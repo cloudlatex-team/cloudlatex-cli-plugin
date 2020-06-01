@@ -1,0 +1,42 @@
+{
+  "name": "latex-extension",
+  "version": "1.0.0",
+  "license": "MIT",
+  "main": "./dist/index.js",
+  "bin": {
+    "latexcl": "./dist/cli.js"
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "lint": "eslint src --ext ts",
+    "watch": "tsc -watch -p ./",
+    "test": "nyc mocha -r ts-node/register \"test/*.ts\"",
+    "report-coverage": "nyc report --reporter=text-lcov > coverage.lcov"
+  },
+  "devDependencies": {
+    "@types/chai": "^4.2.11",
+    "@types/glob": "^7.1.1",
+    "@types/mocha": "^7.0.2",
+    "@types/node": "^14.0.4",
+    "@types/node-fetch": "^2.5.5",
+    "@types/pako": "^1.0.1",
+    "@typescript-eslint/eslint-plugin": "^2.34.0",
+    "@typescript-eslint/parser": "^2.34.0",
+    "chai": "^4.2.0",
+    "eslint": "^7.0.0",
+    "glob": "^7.1.6",
+    "mocha": "^7.1.2",
+    "nyc": "^15.0.1",
+    "ts-node": "^8.10.1",
+    "typescript": "^3.9.3"
+  },
+  "dependencies": {
+    "@types/text-encoding": "^0.0.35",
+    "chokidar": "^3.3.1",
+    "eventemitter3": "^4.0.0",
+    "form-data": "^3.0.0",
+    "node-fetch": "^2.6.0",
+    "pako": "^1.0.11",
+    "text-encoding": "^0.7.0"
+  }
+}
