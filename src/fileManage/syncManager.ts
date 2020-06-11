@@ -1,6 +1,6 @@
-import {SyncMode, DecideSyncMode} from '../types';
+import { SyncMode, DecideSyncMode } from '../types';
 import baseFileAdapter from './baseFileAdapter';
-import {FileRepository, FileInfo} from '../model/fileModel';
+import { FileRepository, FileInfo } from '../model/fileModel';
 
 export default class SyncManager {
   private syncing: boolean = false;
@@ -88,9 +88,9 @@ export default class SyncManager {
     let syncMode: SyncMode = 'download';
     if(remoteChanged) { // #TODO only bothChanged?
       syncMode = await this.decideSyncMode(
-        this.files.where({'changeLocation': 'remote'}).map(file => file.relativePath),
-        this.files.where({'changeLocation': 'local'}).map(file => file.relativePath),
-        this.files.where({'changeLocation': 'both'}).map(file => file.relativePath),
+        this.files.where({ 'changeLocation': 'remote' }).map(file => file.relativePath),
+        this.files.where({ 'changeLocation': 'local' }).map(file => file.relativePath),
+        this.files.where({ 'changeLocation': 'both' }).map(file => file.relativePath),
       );
     }
     let promises = this.getSyncTasks(syncMode);

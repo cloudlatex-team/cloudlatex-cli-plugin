@@ -2,8 +2,8 @@ import BaseFileSystem from '../../fileManage/baseFileAdapter';
 import * as fs from 'fs';
 import * as path from 'path';
 import WebAppApi from './webAppApi';
-import {FileRepository, FileInfo} from '../../model/fileModel';
-import {ClFile} from './types';
+import { FileRepository, FileInfo } from '../../model/fileModel';
+import { ClFile } from './types';
 import Logger from '../../logger';
 
 export default class ClFileAdapter extends BaseFileSystem {
@@ -56,7 +56,7 @@ export default class ClFileAdapter extends BaseFileSystem {
     // #TODO detect unauthorized and offline
     const res = await this.api?.loadFiles();
     const materialFiles: Array<ClFile> = res.material_files;
-    console.log(materialFiles, res);
+    this.logger.log(materialFiles, res);
 
     return materialFiles.map(materialFile => {
       return {

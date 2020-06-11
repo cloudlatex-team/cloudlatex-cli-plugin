@@ -1,9 +1,9 @@
 
 import baseFileAdapter from './../fileManage/baseFileAdapter';
 import ClFileAdapter from './cloudlatex/clFileAdapter';
-import {FileRepository} from './../model/fileModel';
+import { FileRepository } from './../model/fileModel';
 import ClAPI from './cloudlatex/webAppApi';
-import {Config, WebAppApi} from './../types';
+import { Config, WebAppApi } from './../types';
 import Logger from '../logger';
 import CLWebAppApi from './cloudlatex/webAppApi';
 

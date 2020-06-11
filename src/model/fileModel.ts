@@ -1,5 +1,5 @@
 import { ChangeState, ChangeLocation } from '../types';
-import {TypeDB, Repository} from 'type-db';
+import { Repository } from 'type-db';
 
 export const FileInfoDesc = {
   name: 'FileInfo',
@@ -22,14 +22,3 @@ export const FileInfoDesc = {
 
 export type FileRepository = Repository<typeof FileInfoDesc>;
 export type FileInfo = typeof FileInfoDesc['columns'];
-
-async function test() {
-  const db = new TypeDB('path');
-  await db.load();
-  const files = db.getRepository(FileInfoDesc);
-
-  files.find(1);
-  const file = files.new();
-  file.isFolder = false;
-  await db.save();
-}

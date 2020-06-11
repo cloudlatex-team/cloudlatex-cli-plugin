@@ -26,23 +26,23 @@ export default class CLWebAppApi implements WebAppApi {
   }
 
   async validateToken() {
-    const res = await fetch(`${APIRoot}/auth/validate_token`, {headers: this.headers()});
+    const res = await fetch(`${APIRoot}/auth/validate_token`, { headers: this.headers() });
     return await res.json();
   }
 
   async loadProjects() {
-    const res = await fetch(APIProjects, {headers: this.headers()});
+    const res = await fetch(APIProjects, { headers: this.headers() });
     return JSON.parse(await res.json());
   }
 
   async loadProjectInfo() {
-    const res = await fetch(`${APIProjects}/${this.config.projectId}`, {headers: this.headers()});
+    const res = await fetch(`${APIProjects}/${this.config.projectId}`, { headers: this.headers() });
     const text = await res.text();
     return JSON.parse(text)['project'] as ProjectInfo;
   }
 
   async loadFiles() {
-    const res = await fetch(`${APIProjects}/${this.config.projectId}/files`, {headers: this.headers()});
+    const res = await fetch(`${APIProjects}/${this.config.projectId}/files`, { headers: this.headers() });
     const text = await res.text();
     return JSON.parse(text);
   }
@@ -50,9 +50,9 @@ export default class CLWebAppApi implements WebAppApi {
   async createFile(name: string, belongs: number, is_folder: boolean) {
     const res = await fetch(
       `${APIProjects}/${this.config.projectId}`,
-      {headers: this.headers({json: true}),
+      { headers: this.headers({ json: true }),
       method: 'POST',
-      body: JSON.stringify({name, is_folder, belongs})}
+      body: JSON.stringify({ name, is_folder, belongs }) }
     );
     return JSON.parse(await res.text());
   }
@@ -60,8 +60,8 @@ export default class CLWebAppApi implements WebAppApi {
   async deleteFile(id: number) {
     const res = await fetch(
       `${APIProjects}/${this.config.projectId}/files/${id}`,
-      {headers: this.headers(),
-      method: 'DELETE'}
+      { headers: this.headers(),
+      method: 'DELETE' }
     );
     return JSON.parse(await res.text());
   }
@@ -69,9 +69,9 @@ export default class CLWebAppApi implements WebAppApi {
   async updateFile(id: number, params: any): Promise<{revision: string}> {
     const res = await fetch(
       `${APIProjects}/${this.config.projectId}/files/${id}`,
-      {headers: this.headers({json: true}),
+      { headers: this.headers({ json: true }),
       body: JSON.stringify({ material_file: params }),
-      method: 'PUT'}
+      method: 'PUT' }
     );
     const result = JSON.parse(await res.text());
     if(!res.ok) {
@@ -83,8 +83,8 @@ export default class CLWebAppApi implements WebAppApi {
   async compileProject(): Promise<CompileResult> {
     const res = await fetch(
       `${APIProjects}/${this.config.projectId}/compile`,
-      {headers: this.headers(),
-      method: 'POST'}
+      { headers: this.headers(),
+      method: 'POST' }
     );
     const result = JSON.parse(await res.text());
     if(!res.ok) {
@@ -101,9 +101,9 @@ export default class CLWebAppApi implements WebAppApi {
     const headers = form.getHeaders();
     const res = await fetch(
       `${APIProjects}/${this.config.projectId}/files/upload`,
-      {headers: {...this.headers(), ...headers},
+      { headers: { ...this.headers(), ...headers },
       body: form,
-      method: 'POST'}
+      method: 'POST' }
     );
     const result = JSON.parse(await res.text());
     if(!res.ok) {

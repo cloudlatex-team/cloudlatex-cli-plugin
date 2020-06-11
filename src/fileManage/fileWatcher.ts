@@ -1,6 +1,6 @@
 import * as chokidar from 'chokidar';
 import * as  EventEmitter from 'eventemitter3';
-import {FileRepository} from '../model/fileModel';
+import { FileRepository } from '../model/fileModel';
 import Logger from './../logger';
 
 export default class FileWatcher extends EventEmitter {
@@ -38,7 +38,7 @@ export default class FileWatcher extends EventEmitter {
       }
       return this.logger.error('New file detected, but already registered.: ' + absPath);
     }
-    console.log('new file detected', absPath);
+    this.logger.log('new file detected', absPath);
     // #TODO add into files
     file = this.files.new({
       relativePath, 
@@ -103,5 +103,9 @@ export default class FileWatcher extends EventEmitter {
       return false;
     }
     return true;
+  }
+
+  public unwatch() {
+    this.fileWatcher.unwatch(this.rootPath);
   }
 }

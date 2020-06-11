@@ -1,7 +1,7 @@
 import * as path from 'path';
 import * as  EventEmitter from 'eventemitter3';
-import {TextDecoder} from 'text-encoding';
-import {Readable} from 'stream';
+import { TextDecoder } from 'text-encoding';
+import { Readable } from 'stream';
 import * as pako from 'pako';
 import Logger from './logger';
 import { Config, ProjectInfo, AppInfo, SyncMode, DecideSyncMode } from './types';
@@ -34,7 +34,7 @@ export default class LatexApp extends EventEmitter {
       this.logger.error('[cloudlatex] Failed to load Project info.');
       return;
     }
-    console.log('project info', this.projectInfo);
+    this.logger.log('project info', this.projectInfo);
     this.loggedIn = true;
     this.emit('appinfo-updated');
 
@@ -89,7 +89,7 @@ export default class LatexApp extends EventEmitter {
 
   public async compile() {
     try {
-      console.log('compile...');
+      this.logger.info('compile...');
       let result = await this.manager.api.compileProject();
 
       if(result.exit_code === 0) {
@@ -98,7 +98,7 @@ export default class LatexApp extends EventEmitter {
         this.logger.warn('[cloudlatex] Some error occured with compilation.');
       }
 
-      console.log('compile result', result);
+      this.logger.log('compile result', result);
 
       // log
       const logStr = result.errors.join('\n') + result.warnings.join('\n') + '\n' + result.log;

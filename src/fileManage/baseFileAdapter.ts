@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import {KeyType} from '../types';
-import {FileRepository, FileInfo} from '../model/fileModel';
+import { KeyType } from '../types';
+import { FileRepository, FileInfo } from '../model/fileModel';
 import Logger from '../logger';
 
 export default class BaseFileAdapter {
@@ -16,7 +16,7 @@ export default class BaseFileAdapter {
     if(file.isFolder) {
       return;
     } 
-    console.log('downloading..,', file);
+    this.logger.log('downloading..,', file);
 
     const stream = await this._download(file);
     file.watcherSynced = false;
@@ -34,7 +34,7 @@ export default class BaseFileAdapter {
     try {
       await fs.promises.access(absPath);
     } catch(err) {
-      await fs.promises.mkdir(dirname, {recursive: true});
+      await fs.promises.mkdir(dirname, { recursive: true });
     }
 
     return await new Promise((resolve, reject) => {
