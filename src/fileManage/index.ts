@@ -1,8 +1,9 @@
-import {TypeDB, Repository} from 'type-db';
+import { TypeDB, Repository } from 'type-db';
 import * as path from 'path';
-import {Config, SyncMode, WebAppApi, DecideSyncMode} from './../types';
+import * as fs from 'fs';
+import { Config, SyncMode, WebAppApi, DecideSyncMode } from './../types';
 import BackendSelector from './../backend/backendSelector';
-import {FileInfoDesc, FileInfo} from './../model/fileModel';
+import { FileInfoDesc, FileInfo } from './../model/fileModel';
 import FileWatcher from './fileWatcher';
 import SyncManager from './syncManager';
 import BaseFileAdapter from './baseFileAdapter';
@@ -41,8 +42,12 @@ export default class FileManager extends EventEmitter {
     // DB
     const dbFilePath = path.join(this.rootPath, `.${this.config.backend}.json`);
     const db = new TypeDB(dbFilePath);
-    await db.load();
-    this._files = db.getRepository(FileInfoDesc);
+    try {
+      await db.load();
+    } catch(err) {
+      // Not initialized because there is no db file.
+    }
+      this._files = db.getRepository(FileInfoDesc);
     this._files.all().forEach(file => {
       file.watcherSynced = false;
     });

@@ -19,7 +19,6 @@ export default class LatexApp extends EventEmitter {
         return ![this.logPath, this.pdfPath, this.synctexPath].includes(relativePath);
       }, 
       logger);
-    
   }
 
   async launch() {

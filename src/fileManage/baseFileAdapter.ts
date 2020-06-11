@@ -70,8 +70,6 @@ export default class BaseFileAdapter {
 
   public async deleteRemote(file: FileInfo): Promise<unknown>  {
     const result = await this._deleteRemote(file);
-    file.watcherSynced = false;
-    this.files.save();
     return result;
   }
 
@@ -80,6 +78,8 @@ export default class BaseFileAdapter {
   }
 
   public deleteLocal(file: FileInfo) {
+    file.watcherSynced = false;
+    this.files.save();
     const absPath = path.join(this.rootPath, file.relativePath);
     return fs.promises.unlink(absPath);
   }

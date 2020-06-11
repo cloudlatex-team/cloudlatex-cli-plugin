@@ -71,6 +71,7 @@ export default class FileWatcher extends EventEmitter {
   }
 
   private async onWatchedFileDeleted(absPath: string) {
+    console.log('deleted!!');
     const relativePath = this.getRelativePath(absPath);
     if(!this.filterWatchingEvent(relativePath)) {
       return;
@@ -80,11 +81,11 @@ export default class FileWatcher extends EventEmitter {
       this.logger.error('local-deleted-error', absPath);
       return;
     }
-    if(file.watcherSynced) {
-      file.watcherSynced = false;
-      this.files.save();
+    // file was deleted by deleteLocal() because remote file is deleted.
+    if(!file.watcherSynced) {
       return;
     }
+    file.watcherSynced = false;
     file.localChange = 'delete';
     this.files.save();
     this.emit('change-detected');
