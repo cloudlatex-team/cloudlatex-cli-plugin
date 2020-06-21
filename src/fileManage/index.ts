@@ -1,16 +1,14 @@
 import { TypeDB, Repository } from 'type-db';
 import * as path from 'path';
-import * as fs from 'fs';
-import { Config, SyncMode, WebAppApi, DecideSyncMode } from './../types';
-import BackendSelector from './../backend/backendSelector';
-import { FileInfoDesc, FileInfo } from './../model/fileModel';
+import { Config, SyncMode, DecideSyncMode } from './../types';
+import Backend from './../backend/backend';
+import backendSelector from './../backend/backendSelector';
+import { FileInfoDesc } from './../model/fileModel';
 import FileWatcher from './fileWatcher';
 import SyncManager from './syncManager';
-import BaseFileAdapter from './baseFileAdapter';
-import ClFileAdapter from '../backend/cloudlatex/clFileAdapter';
+import FileAdapter from './FileAdapter';
 import Logger from './../logger';
 import * as  EventEmitter from 'eventemitter3';
-import { timingSafeEqual } from 'crypto';
 
 /*
  * File management class
@@ -21,45 +19,44 @@ import { timingSafeEqual } from 'crypto';
  * The file Adapter abstructs file operations of local files and remote ones.
  */
 export default class FileManager extends EventEmitter {
-  private selector: BackendSelector;
-  readonly api: WebAppApi;
-  private _fileAdapter?: BaseFileAdapter;
-  private _files?: Repository<typeof FileInfoDesc>;
+  readonly backend: Backend;
+  private _fileAdapter?: FileAdapter;
+  private _fileRepo?: Repository<typeof FileInfoDesc>;
   private syncManager?: SyncManager;
   constructor(
     private config: Config,
-    readonly rootPath: string,
     private decideSyncMode: DecideSyncMode,
     private fileFilter: (relativePath: string) => boolean,
     private logger: Logger
   ) {
     super();
-    this.selector = new BackendSelector(config);
-    this.api = this.selector.api;
+    this.backend = backendSelector(config);
   }
 
   public async init(): Promise<void> {
     // DB
-    const dbFilePath = path.join(this.rootPath, `.${this.config.backend}.json`);
+    const dbFilePath = path.join(this.config.rootPath, `.${this.config.backend}.json`);
     const db = new TypeDB(dbFilePath);
     try {
       await db.load();
     } catch(err) {
       // Not initialized because there is no db file.
     }
-      this._files = db.getRepository(FileInfoDesc);
-    this._files.all().forEach(file => {
-      file.watcherSynced = false;
+    this._fileRepo = db.getRepository(FileInfoDesc);
+    this._fileRepo.all().forEach(file => {
+      file.watcherSynced = true;
     });
-    this._files.save();
+    this._fileRepo.save();
 
-    this._fileAdapter = this.selector.instantiateFileAdapter(this.rootPath, this._files, this.logger);
+    this._fileAdapter = new FileAdapter(this.config.rootPath, this._fileRepo, this.backend, this.logger);
 
     // Sync Manager
-    this.syncManager = new SyncManager(this._files, this._fileAdapter, this.decideSyncMode);  
+    this.syncManager = new SyncManager(this._fileRepo, this._fileAdapter, this.decideSyncMode);  
 
     // File watcher
-    const fileWatcher = new FileWatcher(this.rootPath, this._files, this.fileFilter, this.logger);
+    const fileWatcher = new FileWatcher(this.config.rootPath, this._fileRepo, this.fileFilter, this.logger);
+    await fileWatcher.init();
+    
     fileWatcher.on('change-detected', () => {
       this.startSync();
     });
@@ -74,17 +71,17 @@ export default class FileManager extends EventEmitter {
     }
   }
 
-  public get fileAdapter(): BaseFileAdapter {
+  public get fileAdapter(): FileAdapter {
     if(!this._fileAdapter) {
       throw new Error('file adapter is not defined');
     }
     return this._fileAdapter;
   }
 
-  public get files() {
-    if(!this._files) {
+  public get fileRepo() {
+    if(!this._fileRepo) {
       throw new Error('files is not defined');
     }
-    return this._files;
+    return this._fileRepo;
   }
 }

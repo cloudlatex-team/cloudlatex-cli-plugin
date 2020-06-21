@@ -8,7 +8,7 @@ export const FileInfoDesc = {
     isFolder: false,
     relativePath: '',
     url: '',
-    revision: ('' as string | number),
+    remoteRevision: ('' as string | number),
     localChange: ('no' as ChangeState),
     remoteChange: ('no' as ChangeState),
     changeLocation: ('no' as ChangeLocation),

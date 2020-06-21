@@ -65,7 +65,7 @@ describe('Create', () => {
       await fs.createFile(path.resolve(workspacePath, './new_file.tex'));
       
       watcher.on('change-detected', async () => {
-        const file = files.findBy('localChange', 'new');
+        const file = files.findBy('localChange', 'create');
         chai.assert.strictEqual(file?.changeLocation, 'local');
         await fs.remove(path.resolve(workspacePath, './new_file.tex'));
         done();

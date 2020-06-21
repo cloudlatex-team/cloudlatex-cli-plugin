@@ -4,13 +4,15 @@
   "license": "MIT",
   "main": "./dist/index.js",
   "bin": {
-    "latexcl": "./dist/cli.js"
+    "latexcli": "./dist/cli.js"
   },
   "scripts": {
-    "compile": "tsc -p ./",
+    "compile": "tsc",
     "lint": "eslint src --ext ts",
     "watch": "tsc -watch -p ./",
     "test": "nyc mocha -r ts-node/register \"test/**/*.ts\"",
+    "unit": "nyc mocha -r ts-node/register \"test/unit/*.ts\"",
+    "integ": "nyc mocha -r ts-node/register \"test/integ/*.ts\"",
     "report-coverage": "nyc report --reporter=text-lcov > coverage.lcov"
   },
   "devDependencies": {
@@ -18,10 +20,12 @@
     "@types/fs-extra": "^9.0.1",
     "@types/glob": "^7.1.1",
     "@types/mocha": "^7.0.2",
+    "@types/mock-fs": "^4.10.0",
     "@types/node": "^14.0.4",
     "@types/node-fetch": "^2.5.5",
     "@types/pako": "^1.0.1",
     "@types/sinon": "^9.0.4",
+    "@types/uuid": "^8.0.0",
     "@typescript-eslint/eslint-plugin": "^2.34.0",
     "@typescript-eslint/parser": "^2.34.0",
     "chai": "^4.2.0",
@@ -29,10 +33,12 @@
     "fs-extra": "^9.0.1",
     "glob": "^7.1.6",
     "mocha": "^7.1.2",
+    "mock-fs": "^4.12.0",
     "nyc": "^15.0.1",
     "sinon": "^9.0.2",
     "ts-node": "^8.10.1",
-    "typescript": "^3.9.3"
+    "typescript": "^3.9.3",
+    "uuid": "^8.1.0"
   },
   "dependencies": {
     "@types/text-encoding": "^0.0.35",

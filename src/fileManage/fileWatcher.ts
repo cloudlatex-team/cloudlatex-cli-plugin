@@ -1,26 +1,36 @@
 import * as chokidar from 'chokidar';
+import * as path from 'path';
 import * as  EventEmitter from 'eventemitter3';
 import { FileRepository } from '../model/fileModel';
 import Logger from './../logger';
 
 export default class FileWatcher extends EventEmitter {
-  private fileWatcher: chokidar.FSWatcher;
+  private fileWatcher?: chokidar.FSWatcher;
 
   constructor(
     private rootPath: string,
-    private files: FileRepository,
+    private fileRepo: FileRepository,
     public readonly watcherFileFilter: (relativePath: string) => boolean,
     private logger: Logger
   ) {
     super();
+  }
+
+  public init(): Promise<void> {
     const watcherOption = {
-      ignored: /\.git|\.cloudlatex\.json|synctex\.gz|\.vscode|.DS\_Store/ //#TODO
+      ignored: /\.git|\.cloudlatex\.json|synctex\.gz|\.vscode|.DS\_Store/, //#TODO
+      awaitWriteFinish: true
       // ignored: /\.git|\.vswpp|synctex\.gz|main\.pdf|\.workspace|\.vscode|.DS\_Store/ //#TODO
     };
     this.fileWatcher = chokidar.watch(this.rootPath, watcherOption);
-    this.fileWatcher.on('add', (file: string) => this.onWatchingNewFile(file));
-    this.fileWatcher.on('change', (file: string) => this.onWatchedFileChanged(file));
-    this.fileWatcher.on('unlink', (file: string) => this.onWatchedFileDeleted(file));
+    return new Promise((resolve, reject) => {
+      this.fileWatcher?.on('ready', () => {
+        this.fileWatcher?.on('add', (file: string) => this.onWatchingNewFile(file));
+        this.fileWatcher?.on('change', (file: string) => this.onWatchedFileChanged(file));
+        this.fileWatcher?.on('unlink', (file: string) => this.onWatchedFileDeleted(file));
+        resolve();
+      });
+    });
   }
 
   private onWatchingNewFile(absPath: string) {
@@ -28,24 +38,23 @@ export default class FileWatcher extends EventEmitter {
     if(!this.filterWatchingEvent(relativePath)) {
       return;
     }
-    let file = this.files.findBy('relativePath', relativePath);
+    let file = this.fileRepo.findBy('relativePath', relativePath);
     if(file) {
       if(!file.watcherSynced) {
         // this file is downloaded from remote
         file.watcherSynced = true;
-        this.files.save();
+        this.fileRepo.save();
         return;
       }
       return this.logger.error('New file detected, but already registered.: ' + absPath);
     }
     this.logger.log('new file detected', absPath);
-    // #TODO add into files
-    file = this.files.new({
+    file = this.fileRepo.new({
       relativePath, 
-      localChange: 'new',
+      localChange: 'create',
       changeLocation: 'local'
     });
-    this.files.save();
+    this.fileRepo.save();
     this.emit('change-detected');
   }
 
@@ -54,7 +63,7 @@ export default class FileWatcher extends EventEmitter {
     if(!this.filterWatchingEvent(relativePath)) {
       return;
     }
-    const changedFile = this.files.findBy('relativePath', relativePath);
+    const changedFile = this.fileRepo.findBy('relativePath', relativePath);
     if(!changedFile) {
       this.logger.error('local-changed-error', absPath);
       return;
@@ -62,41 +71,38 @@ export default class FileWatcher extends EventEmitter {
     // file was changed by downloading
     if(!changedFile.watcherSynced) {
       changedFile.watcherSynced = true;
-      this.files.save();
+      this.fileRepo.save();
       return;
     }
     changedFile.localChange = 'update';
-    this.files.save();
+    this.fileRepo.save();
     this.emit('change-detected');
   }
 
   private async onWatchedFileDeleted(absPath: string) {
-    console.log('deleted!!');
     const relativePath = this.getRelativePath(absPath);
     if(!this.filterWatchingEvent(relativePath)) {
       return;
     }
-    const file = this.files.findBy('relativePath', relativePath);
+    const file = this.fileRepo.findBy('relativePath', relativePath);
     if (!file) {
       this.logger.error('local-deleted-error', absPath);
       return;
     }
     // file was deleted by deleteLocal() because remote file is deleted.
     if(!file.watcherSynced) {
+      this.fileRepo.delete(file.id);
+      this.fileRepo.save();
       return;
     }
     file.watcherSynced = false;
     file.localChange = 'delete';
-    this.files.save();
+    this.fileRepo.save();
     this.emit('change-detected');
   }
 
   private getRelativePath(absPath: string): string {
-    let relativePath = absPath.replace(this.rootPath, '');
-    if(relativePath[0] === '/') {
-      relativePath = relativePath.slice(1);
-    }
-    return relativePath;
+    return path.relative(this.rootPath, absPath);
   }
 
   private filterWatchingEvent(relativePath: string): boolean {
@@ -107,6 +113,6 @@ export default class FileWatcher extends EventEmitter {
   }
 
   public unwatch() {
-    this.fileWatcher.unwatch(this.rootPath);
+    this.fileWatcher?.unwatch(this.rootPath);
   }
 }

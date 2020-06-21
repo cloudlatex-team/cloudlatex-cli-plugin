@@ -1,11 +1,11 @@
 import fetch from 'node-fetch';
-import { Stream } from 'stream';
+import { Readable } from 'stream';
 import { CompileResult } from './types';
 import * as FormData from 'form-data';
-import { Config, ProjectInfo, WebAppApi } from '../../types';
+import { Config, ProjectInfo } from '../../types';
 import { APIProjects, APIRoot } from './clConst';
 
-export default class CLWebAppApi implements WebAppApi {
+export default class CLWebAppApi {
   constructor(private config: Config) {
   }
 
@@ -88,13 +88,12 @@ export default class CLWebAppApi implements WebAppApi {
     );
     const result = JSON.parse(await res.text());
     if(!res.ok) {
-      console.log('compile failed', res, result);
       throw result;
     }
     return result;
   }
 
-  async uploadFile(stream: Stream, relativeDir: string) {
+  async uploadFile(stream: NodeJS.ReadableStream, relativeDir: string) {
     const form = new FormData();
     form.append('relative_path', relativeDir);
     form.append('file', stream);
@@ -107,13 +106,12 @@ export default class CLWebAppApi implements WebAppApi {
     );
     const result = JSON.parse(await res.text());
     if(!res.ok) {
-      console.log('upload file failed', res, result);
       throw result;
     }
     return result;
   }
 
-  async downloadFile(url: string): Promise<NodeJS.ReadableStream> {
+  async download(url: string): Promise<NodeJS.ReadableStream> {
     const res = await fetch(
       `${url}`
     );

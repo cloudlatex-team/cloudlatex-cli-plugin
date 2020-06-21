@@ -1,11 +1,12 @@
 import { SyncMode, DecideSyncMode } from '../types';
-import baseFileAdapter from './baseFileAdapter';
+import FileAdapter from './fileAdapter';
 import { FileRepository, FileInfo } from '../model/fileModel';
 
+// #TODO folder 対応
 export default class SyncManager {
   private syncing: boolean = false;
   private syncReserved: boolean = false;
-  constructor(private files: FileRepository, private fileAdapter: baseFileAdapter,  public decideSyncMode: DecideSyncMode) {
+  constructor(private fileRepo: FileRepository, private fileAdapter: FileAdapter,  public decideSyncMode: DecideSyncMode) {
   }
 
   public async syncSession(): Promise<boolean> {
@@ -15,10 +16,11 @@ export default class SyncManager {
     }
     this.syncing = true;
     try {
-      this.sync();
+      await this.sync();
     } catch(e) {
       this.syncing = false;
       // #TODO offline or unauthorized?
+      console.error(e);
       return false;
     }
     this.syncing = false;
@@ -38,7 +40,7 @@ export default class SyncManager {
     const remoteFileDict = this.toDict(remoteFileList);
 
     // Reset remote change state and change location
-    this.files.all().forEach(file => {
+    this.fileRepo.all().forEach(file => {
       file.remoteChange = 'no';
       file.changeLocation = 'no';
     });
@@ -48,20 +50,20 @@ export default class SyncManager {
      */
     // Remote to local
     remoteFileList.forEach(remoteFile => {
-      let file = this.files.findBy('remoteId', remoteFile.remoteId);
+      let file = this.fileRepo.findBy('remoteId', remoteFile.remoteId);
       if(!file) { // created in remote
-        file = this.files.new();
+        file = this.fileRepo.new(remoteFile);
         file.changeLocation = 'remote';
-        file.remoteChange = 'new';
+        file.remoteChange = 'create';
         remoteChanged = true;
-      } else if(file.revision !== remoteFile.revision) { // remote updated
+      } else if(file.remoteRevision !== remoteFile.remoteRevision) { // remote updated
         file.changeLocation = 'remote';
         file.remoteChange = 'update';
         remoteChanged = true;
       }
     });
     // Local to remote
-    this.files.all().forEach(file => {
+    this.fileRepo.all().forEach(file => {
       let remoteFile = remoteFileDict[file.id];
       if(remoteFile) { // remote file exists
         if(file.localChange === 'no') {
@@ -85,12 +87,14 @@ export default class SyncManager {
       }
     });
 
+    this.fileRepo.save();
+
     let syncMode: SyncMode = 'download';
-    if(remoteChanged) { // #TODO only bothChanged?
+    if(bothChanged) { // #TODO only bothChanged?
       syncMode = await this.decideSyncMode(
-        this.files.where({ 'changeLocation': 'remote' }).map(file => file.relativePath),
-        this.files.where({ 'changeLocation': 'local' }).map(file => file.relativePath),
-        this.files.where({ 'changeLocation': 'both' }).map(file => file.relativePath),
+        this.fileRepo.where({ 'changeLocation': 'remote' }).map(file => file.relativePath),
+        this.fileRepo.where({ 'changeLocation': 'local' }).map(file => file.relativePath),
+        this.fileRepo.where({ 'changeLocation': 'both' }).map(file => file.relativePath),
       );
     }
     let promises = this.getSyncTasks(syncMode);
@@ -99,15 +103,15 @@ export default class SyncManager {
 
   private getSyncTasks(remoteSyncMode: SyncMode): Promise<unknown>[] {
     const tasks: Promise<unknown>[] = [];
-    this.files.all().forEach(file => {
+    this.fileRepo.all().forEach(file => {
       if(file.changeLocation === 'remote' || 
         (file.changeLocation === 'both' && remoteSyncMode === 'download')) {
-        tasks.push(this.syncWithLocalTask(file));
+        tasks.push(this.syncWithRemoteTask(file));
       } else if(
         file.changeLocation === 'local' ||
         (file.changeLocation === 'both' && remoteSyncMode === 'upload')
       ) {
-        tasks.push(this.syncWithRemoteTask(file));      
+        tasks.push(this.syncWithLocalTask(file));      
       }
     });
     return tasks;
@@ -115,7 +119,7 @@ export default class SyncManager {
 
   private syncWithLocalTask(file: FileInfo): Promise<unknown> {
     switch(file.localChange) {
-      case 'new':
+      case 'create':
         return this.fileAdapter.upload(file);
       case 'update':
         if(file.remoteChange === 'delete') {
@@ -124,8 +128,8 @@ export default class SyncManager {
         return this.fileAdapter.updateRemote(file);
       case 'delete':
         if(file.remoteChange === 'delete') {
-          this.files.delete(file.id);
-          this.files.save();
+          this.fileRepo.delete(file.id);
+          this.fileRepo.save();
           return Promise.resolve();
         }
         return this.fileAdapter.deleteRemote(file);
@@ -136,13 +140,13 @@ export default class SyncManager {
 
   private syncWithRemoteTask(file: FileInfo): Promise<unknown> {
     switch(file.remoteChange) {
-      case 'new':
+      case 'create':
       case 'update':
         return this.fileAdapter.download(file);
       case 'delete':
         if(file.localChange === 'delete') {
-          this.files.delete(file.id);
-          this.files.save();
+          this.fileRepo.delete(file.id);
+          this.fileRepo.save();
           return Promise.resolve();
         }
         return this.fileAdapter.deleteLocal(file);
