@@ -19,15 +19,18 @@ export default class FileWatcher extends EventEmitter {
   public init(): Promise<void> {
     const watcherOption = {
       ignored: /\.git|\.cloudlatex\.json|synctex\.gz|\.vscode|.DS\_Store/, //#TODO
-      awaitWriteFinish: true
+      awaitWriteFinish: {
+        stabilityThreshold: 500,
+        pollInterval: 100
+      }
       // ignored: /\.git|\.vswpp|synctex\.gz|main\.pdf|\.workspace|\.vscode|.DS\_Store/ //#TODO
     };
-    this.fileWatcher = chokidar.watch(this.rootPath, watcherOption);
+    const fileWatcher = this.fileWatcher = chokidar.watch(this.rootPath, watcherOption);
     return new Promise((resolve, reject) => {
-      this.fileWatcher?.on('ready', () => {
-        this.fileWatcher?.on('add', (file: string) => this.onWatchingNewFile(file));
-        this.fileWatcher?.on('change', (file: string) => this.onWatchedFileChanged(file));
-        this.fileWatcher?.on('unlink', (file: string) => this.onWatchedFileDeleted(file));
+      fileWatcher.on('ready', () => {
+        fileWatcher.on('add', (file: string) => this.onWatchingNewFile(file));
+        fileWatcher.on('change', (file: string) => this.onWatchedFileChanged(file));
+        fileWatcher.on('unlink', (file: string) => this.onWatchedFileDeleted(file));
         resolve();
       });
     });

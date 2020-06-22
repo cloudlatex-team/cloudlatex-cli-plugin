@@ -80,28 +80,6 @@ export default class SyncManager {
       } else if(file.localChange !== 'no') {
         file.changeLocation = 'local';
       }
-      /*
-      if(remoteFile) { // remote file exists
-        if(file.localChange === 'no') {
-          return;
-        }
-        if(file.changeLocation === 'remote') {
-          file.changeLocation = 'both';
-          bothChanged = true;
-        } else {
-          file.changeLocation = 'local';
-        }
-      } else { // remote file does not exist
-        if(file.remoteId === null) { // local file is created
-          file.changeLocation = 'local';
-        } else { // remote file is deleted
-          file.changeLocation = 'remote';
-          file.remoteChange = 'delete';
-          file.remoteId = null;
-          remoteChanged = true;
-        }
-      }
-      */
     });
 
     this.fileRepo.save();

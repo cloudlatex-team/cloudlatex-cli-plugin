@@ -3,7 +3,6 @@ import * as chokidar from 'chokidar';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as chai from 'chai';
-import * as mockFs from 'mock-fs';
 import { v4 as uuid } from 'uuid';
 
 import { TypeDB } from 'type-db';
