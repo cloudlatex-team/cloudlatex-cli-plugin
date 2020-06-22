@@ -47,6 +47,7 @@ export default class BackendStub extends Backend {
       return Promise.reject();
     }
     const newFile = this.remoteFiles.new({ ...file });
+    newFile.id = -1; // reset local id
     const remoteId = newFile.remoteId = uuid();
     const remoteRevision = newFile.remoteRevision = uuid();
     this.remoteContents[remoteId] = await streamToString(stream);

@@ -33,11 +33,9 @@ let fileWatcher: FileWatcher;
 const setupInstances = async () => {
 
   // Sync Mode Decision
-  const syncModeDecision: {func: DecideSyncMode, mode: SyncMode} = {
-    func: function(){ return Promise.resolve(this.mode);},
-    mode: 'upload'
-  };
-  const decideSyncModeSpy = Sinon.spy(syncModeDecision.func);
+  let syncModeRef: {instance: SyncMode} = { instance: 'upload' };
+  const decideSyncMode: DecideSyncMode = () => Promise.resolve(syncModeRef.instance);
+  const decideSyncModeSpy = Sinon.spy(decideSyncMode);
 
   const logger = new Logger();
 
@@ -65,7 +63,7 @@ const setupInstances = async () => {
   const fileAdapter = new FileAdapter(workdir, localFiles, backend, logger);
 
   // Sync Manager
-  const syncManager = new SyncManager(localFiles, fileAdapter, syncModeDecision.func);  
+  const syncManager = new SyncManager(localFiles, fileAdapter, decideSyncMode);  
 
   // File watcher
   fileWatcher = new FileWatcher(workdir, localFiles, () => true, logger);
@@ -73,7 +71,7 @@ const setupInstances = async () => {
 
   return {
     decideSyncModeSpy,
-    syncModeDecision,
+    syncModeRef,
     backend,
     localFiles,
     syncManager
@@ -108,7 +106,7 @@ class TestSituation {
   async executeTest() {
     // Apply some configuration
     this.instances.backend.isOffline = this.config.isOffline;
-    this.instances.syncModeDecision.mode = this.config.syncMode;
+    this.instances.syncModeRef.instance = this.config.syncMode;
 
     // Apply file changes to remote and local filesystems
     await this.applyFileChanges();
@@ -244,8 +242,8 @@ class TestSituation {
       if(!localFile) {
         return;
       }
-      chai.assert.isTrue(localFile.watcherSynced, 'localFile.watcherSynced');
-      chai.assert.strictEqual(localFile.localChange, 'no', 'local.localChange');
+      chai.assert.isTrue(localFile.watcherSynced, `localFile.watcherSynced of ${localFile.relativePath}`);
+      chai.assert.strictEqual(localFile.localChange, 'no', `local.localChange of ${localFile.relativePath}`);
       tasks.push(assertStream(fs.createReadStream(absPath), expectedContent));
       
       // remote
@@ -264,7 +262,7 @@ afterEach(() => {
 
 
 describe('Sync file system', () => {
-  tool.TestConfigList.slice(5,6).forEach(config => {
+  tool.TestConfigList.forEach(config => {
     it(config.describe, async () => {
       const instances = await setupInstances();
       const localNewFiles = ['new_file.tex', 'images/new_img.png'];

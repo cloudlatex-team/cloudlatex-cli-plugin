@@ -17,7 +17,6 @@ export default class FileAdapter {
     if(file.isFolder) {
       return;
     } 
-    this.logger.log('downloading..,', file);
 
     // # When failed download 
     const stream = await this.backend.download(file);

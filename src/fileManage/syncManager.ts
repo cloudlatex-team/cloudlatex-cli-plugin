@@ -1,4 +1,4 @@
-import { SyncMode, DecideSyncMode } from '../types';
+import { SyncMode, DecideSyncMode, KeyType } from '../types';
 import FileAdapter from './fileAdapter';
 import { FileRepository, FileInfo } from '../model/fileModel';
 
@@ -34,10 +34,14 @@ export default class SyncManager {
   }
 
   private async sync() {
-    let remoteChanged = false;
-    let bothChanged = false;
     const remoteFileList = await this.fileAdapter.loadFileList();
-    const remoteFileDict = this.toDict(remoteFileList);
+    const remoteFileDict = remoteFileList.reduce((dict, file) => {
+      if(file.remoteId === null) {
+        throw new Error('remoteId is null');
+      }
+      dict[file.remoteId] = file;
+      return dict;
+    }, {} as Record<KeyType, FileInfo>);
 
     // Reset remote change state and change location
     this.fileRepo.all().forEach(file => {
@@ -53,18 +57,30 @@ export default class SyncManager {
       let file = this.fileRepo.findBy('remoteId', remoteFile.remoteId);
       if(!file) { // created in remote
         file = this.fileRepo.new(remoteFile);
-        file.changeLocation = 'remote';
         file.remoteChange = 'create';
-        remoteChanged = true;
       } else if(file.remoteRevision !== remoteFile.remoteRevision) { // remote updated
-        file.changeLocation = 'remote';
         file.remoteChange = 'update';
-        remoteChanged = true;
       }
     });
     // Local to remote
     this.fileRepo.all().forEach(file => {
-      let remoteFile = remoteFileDict[file.id];
+      let remoteFile = file.remoteId && remoteFileDict[file.remoteId];
+      if(!remoteFile) { // remote file does not exist
+        if(file.remoteId) { // remote file is deleted
+          file.remoteChange = 'delete';
+          file.remoteId = null;
+        }
+      }
+
+      // update changeLocation
+      if(file.remoteChange !== 'no' && file.localChange !== 'no') {
+        file.changeLocation = 'both';
+      } else if(file.remoteChange !== 'no') {
+        file.changeLocation = 'remote';
+      } else if(file.localChange !== 'no') {
+        file.changeLocation = 'local';
+      }
+      /*
       if(remoteFile) { // remote file exists
         if(file.localChange === 'no') {
           return;
@@ -85,12 +101,13 @@ export default class SyncManager {
           remoteChanged = true;
         }
       }
+      */
     });
 
     this.fileRepo.save();
 
     let syncMode: SyncMode = 'download';
-    if(bothChanged) { // #TODO only bothChanged?
+    if(this.fileRepo.findBy('changeLocation', 'both')) { // #TODO only bothChanged?
       syncMode = await this.decideSyncMode(
         this.fileRepo.where({ 'changeLocation': 'remote' }).map(file => file.relativePath),
         this.fileRepo.where({ 'changeLocation': 'local' }).map(file => file.relativePath),
