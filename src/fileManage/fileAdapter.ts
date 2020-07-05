@@ -54,7 +54,6 @@ export default class FileAdapter {
     file.remoteId = remoteId;
     file.remoteRevision = remoteRevision;
     file.localChange = 'no';
-    file.watcherSynced = true;
     this.fileRepo.save();
   }
 

@@ -49,13 +49,21 @@ export default class FileWatcher extends EventEmitter {
         this.fileRepo.save();
         return;
       }
+      if(file.localChange === 'delete') {
+        // The same named file is deleted and created.
+        file.localChange = 'update';
+        this.fileRepo.save();
+        this.emit('change-detected');
+        return;
+      }
       return this.logger.error('New file detected, but already registered.: ' + absPath);
     }
     this.logger.log('new file detected', absPath);
     file = this.fileRepo.new({
       relativePath, 
       localChange: 'create',
-      changeLocation: 'local'
+      changeLocation: 'local',
+      watcherSynced: true
     });
     this.fileRepo.save();
     this.emit('change-detected');
@@ -71,13 +79,17 @@ export default class FileWatcher extends EventEmitter {
       this.logger.error('local-changed-error', absPath);
       return;
     }
+
     // file was changed by downloading
     if(!changedFile.watcherSynced) {
       changedFile.watcherSynced = true;
       this.fileRepo.save();
       return;
     }
-    changedFile.localChange = 'update';
+
+    if(changedFile.localChange !== 'create') {
+      changedFile.localChange = 'update';
+    }
     this.fileRepo.save();
     this.emit('change-detected');
   }
@@ -92,13 +104,21 @@ export default class FileWatcher extends EventEmitter {
       this.logger.error('local-deleted-error', absPath);
       return;
     }
+
     // file was deleted by deleteLocal() because remote file is deleted.
     if(!file.watcherSynced) {
       this.fileRepo.delete(file.id);
       this.fileRepo.save();
       return;
     }
-    file.watcherSynced = false;
+
+    if(file.localChange === 'create') {
+      this.fileRepo.delete(file.id);
+      this.fileRepo.save();
+      this.emit('change-detected');
+      return;
+    }
+
     file.localChange = 'delete';
     this.fileRepo.save();
     this.emit('change-detected');

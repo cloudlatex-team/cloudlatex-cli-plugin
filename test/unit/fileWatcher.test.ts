@@ -13,6 +13,7 @@ const workspacePath = path.resolve(__dirname, './../workspace');
 
 const setupWorkspace = async () => {
   await fs.copy(fixturePath, workspacePath);
+  await tool.sleep(1000);
 };
 
 const cleanupWorkspace = async () => {
@@ -27,12 +28,18 @@ const setupInstances = async () => {
   files.new({ relativePath: 'main.tex', watcherSynced: true });
   watcher =  new FileWatcher(workspacePath, files, () => true, new Logger());
   const changedSpy = Sinon.spy();
+  const awaitChangeDetection = () => {
+    return new Promise((resolve, reject) => {
+      watcher?.on('change-detected', resolve);
+    });
+  };
   watcher.on('change-detected', changedSpy);
   await watcher.init();
   return {
     files,
     watcher,
-    changedSpy
+    changedSpy,
+    awaitChangeDetection
   };
 };
 
@@ -47,45 +54,119 @@ afterEach(() => {
 });
 
 describe('Create', () => {
-  it('should emit change-detected', (done) => {
-    (async () => {
-      const { watcher, files, changedSpy } = await setupInstances();
-      watcher.once('change-detected', async () => {
-        const file = files.findBy('localChange', 'create');
-        chai.assert.strictEqual(file?.changeLocation, 'local');
-        await fs.remove(path.resolve(workspacePath, './new_file.tex'));
-        done();
-      });
-      await fs.createFile(path.resolve(workspacePath, './new_file.tex'));
-    })();
+  it('localChange should be "create"', async () => {
+    const { watcher, files, awaitChangeDetection } = await setupInstances();
+    const relativePath = 'new_file.tex';
+    const filePath = path.resolve(workspacePath, relativePath);
+    fs.createFile(filePath);
+    await awaitChangeDetection();
+    const file = files.findBy('relativePath', relativePath);
+    chai.assert.strictEqual(file && file.localChange, 'create');
+    await fs.remove(filePath);
   });
 });
 
 describe('Update', () => {
-  it('should emit change-detected', (done) => {
-    (async () => {
-      const { watcher, files, changedSpy } = await setupInstances();
-      watcher.on('change-detected', async () => {
-        const file = files.findBy('localChange', 'update');
-        chai.assert.isNotNull(file);
-        done();
-      });
-      fs.writeFile(path.resolve(workspacePath, './main.tex'), 'content');
-
-    })();
+  it('localChange should be "update"', async () => {
+    const { watcher, files, awaitChangeDetection } = await setupInstances();
+    const relativePath = 'main.tex';
+    const filePath = path.resolve(workspacePath, relativePath);
+    fs.writeFile(filePath, 'updated content');
+    await awaitChangeDetection();
+    const file = files.findBy('relativePath', relativePath);
+    chai.assert.strictEqual(file && file.localChange, 'update');
   });
 });
 
 describe('Delete', () => {
-  it('should emit change-detected', (done) => {
-    (async () => {
-      const { watcher, files, changedSpy } = await setupInstances();
-      await fs.remove(path.resolve(workspacePath, './main.tex'));
-      watcher.on('change-detected', async () => {
-        const file = files.findBy('localChange', 'delete');
-        chai.assert.isNotNull(file);
-        done();
-      });
-    })();
+  it('localChange should be "delete"', async () => {
+    const { watcher, files, awaitChangeDetection } = await setupInstances();
+    const relativePath = 'main.tex';
+    const filePath = path.resolve(workspacePath, relativePath);
+    fs.remove(filePath);
+    await awaitChangeDetection();
+    const file = files.findBy('relativePath', relativePath);
+    chai.assert.strictEqual(file && file.localChange, 'delete');
+    fs.createFile(filePath);
+    // await awaitChangeDetection();
+  });
+});
+
+
+describe('Create and Update', () => {
+  it('localChange should be "create"', async () => {
+    const { watcher, files, awaitChangeDetection } = await setupInstances();
+    const relativePath = 'new_file.tex';
+    const filePath = path.resolve(workspacePath, relativePath);
+    fs.createFile(filePath);
+    await awaitChangeDetection();
+    fs.writeFile(filePath, 'updated content');
+    await awaitChangeDetection();
+    const file = files.findBy('relativePath', relativePath);
+    chai.assert.strictEqual(file && file.localChange, 'create');
+    await fs.remove(filePath);
+  });
+});
+
+describe('Create and Update and Delete', () => {
+  it('the file should not exist', async () => {
+    const { watcher, files, awaitChangeDetection } = await setupInstances();
+    const relativePath = 'new_file.tex';
+    const filePath = path.resolve(workspacePath, relativePath);
+    fs.createFile(filePath);
+    await awaitChangeDetection();
+    fs.writeFile(filePath, 'updated content');
+    await awaitChangeDetection();
+    fs.remove(filePath);
+    await awaitChangeDetection();
+    const file = files.findBy('relativePath', relativePath);
+    chai.assert.isNull(file);
+  });
+});
+
+describe('Delete and recreate', () => {
+  it('localChange should be "update"', async () => {
+    const { watcher, files, awaitChangeDetection } = await setupInstances();
+    const relativePath = 'main.tex';
+    const filePath = path.resolve(workspacePath, relativePath);
+    fs.remove(filePath);
+    await awaitChangeDetection();
+    fs.createFile(filePath);
+    await awaitChangeDetection();
+    const file = files.findBy('relativePath', relativePath);
+    chai.assert.strictEqual(file && file.localChange, 'update');
+  });
+});
+
+
+describe('Update, delete and recreate', () => {
+  it('localChange should be "update"', async () => {
+    const { watcher, files, awaitChangeDetection } = await setupInstances();
+    const relativePath = 'main.tex';
+    const filePath = path.resolve(workspacePath, relativePath);
+    fs.writeFile(filePath, 'update content');
+    await awaitChangeDetection();
+    fs.remove(filePath);
+    await awaitChangeDetection();
+    fs.createFile(filePath);
+    await awaitChangeDetection();
+    const file = files.findBy('relativePath', relativePath);
+    chai.assert.strictEqual(file && file.localChange, 'update');
+  });
+});
+
+describe('Create, delete and recreate', () => {
+  it('localChange should be "create"', async () => {
+    const { watcher, files, awaitChangeDetection } = await setupInstances();
+    const relativePath = 'new_file.tex';
+    const filePath = path.resolve(workspacePath, relativePath);
+    fs.createFile(filePath);
+    await awaitChangeDetection();
+    fs.remove(filePath);
+    await awaitChangeDetection();
+    fs.createFile(filePath);
+    await awaitChangeDetection();
+    const file = files.findBy('relativePath', relativePath);
+    chai.assert.strictEqual(file && file.localChange, 'create');
   });
 });
