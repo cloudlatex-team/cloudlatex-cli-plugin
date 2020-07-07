@@ -124,7 +124,7 @@ class TestSituation {
         tasks = tasks.concat(this.changeSet.local.create.map(
           relativePath => fs.promises.writeFile(
             path.join(workdir, relativePath),
-            this.getNewContent(relativePath, this.config.changeStates.local, 'local')
+            this.getChangedContent(relativePath, this.config.changeStates.local, 'local')
           )
         ));
         break;
@@ -132,7 +132,7 @@ class TestSituation {
         tasks = tasks.concat(this.changeSet.local.update.map(
           fileInfo => fs.promises.writeFile(
             path.join(workdir, fileInfo.relativePath), 
-            this.getNewContent(fileInfo.relativePath, this.config.changeStates.local, 'local')
+            this.getChangedContent(fileInfo.relativePath, this.config.changeStates.local, 'local')
           )
         ));
         break;
@@ -148,7 +148,7 @@ class TestSituation {
         tasks = tasks.concat(this.changeSet.remote.create.map(
           relativePath => this.instances.backend._createInRemote(
             { relativePath },
-            this.getNewContent(relativePath, this.config.changeStates.remote, 'remote')
+            this.getChangedContent(relativePath, this.config.changeStates.remote, 'remote')
           )
         ));
         break;
@@ -160,7 +160,7 @@ class TestSituation {
             }
             return this.instances.backend._updateInRemote(
               { relativePath: fileInfo.relativePath },
-              this.getNewContent(fileInfo.relativePath, this.config.changeStates.remote, 'remote')
+              this.getChangedContent(fileInfo.relativePath, this.config.changeStates.remote, 'remote')
             );
           }
         ));
@@ -181,7 +181,7 @@ class TestSituation {
     await Promise.all(tasks);
   }
 
-  private getNewContent = (relativePath: string, change: ChangeState, location: ChangeLocation): string => (
+  private getChangedContent = (relativePath: string, change: ChangeState, location: ChangeLocation): string => (
     `"${change}" content of "${relativePath}" in "${location}"`
   );
 
@@ -191,12 +191,12 @@ class TestSituation {
       switch(this.config.changeStates[location]) {
         case 'create':
           this.changeSet[location]['create'].forEach(relativePath => {
-            expectedFileDict[path.join(workdir, relativePath)] = this.getNewContent(relativePath, 'create', location);
+            expectedFileDict[path.join(workdir, relativePath)] = this.getChangedContent(relativePath, 'create', location);
           });
           break;
         case 'update':
           this.changeSet[location]['update'].forEach(fileInfo => {
-            expectedFileDict[path.join(workdir, fileInfo.relativePath)] = this.getNewContent(fileInfo.relativePath, 'update', location);
+            expectedFileDict[path.join(workdir, fileInfo.relativePath)] = this.getChangedContent(fileInfo.relativePath, 'update', location);
           });
           break;
         case 'delete':
@@ -206,23 +206,50 @@ class TestSituation {
           break;
       }
     };
-
-    if(this.config.syncMode === 'upload') {
+    if(this.config.isOffline) {
+      applyChange('local');
+    } else if(this.config.syncMode === 'upload') {
+      // Apply remote changes first and apply local changes later,
+      // which emulates the 'upload' mode
       (['remote', 'local'] as const).forEach(applyChange);
     } else {
+      // Apply local changes first and apply remote changes later,
+      // which emulates the 'download' mode
       (['local', 'remote'] as const).forEach(applyChange);
     }
     return expectedFileDict;
   }
 
+  private computeExpectedChangeState(absPath: string): ChangeState {
+    if(!this.config.isOffline) {
+      return 'no'; // Changed should be resolved
+    }
+    if(this.changeSet.local.create.some(relativePath => (
+      absPath === path.join(workdir, relativePath)
+    ))) {
+      return 'create';
+    }
+    if(this.changeSet.local.update.some(fileInfo => (
+      absPath === path.join(workdir, fileInfo.relativePath)
+    ))) {
+      return 'update';
+    }
+    if(this.changeSet.local.delete.some(fileInfo => (
+      absPath === path.join(workdir, fileInfo.relativePath)
+    ))) {
+      return 'delete';
+    }
+    return 'no';
+  }
+
   private async verify(syncResult: boolean) {
     const expectedFileDict = this.computeExpectedFileDict();
-    // TDOO
     if(this.config.isOffline) {
-
+      chai.assert.isFalse(syncResult);
+    } else {
+      chai.assert.isTrue(syncResult);
     }
 
-    chai.assert.isTrue(syncResult);
 
     const expectedAbsPaths = Object.keys(expectedFileDict);
     // validate the number of files
@@ -242,9 +269,13 @@ class TestSituation {
         return;
       }
       chai.assert.isTrue(localFile.watcherSynced, `localFile.watcherSynced of ${localFile.relativePath}`);
-      chai.assert.strictEqual(localFile.localChange, 'no', `local.localChange of ${localFile.relativePath}`);
+      chai.assert.strictEqual(localFile.localChange, this.computeExpectedChangeState(absPath), `local.localChange of ${localFile.relativePath}`);
       tasks.push(assertStream(fs.createReadStream(absPath), expectedContent));
       
+      if(this.config.isOffline) {
+        return;
+      }
+
       // remote
       const remoteContent = this.instances.backend.remoteContents[localFile.remoteId as string];
       chai.assert.strictEqual(remoteContent, expectedContent, 'remoteContent');

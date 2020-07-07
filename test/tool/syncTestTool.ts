@@ -48,6 +48,17 @@ export const TestConfigList = (() => {
       });
     });
   });
+  // offline
+  list.push({
+    changeStates: {
+      local: 'update',
+      remote: 'no',
+    },
+    conflict: false,
+    syncMode: 'upload',
+    isOffline: true,
+    describe: 'offline'
+  });
   return list;
 })();
 
