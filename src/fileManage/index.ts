@@ -20,9 +20,18 @@ import * as  EventEmitter from 'eventemitter3';
  */
 export default class FileManager extends EventEmitter {
   readonly backend: Backend;
-  private _fileAdapter?: FileAdapter;
-  private _fileRepo?: Repository<typeof FileInfoDesc>;
-  private syncManager?: SyncManager;
+  private _fileAdapter!: FileAdapter;
+  private _fileRepo!: Repository<typeof FileInfoDesc>;
+  private syncManager!: SyncManager;
+
+  public get fileAdapter(): FileAdapter {
+    return this._fileAdapter;
+  }
+
+  public get fileRepo() {
+    return this._fileRepo;
+  }
+
   constructor(
     private config: Config,
     private decideSyncMode: DecideSyncMode,
@@ -63,25 +72,8 @@ export default class FileManager extends EventEmitter {
   }
 
   public async startSync() {
-    if(!this.syncManager) {
-      throw new Error('synManager is undefined.');
-    }
     if (await this.syncManager.syncSession()) {
       this.emit('successfully-synced');
     }
-  }
-
-  public get fileAdapter(): FileAdapter {
-    if(!this._fileAdapter) {
-      throw new Error('file adapter is not defined');
-    }
-    return this._fileAdapter;
-  }
-
-  public get fileRepo() {
-    if(!this._fileRepo) {
-      throw new Error('files is not defined');
-    }
-    return this._fileRepo;
   }
 }

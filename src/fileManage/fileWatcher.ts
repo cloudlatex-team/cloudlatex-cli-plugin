@@ -5,7 +5,7 @@ import { FileRepository } from '../model/fileModel';
 import Logger from './../logger';
 
 export default class FileWatcher extends EventEmitter {
-  private fileWatcher?: chokidar.FSWatcher;
+  private fileWatcher!: chokidar.FSWatcher;
 
   constructor(
     private rootPath: string,
@@ -25,12 +25,12 @@ export default class FileWatcher extends EventEmitter {
       }
       // ignored: /\.git|\.vswpp|synctex\.gz|main\.pdf|\.workspace|\.vscode|.DS\_Store/ //#TODO
     };
-    const fileWatcher = this.fileWatcher = chokidar.watch(this.rootPath, watcherOption);
+    this.fileWatcher = chokidar.watch(this.rootPath, watcherOption);
     return new Promise((resolve, reject) => {
-      fileWatcher.on('ready', () => {
-        fileWatcher.on('add', (file: string) => this.onWatchingNewFile(file));
-        fileWatcher.on('change', (file: string) => this.onWatchedFileChanged(file));
-        fileWatcher.on('unlink', (file: string) => this.onWatchedFileDeleted(file));
+      this.fileWatcher.on('ready', () => {
+        this.fileWatcher.on('add', (file: string) => this.onWatchingNewFile(file));
+        this.fileWatcher.on('change', (file: string) => this.onWatchedFileChanged(file));
+        this.fileWatcher.on('unlink', (file: string) => this.onWatchedFileDeleted(file));
         resolve();
       });
     });
@@ -136,6 +136,6 @@ export default class FileWatcher extends EventEmitter {
   }
 
   public unwatch() {
-    this.fileWatcher?.unwatch(this.rootPath);
+    this.fileWatcher.unwatch(this.rootPath);
   }
 }
