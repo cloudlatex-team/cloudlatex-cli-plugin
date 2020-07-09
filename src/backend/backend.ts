@@ -6,6 +6,10 @@ export default class Backend {
   constructor(protected config: Config) {
   }
 
+  validateToken(): Promise<boolean> {
+    throw new Error('No implementation');
+  }
+
   loadProjectInfo(): Promise<ProjectInfo> {
     throw new Error('No implementation');
   }

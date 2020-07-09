@@ -1,5 +1,3 @@
-import { FileInfo } from './model/fileModel';
-
 export interface ProjectInfo {
   id: number;
   compile_target_file_id: number;
@@ -10,6 +8,7 @@ export interface Config {
   outDir: string;
   rootPath: string;
   backend: string;
+  endpoint: string;
   email: string;
   client: string;
   token: string;

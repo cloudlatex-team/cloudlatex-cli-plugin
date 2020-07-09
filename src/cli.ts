@@ -16,7 +16,8 @@ function main() {
     client: '',
     email: '',
     token: '',
-    projectId: 0
+    projectId: 0,
+    endpoint: 'http://localhost:3000/api'
   }, () => Promise.resolve('upload'));
 }
 

@@ -1,12 +1,14 @@
 import fetch from 'node-fetch';
-import { Readable } from 'stream';
 import { CompileResult } from './types';
 import * as FormData from 'form-data';
 import { Config, ProjectInfo } from '../../types';
-import { APIProjects, APIRoot } from './clConst';
 
 export default class CLWebAppApi {
+  private APIRoot: string;
+  private APIProjects: string;
   constructor(private config: Config) {
+    this.APIRoot = config.endpoint;
+    this.APIProjects = config.endpoint + '/projects';
   }
 
   private headers(option: {json?: boolean, form?: boolean} = {}) {
@@ -26,30 +28,31 @@ export default class CLWebAppApi {
   }
 
   async validateToken() {
-    const res = await fetch(`${APIRoot}/auth/validate_token`, { headers: this.headers() });
-    return await res.json();
+    const res = await fetch(`${this.APIRoot}/auth/validate_token`, { headers: this.headers() });
+    const json = await res.json();
+    return !!json['success'];
   }
 
   async loadProjects() {
-    const res = await fetch(APIProjects, { headers: this.headers() });
+    const res = await fetch(this.APIProjects, { headers: this.headers() });
     return JSON.parse(await res.json());
   }
 
   async loadProjectInfo() {
-    const res = await fetch(`${APIProjects}/${this.config.projectId}`, { headers: this.headers() });
+    const res = await fetch(`${this.APIProjects}/${this.config.projectId}`, { headers: this.headers() });
     const text = await res.text();
     return JSON.parse(text)['project'] as ProjectInfo;
   }
 
   async loadFiles() {
-    const res = await fetch(`${APIProjects}/${this.config.projectId}/files`, { headers: this.headers() });
+    const res = await fetch(`${this.APIProjects}/${this.config.projectId}/files`, { headers: this.headers() });
     const text = await res.text();
     return JSON.parse(text);
   }
 
   async createFile(name: string, belongs: number, is_folder: boolean) {
     const res = await fetch(
-      `${APIProjects}/${this.config.projectId}`,
+      `${this.APIProjects}/${this.config.projectId}`,
       { headers: this.headers({ json: true }),
       method: 'POST',
       body: JSON.stringify({ name, is_folder, belongs }) }
@@ -59,7 +62,7 @@ export default class CLWebAppApi {
 
   async deleteFile(id: number) {
     const res = await fetch(
-      `${APIProjects}/${this.config.projectId}/files/${id}`,
+      `${this.APIProjects}/${this.config.projectId}/files/${id}`,
       { headers: this.headers(),
       method: 'DELETE' }
     );
@@ -68,7 +71,7 @@ export default class CLWebAppApi {
 
   async updateFile(id: number, params: any): Promise<{revision: string}> {
     const res = await fetch(
-      `${APIProjects}/${this.config.projectId}/files/${id}`,
+      `${this.APIProjects}/${this.config.projectId}/files/${id}`,
       { headers: this.headers({ json: true }),
       body: JSON.stringify({ material_file: params }),
       method: 'PUT' }
@@ -82,7 +85,7 @@ export default class CLWebAppApi {
 
   async compileProject(): Promise<CompileResult> {
     const res = await fetch(
-      `${APIProjects}/${this.config.projectId}/compile`,
+      `${this.APIProjects}/${this.config.projectId}/compile`,
       { headers: this.headers(),
       method: 'POST' }
     );
@@ -99,7 +102,7 @@ export default class CLWebAppApi {
     form.append('file', stream);
     const headers = form.getHeaders();
     const res = await fetch(
-      `${APIProjects}/${this.config.projectId}/files/upload`,
+      `${this.APIProjects}/${this.config.projectId}/files/upload`,
       { headers: { ...this.headers(), ...headers },
       body: form,
       method: 'POST' }

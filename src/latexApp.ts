@@ -1,6 +1,5 @@
 import * as path from 'path';
 import * as  EventEmitter from 'eventemitter3';
-import { Readable } from 'stream';
 import Logger from './logger';
 import { Config, ProjectInfo, AppInfo, SyncMode, DecideSyncMode } from './types';
 import Manager from './fileManage/index';
@@ -26,6 +25,16 @@ export default class LatexApp extends EventEmitter {
     });
 
     // #TODO offline 時を現在のstate machineに統合
+    try {
+      const result = await this.manager.backend.validateToken();
+      if(!result) {
+        this.logger.error('Your account is invalid.');
+        return;
+      }
+    } catch(err) {
+      this.logger.warn(`The network is offline or some trouble occur with the server.
+      You can edit your files, but your changes will not be reflected on the server.`);
+    }
     this.projectInfo = await this.manager.backend.loadProjectInfo();
     if (!this.projectInfo) {
       this.logger.error('Failed to load Project info.');
@@ -89,17 +98,15 @@ export default class LatexApp extends EventEmitter {
     try {
       const { pdfStream, logStream, synctexStream } = await this.manager.backend.compileProject();
       this.logger.info('Successfully Compiled.');
-        // log
+      // log
       this.manager.fileAdapter.saveAs(this.logPath, logStream);
 
       // download pdf
       this.manager.fileAdapter.saveAs(this.pdfPath, pdfStream).catch(err => {
-        this.logger.error(err);
+        this.logger.error('Some error occurred with downloading the compiled pdf file.', err);
       }).then(() => {
         this.emit('successfully-compiled');
         return;
-      }).catch(err => {
-        console.warn(err);
       });
 
       // download synctex
@@ -107,6 +114,7 @@ export default class LatexApp extends EventEmitter {
         this.manager.fileAdapter.saveAs(this.synctexPath, synctexStream);
       }
     } catch(err) {
+      console.error(err);
       this.logger.warn('Some error occured with compilation.', err);
     }
   }

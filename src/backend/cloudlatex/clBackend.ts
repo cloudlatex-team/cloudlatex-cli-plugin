@@ -1,6 +1,5 @@
 import * as path from 'path';
 import * as pako from 'pako';
-import { Readable } from 'stream';
 import { TextDecoder } from 'text-encoding';
 
 import WebAppApi from './webAppApi';
@@ -15,6 +14,10 @@ export default class ClBackend extends Backend {
   constructor(config: Config) {
     super(config);
     this.api = new WebAppApi(config);
+  }
+
+  public validateToken() {
+    return this.api.validateToken();
   }
 
   public download(file: FileInfo) {

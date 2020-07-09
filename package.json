@@ -2,9 +2,9 @@
   "name": "latex-extension",
   "version": "1.0.0",
   "license": "MIT",
-  "main": "./dist/index.js",
+  "main": "./dist/src/index.js",
   "bin": {
-    "latexcli": "./dist/cli.js"
+    "latexcli": "./dist/src/cli.js"
   },
   "scripts": {
     "compile": "tsc",
