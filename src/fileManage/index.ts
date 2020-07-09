@@ -60,7 +60,7 @@ export default class FileManager extends EventEmitter {
     this._fileAdapter = new FileAdapter(this.config.rootPath, this._fileRepo, this.backend, this.logger);
 
     // Sync Manager
-    this.syncManager = new SyncManager(this._fileRepo, this._fileAdapter, this.decideSyncMode);  
+    this.syncManager = new SyncManager(this._fileRepo, this._fileAdapter, this.decideSyncMode, this.logger);
 
     // File watcher
     const fileWatcher = new FileWatcher(this.config.rootPath, this._fileRepo, this.fileFilter, this.logger);

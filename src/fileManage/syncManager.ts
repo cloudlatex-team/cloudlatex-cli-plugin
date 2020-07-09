@@ -1,12 +1,14 @@
 import { SyncMode, DecideSyncMode, KeyType } from '../types';
 import FileAdapter from './fileAdapter';
 import { FileRepository, FileInfo } from '../model/fileModel';
+import Logger from './../logger';
+
 
 // #TODO folder 対応
 export default class SyncManager {
   private syncing: boolean = false;
   private syncReserved: boolean = false;
-  constructor(private fileRepo: FileRepository, private fileAdapter: FileAdapter,  public decideSyncMode: DecideSyncMode) {
+  constructor(private fileRepo: FileRepository, private fileAdapter: FileAdapter,  public decideSyncMode: DecideSyncMode, private logger: Logger) {
   }
 
   public async syncSession(): Promise<boolean> {
@@ -14,13 +16,14 @@ export default class SyncManager {
       this.syncReserved = true;
       return true;
     }
+    this.logger.info('Synchronizing files with server ...');
     this.syncing = true;
     try {
       await this.sync();
     } catch(e) {
       this.syncing = false;
       // #TODO offline or unauthorized?
-      console.error(e);
+      this.logger.error(JSON.stringify(e));
       return false;
     }
     this.syncing = false;

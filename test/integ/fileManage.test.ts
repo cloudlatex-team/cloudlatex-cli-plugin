@@ -62,7 +62,7 @@ const setupInstances = async () => {
   const fileAdapter = new FileAdapter(workdir, localFiles, backend, logger);
 
   // Sync Manager
-  const syncManager = new SyncManager(localFiles, fileAdapter, decideSyncMode);  
+  const syncManager = new SyncManager(localFiles, fileAdapter, decideSyncMode, logger);
 
   // File watcher
   fileWatcher = new FileWatcher(workdir, localFiles, () => true, logger);

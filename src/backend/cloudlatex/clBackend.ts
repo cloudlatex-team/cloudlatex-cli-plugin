@@ -36,9 +36,10 @@ export default class ClBackend extends Backend {
 
   public async updateRemote(file: FileInfo & {remoteId: number}, stream: NodeJS.ReadableStream): Promise<any> {
     const content = await streamToString(stream);
+    
     const result = await this.api.updateFile(file.remoteId, {
       content,
-      remoteRevision: file.remoteRevision
+      revision: file.remoteRevision
     });
     return result.revision;
   }
@@ -79,8 +80,8 @@ export default class ClBackend extends Backend {
   public async compileProject() {
     let result = await this.api.compileProject();
 
-    if(result.exit_code === 0) {
-      throw new Error(result.toString());
+    if(Number(result.exit_code) !== 0) {
+      throw result;
     }
 
     // log

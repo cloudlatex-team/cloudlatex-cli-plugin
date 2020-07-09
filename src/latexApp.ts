@@ -40,7 +40,7 @@ export default class LatexApp extends EventEmitter {
       this.logger.error('Failed to load Project info.');
       return;
     }
-    this.logger.log('project info', this.projectInfo);
+    // this.logger.log('project info', this.projectInfo);
     this.loggedIn = true;
     this.emit('appinfo-updated');
 
@@ -94,7 +94,7 @@ export default class LatexApp extends EventEmitter {
   }
 
   public async compile() {
-    this.logger.info('compile...');
+    this.logger.info('compiling...');
     try {
       const { pdfStream, logStream, synctexStream } = await this.manager.backend.compileProject();
       this.logger.info('Successfully Compiled.');
@@ -114,8 +114,8 @@ export default class LatexApp extends EventEmitter {
         this.manager.fileAdapter.saveAs(this.synctexPath, synctexStream);
       }
     } catch(err) {
-      console.error(err);
-      this.logger.warn('Some error occured with compilation.', err);
+      console.error('err', err);
+      this.logger.warn('Some error occured with compilation.!' + JSON.stringify(err));
     }
   }
 }
