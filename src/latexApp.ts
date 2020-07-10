@@ -1,7 +1,7 @@
 import * as path from 'path';
 import * as  EventEmitter from 'eventemitter3';
 import Logger from './logger';
-import { Config, ProjectInfo, AppInfo, SyncMode, DecideSyncMode } from './types';
+import { Config, ProjectInfo, AppInfo, DecideSyncMode } from './types';
 import Manager from './fileManage/index';
 
 export default class LatexApp extends EventEmitter {
@@ -11,10 +11,10 @@ export default class LatexApp extends EventEmitter {
 
   constructor(private config: Config, decideSyncMode: DecideSyncMode, private logger: Logger = new Logger()) {
     super();
-    this.manager = new Manager(config, decideSyncMode, 
+    this.manager = new Manager(config, decideSyncMode,
       relativePath => {
         return ![this.logPath, this.pdfPath, this.synctexPath].includes(relativePath);
-      }, 
+      },
       logger);
   }
 
@@ -29,11 +29,11 @@ export default class LatexApp extends EventEmitter {
   }
 
   get targetName(): string {
-    if(!this.projectInfo) {
+    if (!this.projectInfo) {
       throw new Error('Project info is not defined');
     }
     const file = this.manager.fileRepo.findBy('remoteId', this.projectInfo.compile_target_file_id);
-    if(!file) {
+    if (!file) {
       throw new Error('target file is not found');
     }
     return path.basename(file.relativePath, '.tex');
@@ -66,7 +66,7 @@ export default class LatexApp extends EventEmitter {
   }
 
   private onOffline() {
-    if(this.offline) {
+    if (this.offline) {
       return;
     }
     this.logger.warn(`The network is offline or some trouble occur with the server.
@@ -82,7 +82,7 @@ export default class LatexApp extends EventEmitter {
   public async compile() {
     this.logger.info('compiling...');
     try {
-      if (!this.projectInfo) {    
+      if (!this.projectInfo) {
         this.projectInfo = await this.manager.backend.loadProjectInfo();
       }
 
@@ -100,10 +100,10 @@ export default class LatexApp extends EventEmitter {
       });
 
       // download synctex
-      if(synctexStream) {
+      if (synctexStream) {
         this.manager.fileAdapter.saveAs(this.synctexPath, synctexStream);
       }
-    } catch(err) {
+    } catch (err) {
       console.error('err', err);
       this.logger.warn('Some error occured with compilation.!' + JSON.stringify(err));
     }

@@ -18,10 +18,10 @@ export default class CLWebAppApi {
       'client': this.config.client,
       // 'accept-language': 'ja,en-US;q=0.9,en;q=0.8'
     };
-    if(option.json) {
+    if (option.json) {
       headers['Content-Type'] = 'application/json';
     }
-    if(option.form) {
+    if (option.form) {
       headers['Content-Type'] = 'multipart/form-data';
     }
     return headers;
@@ -77,7 +77,7 @@ export default class CLWebAppApi {
       method: 'PUT' }
     );
     const result = JSON.parse(await res.text());
-    if(!res.ok) {
+    if (!res.ok) {
       throw result;
     }
     return result;
@@ -90,7 +90,7 @@ export default class CLWebAppApi {
       method: 'POST' }
     );
     const result = JSON.parse(await res.text());
-    if(!res.ok) {
+    if (!res.ok) {
       throw result;
     }
     return result;
@@ -108,7 +108,7 @@ export default class CLWebAppApi {
       method: 'POST' }
     );
     const result = JSON.parse(await res.text());
-    if(!res.ok) {
+    if (!res.ok) {
       throw result;
     }
     return result;

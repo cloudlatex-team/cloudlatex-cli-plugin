@@ -30,7 +30,7 @@ export type ChangeLocation = 'no' | 'local' | 'remote' | 'both';
 export interface DecideSyncMode {
   (
     remoteChangedFiles: string[],
-    localChangedFiles: string[], 
+    localChangedFiles: string[],
     bothChangedFiles: string[]
   ): Promise<SyncMode>
 }

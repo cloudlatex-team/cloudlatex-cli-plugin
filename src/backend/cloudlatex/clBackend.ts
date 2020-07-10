@@ -36,7 +36,7 @@ export default class ClBackend extends Backend {
 
   public async updateRemote(file: FileInfo & {remoteId: number}, stream: NodeJS.ReadableStream): Promise<any> {
     const content = await streamToString(stream);
-    
+
     const result = await this.api.updateFile(file.remoteId, {
       content,
       revision: file.remoteRevision
@@ -80,7 +80,7 @@ export default class ClBackend extends Backend {
   public async compileProject() {
     let result = await this.api.compileProject();
 
-    if(Number(result.exit_code) !== 0) {
+    if (Number(result.exit_code) !== 0) {
       throw result;
     }
 

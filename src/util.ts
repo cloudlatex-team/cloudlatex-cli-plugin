@@ -9,7 +9,7 @@ export function streamToString(stream: NodeJS.ReadableStream): Promise<string> {
     // stream.on('end', () => resolve(chunks.join()));
     // stream.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
     stream.on('end', () => {
-      if(typeof chunks[0] === 'string') {
+      if (typeof chunks[0] === 'string') {
         resolve(chunks.map(chunk => chunk.toString('utf-8')).join());
 
       } else {

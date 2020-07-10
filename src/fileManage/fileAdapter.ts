@@ -14,11 +14,11 @@ export default class FileAdapter {
   }
 
   public async download(file: FileInfo): Promise<unknown> {
-    if(file.isFolder) {
+    if (file.isFolder) {
       return;
-    } 
+    }
 
-    // # When failed download 
+    // # When failed download
     const stream = await this.backend.download(file);
     file.watcherSynced = false;
     await this.saveAs(file.relativePath, stream);
@@ -29,10 +29,10 @@ export default class FileAdapter {
   public async saveAs(relativePath: string, stream: NodeJS.ReadableStream): Promise<void> {
     const absPath = path.join(this.rootPath, relativePath);
     const dirname = path.dirname(absPath);
-    if(dirname !== relativePath) {
+    if (dirname !== relativePath) {
       try {
         await fs.promises.mkdir(dirname, { recursive: true });
-      } catch(err) {
+      } catch (err) {
       }
     }
 

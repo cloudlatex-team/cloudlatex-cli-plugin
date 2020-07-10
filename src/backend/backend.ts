@@ -1,6 +1,5 @@
 import { ProjectInfo, Config, KeyType } from './../types';
 import { FileInfo } from './../model/fileModel';
-import { Readable } from 'stream';
 
 export default class Backend {
   constructor(protected config: Config) {
@@ -33,7 +32,7 @@ export default class Backend {
   deleteRemote(file: FileInfo): Promise<unknown> {
     throw new Error('No implementation');
   }
- 
+
   compileProject(): Promise<{
     logStream: NodeJS.ReadableStream,
     pdfStream: NodeJS.ReadableStream,

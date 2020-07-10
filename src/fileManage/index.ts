@@ -1,6 +1,6 @@
 import { TypeDB, Repository } from 'type-db';
 import * as path from 'path';
-import { Config, SyncMode, DecideSyncMode } from './../types';
+import { Config, DecideSyncMode } from './../types';
 import Backend from './../backend/backend';
 import backendSelector from './../backend/backendSelector';
 import { FileInfoDesc } from './../model/fileModel';
@@ -48,7 +48,7 @@ export default class FileManager extends EventEmitter {
     const db = new TypeDB(dbFilePath);
     try {
       await db.load();
-    } catch(err) {
+    } catch (err) {
       // Not initialized because there is no db file.
     }
     this._fileRepo = db.getRepository(FileInfoDesc);
@@ -65,7 +65,7 @@ export default class FileManager extends EventEmitter {
     // File watcher
     const fileWatcher = new FileWatcher(this.config.rootPath, this._fileRepo, this.fileFilter, this.logger);
     await fileWatcher.init();
-    
+
     fileWatcher.on('change-detected', () => {
       this.startSync();
     });
@@ -74,12 +74,12 @@ export default class FileManager extends EventEmitter {
   public async startSync() {
     try {
       const result = await this.backend.validateToken();
-      if(!result) {
+      if (!result) {
         this.logger.error('Your account is invalid.');
         return;
       }
       this.emit('online');
-    } catch(err) {
+    } catch (err) {
       this.emit('offline');
       return;
     }

@@ -38,18 +38,18 @@ export default class FileWatcher extends EventEmitter {
 
   private onWatchingNewFile(absPath: string) {
     const relativePath = this.getRelativePath(absPath);
-    if(!this.filterWatchingEvent(relativePath)) {
+    if (!this.filterWatchingEvent(relativePath)) {
       return;
     }
     let file = this.fileRepo.findBy('relativePath', relativePath);
-    if(file) {
-      if(!file.watcherSynced) {
+    if (file) {
+      if (!file.watcherSynced) {
         // this file is downloaded from remote
         file.watcherSynced = true;
         this.fileRepo.save();
         return;
       }
-      if(file.localChange === 'delete') {
+      if (file.localChange === 'delete') {
         // The same named file is deleted and created.
         file.localChange = 'update';
         this.fileRepo.save();
@@ -60,7 +60,7 @@ export default class FileWatcher extends EventEmitter {
     }
     this.logger.log('new file detected', absPath);
     file = this.fileRepo.new({
-      relativePath, 
+      relativePath,
       localChange: 'create',
       changeLocation: 'local',
       watcherSynced: true
@@ -71,23 +71,23 @@ export default class FileWatcher extends EventEmitter {
 
   private async onWatchedFileChanged(absPath: string) {
     const relativePath = this.getRelativePath(absPath);
-    if(!this.filterWatchingEvent(relativePath)) {
+    if (!this.filterWatchingEvent(relativePath)) {
       return;
     }
     const changedFile = this.fileRepo.findBy('relativePath', relativePath);
-    if(!changedFile) {
+    if (!changedFile) {
       this.logger.error('local-changed-error', absPath);
       return;
     }
 
     // file was changed by downloading
-    if(!changedFile.watcherSynced) {
+    if (!changedFile.watcherSynced) {
       changedFile.watcherSynced = true;
       this.fileRepo.save();
       return;
     }
 
-    if(changedFile.localChange !== 'create') {
+    if (changedFile.localChange !== 'create') {
       changedFile.localChange = 'update';
     }
     this.fileRepo.save();
@@ -96,7 +96,7 @@ export default class FileWatcher extends EventEmitter {
 
   private async onWatchedFileDeleted(absPath: string) {
     const relativePath = this.getRelativePath(absPath);
-    if(!this.filterWatchingEvent(relativePath)) {
+    if (!this.filterWatchingEvent(relativePath)) {
       return;
     }
     const file = this.fileRepo.findBy('relativePath', relativePath);
@@ -106,13 +106,13 @@ export default class FileWatcher extends EventEmitter {
     }
 
     // file was deleted by deleteLocal() because remote file is deleted.
-    if(!file.watcherSynced) {
+    if (!file.watcherSynced) {
       this.fileRepo.delete(file.id);
       this.fileRepo.save();
       return;
     }
 
-    if(file.localChange === 'create') {
+    if (file.localChange === 'create') {
       this.fileRepo.delete(file.id);
       this.fileRepo.save();
       this.emit('change-detected');
@@ -129,7 +129,7 @@ export default class FileWatcher extends EventEmitter {
   }
 
   private filterWatchingEvent(relativePath: string): boolean {
-    if(this.watcherFileFilter && !this.watcherFileFilter(relativePath)) {
+    if (this.watcherFileFilter && !this.watcherFileFilter(relativePath)) {
       return false;
     }
     return true;
