@@ -72,6 +72,17 @@ export default class FileManager extends EventEmitter {
   }
 
   public async startSync() {
+    try {
+      const result = await this.backend.validateToken();
+      if(!result) {
+        this.logger.error('Your account is invalid.');
+        return;
+      }
+      this.emit('online');
+    } catch(err) {
+      this.emit('offline');
+      return;
+    }
     if (await this.syncManager.syncSession()) {
       this.emit('successfully-synced');
     }

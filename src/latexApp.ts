@@ -6,7 +6,7 @@ import Manager from './fileManage/index';
 
 export default class LatexApp extends EventEmitter {
   private projectInfo?: ProjectInfo;
-  private loggedIn :boolean = false;
+  private offline: boolean = true;
   private manager: Manager;
 
   constructor(private config: Config, decideSyncMode: DecideSyncMode, private logger: Logger = new Logger()) {
@@ -23,38 +23,9 @@ export default class LatexApp extends EventEmitter {
     this.manager.on('successfully-synced', () => {
       this.compile();
     });
-
-    // #TODO offline 時を現在のstate machineに統合
-    try {
-      const result = await this.manager.backend.validateToken();
-      if(!result) {
-        this.logger.error('Your account is invalid.');
-        return;
-      }
-    } catch(err) {
-      this.logger.warn(`The network is offline or some trouble occur with the server.
-      You can edit your files, but your changes will not be reflected on the server.`);
-    }
-    this.projectInfo = await this.manager.backend.loadProjectInfo();
-    if (!this.projectInfo) {
-      this.logger.error('Failed to load Project info.');
-      return;
-    }
-    // this.logger.log('project info', this.projectInfo);
-    this.loggedIn = true;
-    this.emit('appinfo-updated');
-
+    this.manager.on('offline', this.onOffline.bind(this));
+    this.manager.on('online', this.onOnline.bind(this));
     await this.manager.startSync();
-    /*
-    try {
-      const result = await this.manager.backend.validateToken();
-      if (!result.success) {
-        throw new result;
-      }
-    } catch(err) {
-      return;
-    }
-    */
   }
 
   get targetName(): string {
@@ -82,11 +53,26 @@ export default class LatexApp extends EventEmitter {
 
   get appInfo(): AppInfo {
     return {
-      loggedIn: this.loggedIn,
+      offline: this.offline,
       backend: this.config.backend,
       projectName: this.projectInfo?.title,
       projectId: this.projectInfo?.id ? String(this.projectInfo.id) : ''
     };
+  }
+
+  private onOnline() {
+    this.offline = false;
+    this.emit('appinfo-updated');
+  }
+
+  private onOffline() {
+    if(this.offline) {
+      return;
+    }
+    this.logger.warn(`The network is offline or some trouble occur with the server.
+    You can edit your files, but your changes will not be reflected on the server.`);
+    this.offline = true;
+    this.emit('appinfo-updated');
   }
 
   public async reload() {
@@ -96,6 +82,10 @@ export default class LatexApp extends EventEmitter {
   public async compile() {
     this.logger.info('compiling...');
     try {
+      if (!this.projectInfo) {    
+        this.projectInfo = await this.manager.backend.loadProjectInfo();
+      }
+
       const { pdfStream, logStream, synctexStream } = await this.manager.backend.compileProject();
       this.logger.info('Successfully Compiled.');
       // log

@@ -8,7 +8,11 @@ import Logger from './../logger';
 export default class SyncManager {
   private syncing: boolean = false;
   private syncReserved: boolean = false;
-  constructor(private fileRepo: FileRepository, private fileAdapter: FileAdapter,  public decideSyncMode: DecideSyncMode, private logger: Logger) {
+  constructor(
+    private fileRepo: FileRepository, 
+    private fileAdapter: FileAdapter,  
+    public decideSyncMode: DecideSyncMode, 
+    private logger: Logger) {
   }
 
   public async syncSession(): Promise<boolean> {
@@ -151,12 +155,5 @@ export default class SyncManager {
       case 'no':
         return Promise.resolve();
     }
-  }
-
-  private toDict(list: FileInfo[]): Record<number, FileInfo>{
-    return list.reduce((dict, file) => {
-      dict[file.id] = file;
-      return dict;
-    }, {} as Record<number, FileInfo>);
   }
 }

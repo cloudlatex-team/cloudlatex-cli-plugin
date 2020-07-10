@@ -23,7 +23,6 @@ export default class BackendStub extends Backend {
 
   loadProjectInfo(): Promise<ProjectInfo> {
     if (this.isOffline) {
-      // TODO
       return Promise.reject();
     }
     return Promise.resolve({
@@ -35,7 +34,6 @@ export default class BackendStub extends Backend {
 
   loadFileList(): Promise<FileInfo[]> {
     if (this.isOffline) {
-      // TODO
       return Promise.reject();
     }
     return Promise.resolve(this.remoteFiles.all());
@@ -43,7 +41,6 @@ export default class BackendStub extends Backend {
 
   async upload(file: FileInfo, stream: NodeJS.ReadableStream, option?: any) {
     if (this.isOffline) {
-      // TODO
       return Promise.reject();
     }
     const newFile = this.remoteFiles.new({ ...file });
@@ -59,7 +56,6 @@ export default class BackendStub extends Backend {
 
   async download(file: FileInfo): Promise<NodeJS.ReadableStream> {
     if (this.isOffline) {
-      // TODO
       return Promise.reject();
     }
     const remoteFile = this.remoteFiles.findBy('remoteId', file.remoteId);
@@ -79,7 +75,6 @@ export default class BackendStub extends Backend {
 
   async updateRemote(file: FileInfo, stream: NodeJS.ReadableStream): Promise<KeyType> {
     if (this.isOffline) {
-      // TODO
       return Promise.reject();
     }
     const targetFile = this.remoteFiles.findBy('remoteId', file.remoteId);
@@ -92,7 +87,6 @@ export default class BackendStub extends Backend {
   
   deleteRemote(file: FileInfo) {
     if (this.isOffline) {
-      // TODO
       return Promise.reject();
     }
     const targetFile = this.remoteFiles.findBy('remoteId', file.remoteId);
@@ -106,7 +100,6 @@ export default class BackendStub extends Backend {
 
   compileProject(): any {
     if (this.isOffline) {
-      // TODO
       return Promise.reject();
     }
     return Promise.resolve();

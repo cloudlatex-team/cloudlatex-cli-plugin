@@ -16,7 +16,7 @@ export interface Config {
 }
 
 export interface AppInfo {
-  loggedIn: boolean;
+  offline: boolean;
   backend?: string;
   projectName?: string;
   projectId?: string;
