@@ -17,21 +17,21 @@ export const TestConfigList = (() => {
   changeOptions.forEach(local => {
     changeOptions.forEach(remote => {
       let conflictOptions = [false];
-      if((local === 'update' || local === 'delete') &&
+      if ((local === 'update' || local === 'delete') &&
         (remote === 'update' || remote === 'delete')) {
         conflictOptions.push(true);
       }
       conflictOptions.forEach(conflict => {
         let syncModeOptions: SyncMode[] = ['upload'];
-        if(conflict) {
+        if (conflict) {
           syncModeOptions.push('download');
         }
         syncModeOptions.forEach(syncMode => {
           let describe = `local: "${local}" remote: "${remote}" `;
-          if(conflictOptions.length > 1) {
+          if (conflictOptions.length > 1) {
             describe += `conflict: "${conflict}" `;
           }
-          if(conflict) {
+          if (conflict) {
             describe += `mode: "${syncMode}" `;
           }
           list.push({

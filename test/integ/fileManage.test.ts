@@ -21,10 +21,10 @@ import fsStub from './../tool/fsStub';
 
 const workdir = '/workdir';
 const testFileDict = {
-  [path.join(workdir, 'main.tex')]: 'content', 
-  [path.join(workdir, 'readme.md')]: 'readme', 
-  [path.join(workdir, 'images', 'img1.png')]: '', 
-  [path.join(workdir, 'images', 'img2.png')]: '', 
+  [path.join(workdir, 'main.tex')]: 'content',
+  [path.join(workdir, 'readme.md')]: 'readme',
+  [path.join(workdir, 'images', 'img1.png')]: '',
+  [path.join(workdir, 'images', 'img2.png')]: '',
   [path.join(workdir, 'images', 'sub_images', 'sub_img1.png')]: '',
 } as const;
 
@@ -96,9 +96,9 @@ type ChangeSet = {
 class TestSituation {
   constructor(
     private fileDict: Record<string, string>,
-    private changeSet: ChangeSet, 
+    private changeSet: ChangeSet,
     private config: tool.TestConfig,
-    private instances: ReturnType<typeof setupInstances> extends Promise<infer T> ? T : never) 
+    private instances: ReturnType<typeof setupInstances> extends Promise<infer T> ? T : never)
   {
   }
 
@@ -119,7 +119,7 @@ class TestSituation {
 
   private async applyFileChanges() {
     let tasks: Promise<void>[] = [];
-    switch(this.config.changeStates.local) {
+    switch (this.config.changeStates.local) {
       case 'create':
         tasks = tasks.concat(this.changeSet.local.create.map(
           relativePath => fs.promises.writeFile(
@@ -131,7 +131,7 @@ class TestSituation {
       case 'update':
         tasks = tasks.concat(this.changeSet.local.update.map(
           fileInfo => fs.promises.writeFile(
-            path.join(workdir, fileInfo.relativePath), 
+            path.join(workdir, fileInfo.relativePath),
             this.getChangedContent(fileInfo.relativePath, this.config.changeStates.local, 'local')
           )
         ));
@@ -142,8 +142,8 @@ class TestSituation {
         ));
         break;
     }
-  
-    switch(this.config.changeStates.remote) {
+
+    switch (this.config.changeStates.remote) {
       case 'create':
         tasks = tasks.concat(this.changeSet.remote.create.map(
           relativePath => this.instances.backend._createInRemote(
@@ -155,7 +155,7 @@ class TestSituation {
       case 'update':
         tasks = tasks.concat(this.changeSet.remote.update.map(
           fileInfo => {
-            if(fileInfo.remoteId === null) {
+            if (fileInfo.remoteId === null) {
               throw new Error('remoteId is null');
             }
             return this.instances.backend._updateInRemote(
@@ -168,7 +168,7 @@ class TestSituation {
       case 'delete':
         tasks = tasks.concat(this.changeSet.remote.delete.map(
           fileInfo => {
-            if(fileInfo.remoteId === null) {
+            if (fileInfo.remoteId === null) {
               throw new Error('remoteId is null');
             }
             return this.instances.backend._deleteInRemote(
@@ -188,7 +188,7 @@ class TestSituation {
   private computeExpectedFileDict(): Record<string, string> {
     let expectedFileDict: Record<string, string> = Object.assign({}, this.fileDict);
     const applyChange = (location: 'local' | 'remote') => {
-      switch(this.config.changeStates[location]) {
+      switch (this.config.changeStates[location]) {
         case 'create':
           this.changeSet[location]['create'].forEach(relativePath => {
             expectedFileDict[path.join(workdir, relativePath)] = this.getChangedContent(relativePath, 'create', location);
@@ -206,9 +206,9 @@ class TestSituation {
           break;
       }
     };
-    if(this.config.isOffline) {
+    if (this.config.isOffline) {
       applyChange('local');
-    } else if(this.config.syncMode === 'upload') {
+    } else if (this.config.syncMode === 'upload') {
       // Apply remote changes first and apply local changes later,
       // which emulates the 'upload' mode
       (['remote', 'local'] as const).forEach(applyChange);
@@ -221,20 +221,20 @@ class TestSituation {
   }
 
   private computeExpectedChangeState(absPath: string): ChangeState {
-    if(!this.config.isOffline) {
+    if (!this.config.isOffline) {
       return 'no'; // Changed should be resolved
     }
-    if(this.changeSet.local.create.some(relativePath => (
+    if (this.changeSet.local.create.some(relativePath => (
       absPath === path.join(workdir, relativePath)
     ))) {
       return 'create';
     }
-    if(this.changeSet.local.update.some(fileInfo => (
+    if (this.changeSet.local.update.some(fileInfo => (
       absPath === path.join(workdir, fileInfo.relativePath)
     ))) {
       return 'update';
     }
-    if(this.changeSet.local.delete.some(fileInfo => (
+    if (this.changeSet.local.delete.some(fileInfo => (
       absPath === path.join(workdir, fileInfo.relativePath)
     ))) {
       return 'delete';
@@ -244,7 +244,7 @@ class TestSituation {
 
   private async verify(syncResult: boolean) {
     const expectedFileDict = this.computeExpectedFileDict();
-    if(this.config.isOffline) {
+    if (this.config.isOffline) {
       chai.assert.isFalse(syncResult);
     } else {
       chai.assert.isTrue(syncResult);
@@ -265,14 +265,14 @@ class TestSituation {
       // local
       const localFile = this.instances.localFiles.findBy('relativePath', relativePath);
       chai.assert.isNotNull(localFile);
-      if(!localFile) {
+      if (!localFile) {
         return;
       }
       chai.assert.isTrue(localFile.watcherSynced, `localFile.watcherSynced of ${localFile.relativePath}`);
       chai.assert.strictEqual(localFile.localChange, this.computeExpectedChangeState(absPath), `local.localChange of ${localFile.relativePath}`);
       tasks.push(assertStream(fs.createReadStream(absPath), expectedContent));
-      
-      if(this.config.isOffline) {
+
+      if (this.config.isOffline) {
         return;
       }
 
@@ -296,10 +296,10 @@ describe('Sync file system', () => {
     it(config.describe, async () => {
       const instances = await setupInstances();
       const localNewFiles = ['new_file.tex', 'images/new_img.png'];
-      const remoteNewFiles = config.conflict ? 
+      const remoteNewFiles = config.conflict ?
         localNewFiles : ['remote_new_file.tex', 'images/remote_new_img.png'];
       const localChangeFiles = [instances.localFiles.all()[1], instances.localFiles.all()[4]];
-      const remoteChangeFiles = config.conflict ? 
+      const remoteChangeFiles = config.conflict ?
         localChangeFiles : [instances.localFiles.all()[2], instances.localFiles.all()[3]];
       const changeSet: ChangeSet = {
         'local': {

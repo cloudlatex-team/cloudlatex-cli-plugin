@@ -6,7 +6,7 @@ import Manager from './fileManage/index';
 
 export default class LatexApp extends EventEmitter {
   private projectInfo?: ProjectInfo;
-  private offline: boolean = true;
+  private offline: boolean = false;
   private manager: Manager;
 
   constructor(private config: Config, decideSyncMode: DecideSyncMode, private logger: Logger = new Logger()) {
@@ -76,7 +76,7 @@ export default class LatexApp extends EventEmitter {
   }
 
   public async reload() {
-    await this.manager.fileAdapter.loadFileList();
+    await this.manager.startSync();
   }
 
   public async compile() {

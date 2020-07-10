@@ -8,7 +8,7 @@
   },
   "scripts": {
     "compile": "tsc",
-    "lint": "eslint src --ext ts",
+    "lint": "eslint src test --ext ts",
     "watch": "tsc -watch -p ./",
     "test": "nyc mocha -r ts-node/register \"test/**/*.ts\"",
     "unit": "nyc mocha -r ts-node/register \"test/unit/*.ts\"",

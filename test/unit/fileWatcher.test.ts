@@ -47,7 +47,7 @@ before(setupWorkspace);
 after(cleanupWorkspace);
 
 afterEach(() => {
-  if(watcher) {
+  if (watcher) {
     watcher.unwatch();
     watcher = null;
   }

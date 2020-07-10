@@ -59,14 +59,14 @@ export default class BackendStub extends Backend {
       return Promise.reject();
     }
     const remoteFile = this.remoteFiles.findBy('remoteId', file.remoteId);
-    if(!remoteFile) {
+    if (!remoteFile) {
       throw new Error('remoteFile is null');
     }
 
-    if(remoteFile.remoteId === null) {
+    if (remoteFile.remoteId === null) {
       throw new Error('remoteId is null');
     }
-    if(!(remoteFile.remoteId in this.remoteContents)) {
+    if (!(remoteFile.remoteId in this.remoteContents)) {
       console.log(remoteFile, this.remoteContents);
       throw new Error('remote content is not found');
     }
@@ -84,7 +84,7 @@ export default class BackendStub extends Backend {
     this.remoteContents[targetFile.remoteId] = await streamToString(stream);
     return targetFile.remoteRevision = uuid();
   }
-  
+
   deleteRemote(file: FileInfo) {
     if (this.isOffline) {
       return Promise.reject();
@@ -106,7 +106,7 @@ export default class BackendStub extends Backend {
   }
 
   /*
-   * File operation methods for test situations 
+   * File operation methods for test situations
    */
   async _createInRemote(fileInfo: Partial<FileInfo>, content: string): Promise<void> {
     const isOffline = this.isOffline;
@@ -120,7 +120,7 @@ export default class BackendStub extends Backend {
     this.isOffline = false;
 
     const remoteFiles = this.remoteFiles.where(fileInfo);
-    if(!remoteFiles || remoteFiles.length !== 1) {
+    if (!remoteFiles || remoteFiles.length !== 1) {
       throw new Error('Remote file is not found');
     }
     await this.updateRemote(remoteFiles[0], new ReadableString(content));
@@ -133,7 +133,7 @@ export default class BackendStub extends Backend {
 
     this.isOffline = false;
     const remoteFiles = this.remoteFiles.where(fileInfo);
-    if(!remoteFiles || remoteFiles.length !== 1) {
+    if (!remoteFiles || remoteFiles.length !== 1) {
       throw new Error('Remote file is not found');
     }
     this.deleteRemote(remoteFiles[0]);
