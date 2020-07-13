@@ -26,7 +26,7 @@ const setupInstances = async () => {
   const db = new TypeDB();
   const files = db.getRepository(FileInfoDesc);
   files.new({ relativePath: 'main.tex', watcherSynced: true });
-  watcher =  new FileWatcher(workspacePath, files, () => true, new Logger());
+  watcher =  new FileWatcher(workspacePath, files, () => true, new Logger('warn'));
   const changedSpy = Sinon.spy();
   const awaitChangeDetection = () => {
     return new Promise((resolve, reject) => {

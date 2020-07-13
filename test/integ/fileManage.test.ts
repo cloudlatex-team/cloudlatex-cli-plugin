@@ -28,6 +28,11 @@ const testFileDict = {
   [path.join(workdir, 'images', 'sub_images', 'sub_img1.png')]: '',
 } as const;
 
+const testFileAndFolderDict = Object.assign({}, testFileDict, {
+  [path.join(workdir, 'images')]: null,
+  [path.join(workdir, 'images', 'sub_images')]: null,
+});
+
 let fileWatcher: FileWatcher;
 const setupInstances = async () => {
 
@@ -36,17 +41,17 @@ const setupInstances = async () => {
   const decideSyncMode: DecideSyncMode = () => Promise.resolve(syncModeRef.instance);
   const decideSyncModeSpy = Sinon.spy(decideSyncMode);
 
-  const logger = new Logger();
+  const logger = new Logger('error');
 
   // Files
   const db = new TypeDB();
   const localFiles = db.getRepository(FileInfoDesc);
   const backend = new Backend();
-  Object.keys(testFileDict).map(absPath => {
+  Object.keys(testFileAndFolderDict).map(absPath => {
     const relativePath = path.relative(workdir, absPath);
     const fileInfo: Partial<FileInfo> = {
       relativePath,
-      isFolder: false,
+      isFolder: testFileAndFolderDict[absPath] === null,
       remoteRevision: uuid(),
       remoteId: uuid(),
       watcherSynced: true,
@@ -55,8 +60,9 @@ const setupInstances = async () => {
     };
     localFiles.new(fileInfo);
     backend.remoteFiles.new(fileInfo);
-    backend.remoteContents[fileInfo.remoteId as string] = testFileDict[absPath];
+    backend.remoteContents[fileInfo.remoteId as string] = testFileAndFolderDict[absPath];
   });
+
   fsStub(testFileDict);
   // File adapter
   const fileAdapter = new FileAdapter(workdir, localFiles, backend, logger);
@@ -112,7 +118,8 @@ class TestSituation {
 
     // Wait unitl the system synchronizes local files and remote files
     const syncResult = await this.instances.syncManager.syncSession();
-    await tool.sleep(0);
+    // await tool.sleep(0);
+
     // Verify syncronization result
     await this.verify(syncResult);
   }
@@ -270,15 +277,19 @@ class TestSituation {
       }
       chai.assert.isTrue(localFile.watcherSynced, `localFile.watcherSynced of ${localFile.relativePath}`);
       chai.assert.strictEqual(localFile.localChange, this.computeExpectedChangeState(absPath), `local.localChange of ${localFile.relativePath}`);
-      tasks.push(assertStream(fs.createReadStream(absPath), expectedContent));
+      if (!localFile.isFolder) {
+        tasks.push(assertStream(fs.createReadStream(absPath), expectedContent));
+      }
 
       if (this.config.isOffline) {
         return;
       }
 
       // remote
-      const remoteContent = this.instances.backend.remoteContents[localFile.remoteId as string];
-      chai.assert.strictEqual(remoteContent, expectedContent, 'remoteContent');
+      if (!localFile.isFolder) {
+        const remoteContent = this.instances.backend.remoteContents[localFile.remoteId as string];
+        chai.assert.strictEqual(remoteContent, expectedContent, 'remoteContent');
+      }
     });
     await Promise.all(tasks);
   }
@@ -313,8 +324,21 @@ describe('Sync file system', () => {
           'delete': remoteChangeFiles
         },
       };
-      const test = new TestSituation(testFileDict, changeSet, config, instances);
+      const test = new TestSituation(testFileAndFolderDict, changeSet, config, instances);
       await test.executeTest();
     });
+  });
+});
+
+describe('Sync folder test', () => {
+  it('Create a folder and a file locally', async () => {
+    const instances = await setupInstances();
+    const folderAbsPath = path.join(workdir, 'addedFolder');
+    const fileAbsPath = path.join(workdir, 'addedFolder', 'file.txt');
+    const fileContent = 'file content';
+    await fs.promises.mkdir(folderAbsPath);
+    await fs.promises.writeFile(fileAbsPath, fileContent);
+    const syncResult = await instances.syncManager.syncSession();
+    // TODO check the order of sync tasks
   });
 });

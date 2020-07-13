@@ -67,7 +67,6 @@ export default class BackendStub extends Backend {
       throw new Error('remoteId is null');
     }
     if (!(remoteFile.remoteId in this.remoteContents)) {
-      console.log(remoteFile, this.remoteContents);
       throw new Error('remote content is not found');
     }
     return new ReadableString(this.remoteContents[remoteFile.remoteId]);
