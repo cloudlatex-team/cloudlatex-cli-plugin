@@ -1,10 +1,9 @@
-import { SyncMode, DecideSyncMode, KeyType } from '../types';
+import { SyncMode, DecideSyncMode, KeyType, ChangeLocation, ChangeState } from '../types';
 import FileAdapter from './fileAdapter';
 import { FileRepository, FileInfo } from '../model/fileModel';
+import * as path from 'path';
 import Logger from './../logger';
 
-
-// #TODO folder 対応
 export default class SyncManager {
   private syncing: boolean = false;
   private syncReserved: boolean = false;
@@ -26,7 +25,6 @@ export default class SyncManager {
       await this.sync();
     } catch (e) {
       this.syncing = false;
-      // #TODO offline or unauthorized?
       this.logger.error(JSON.stringify(e));
       return false;
     }
@@ -92,19 +90,20 @@ export default class SyncManager {
     this.fileRepo.save();
 
     let syncMode: SyncMode = 'download';
-    if (this.fileRepo.findBy('changeLocation', 'both')) { // #TODO only bothChanged?
+    if (this.fileRepo.findBy('changeLocation', 'both')) {
       syncMode = await this.decideSyncMode(
         this.fileRepo.where({ 'changeLocation': 'remote' }).map(file => file.relativePath),
         this.fileRepo.where({ 'changeLocation': 'local' }).map(file => file.relativePath),
         this.fileRepo.where({ 'changeLocation': 'both' }).map(file => file.relativePath),
       );
     }
-    let promises = this.getSyncTasks(syncMode);
-    await Promise.all(promises);
+    await new TasksExecuter(
+      this.generateSyncTasks(syncMode)
+    ).execute();
   }
 
-  private getSyncTasks(remoteSyncMode: SyncMode): Promise<unknown>[] {
-    const tasks: Promise<unknown>[] = [];
+  private generateSyncTasks(remoteSyncMode: SyncMode): PriorityTask[] {
+    const tasks: PriorityTask[] = [];
     this.fileRepo.all().forEach(file => {
       if (file.changeLocation === 'remote' ||
         (file.changeLocation === 'both' && remoteSyncMode === 'download')) {
@@ -119,41 +118,112 @@ export default class SyncManager {
     return tasks;
   }
 
-  private syncWithLocalTask(file: FileInfo): Promise<unknown> {
+  private syncWithLocalTask(file: FileInfo): PriorityTask {
+    const priority = this.computePriority(file, 'local');
     switch (file.localChange) {
       case 'create':
-        return this.fileAdapter.upload(file);
+        return new PriorityTask(() => this.fileAdapter.upload(file), priority);
       case 'update':
         if (file.remoteChange === 'delete') {
-          return this.fileAdapter.upload(file);
+          return new PriorityTask(() => this.fileAdapter.upload(file), priority);
         }
-        return this.fileAdapter.updateRemote(file);
+        return new PriorityTask(() => this.fileAdapter.updateRemote(file), priority);
       case 'delete':
         if (file.remoteChange === 'delete') {
+          // The same file is already deleted both in local and remote.
           this.fileRepo.delete(file.id);
           this.fileRepo.save();
-          return Promise.resolve();
+          return new PriorityTask(() => Promise.resolve(), priority);
         }
-        return this.fileAdapter.deleteRemote(file);
+        return new PriorityTask(() => this.fileAdapter.deleteRemote(file), priority);
       case 'no':
-        return Promise.resolve();
+        return new PriorityTask(() => Promise.resolve(), priority);
     }
   }
 
-  private syncWithRemoteTask(file: FileInfo): Promise<unknown> {
+  private syncWithRemoteTask(file: FileInfo): PriorityTask {
+    const priority = this.computePriority(file, 'remote');
     switch (file.remoteChange) {
       case 'create':
       case 'update':
-        return this.fileAdapter.download(file);
+        return new PriorityTask(() => this.fileAdapter.download(file), priority);
       case 'delete':
         if (file.localChange === 'delete') {
+          // The same file is already deleted both in local and remote.
           this.fileRepo.delete(file.id);
           this.fileRepo.save();
-          return Promise.resolve();
+          return new PriorityTask(() => Promise.resolve(), priority);
         }
-        return this.fileAdapter.deleteLocal(file);
+        return new PriorityTask(() => this.fileAdapter.deleteLocal(file), priority);
       case 'no':
-        return Promise.resolve();
+        return new PriorityTask(() => Promise.resolve(), priority);
+    }
+  }
+
+  private computePriority(file: FileInfo, syncDestination: 'local' | 'remote'): number {
+    let change: ChangeState = syncDestination === 'local' ?
+      file.localChange :
+      file.remoteChange;
+
+    switch (change) {
+      case 'create':
+      case 'update':
+        /*
+        *  Creation priority is inversely correlated with the depth of the path
+        *  because folder should be created from the root.
+        *
+        *  For example (priority : relativePath):
+        *    0 : folder1/
+        *    -1: folder1/folder2/
+        *    -2: folder1/folder2/folder3/
+        */
+        return - (file.relativePath.split(path.sep).length - 1);
+      case 'delete':
+        /*
+        *  Deletion priority is correlated with the depth of the path
+        *  because folder should be deleted from the deep end.
+        *
+        *  For example (priority : relativePath):
+        *    2: folder1/folder2/folder3/
+        *    1: folder1/folder2/
+        *    0: folder1/
+        */
+        return file.relativePath.split(path.sep).length - 1;
+    }
+    return 0; // Default priority is 0
+  }
+}
+
+class PriorityTask {
+  constructor(public readonly run: () => Promise<unknown>, public readonly priority: number) {
+  }
+}
+
+/*
+ * TasksExecuter class
+ *
+ * Execute tasks which have the same priority concurently
+ * and execute tasks which have different priority in series in order of the priority.
+ */
+class TasksExecuter {
+  constructor(private taskList: PriorityTask[]) {
+  }
+
+  async execute() {
+    const taskSeries = [];
+    const sortedTaskList = this.taskList.sort((task1, task2) => task1.priority - task2.priority);
+    // sortedTaskList[0] has lowest priority and sortedTaskList[-1] has highest priority.
+    while (sortedTaskList.length > 0) {
+      const priority = sortedTaskList[0].priority;
+      const concurrentTasks: PriorityTask[] = [];
+      while (sortedTaskList.length > 0 && sortedTaskList[0].priority === priority) {
+        concurrentTasks.push(sortedTaskList.shift() as PriorityTask);
+      }
+      taskSeries.push(() => Promise.all(concurrentTasks.map(task => task.run())));
+    }
+    let task;
+    while (task = taskSeries.pop()) {
+      await task();
     }
   }
 }

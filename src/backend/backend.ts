@@ -21,6 +21,10 @@ export default class Backend {
     throw new Error('No implementation');
   }
 
+  createRemote(file: FileInfo, parent: FileInfo): Promise<{remoteId: KeyType, remoteRevision: any}> {
+    throw new Error('No implementation');
+  }
+
   download(file: FileInfo): Promise<NodeJS.ReadableStream> {
     throw new Error('No implementation');
   }

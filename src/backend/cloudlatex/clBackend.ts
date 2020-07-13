@@ -30,11 +30,16 @@ export default class ClBackend extends Backend {
       relativeDir = relativeDir.slice(1);
     }
     const result = await this.api.uploadFile(stream, relativeDir);
-    // # TODO revision is in result.file?
     return { remoteId: result.file.id, remoteRevision: result.file.revision };
   }
 
-  public async updateRemote(file: FileInfo & {remoteId: number}, stream: NodeJS.ReadableStream): Promise<any> {
+  public async createRemote(file: FileInfo, parent: FileInfo): Promise<{remoteId: KeyType, remoteRevision: any}> {
+    const belongs = Number(parent.remoteId);
+    const result = await this.api.createFile(file.relativePath, belongs, file.isFolder);
+    return { remoteId: result.file.id, remoteRevision: result.file.revision };
+  }
+
+  public async updateRemote(file: FileInfo & {remoteId: number}, stream: NodeJS.ReadableStream): Promise<KeyType> {
     const content = await streamToString(stream);
 
     const result = await this.api.updateFile(file.remoteId, {
@@ -53,7 +58,6 @@ export default class ClBackend extends Backend {
   }
 
   public async loadFileList(): Promise<FileInfo[]> {
-    // #TODO detect unauthorized and offline
     const res = await this.api?.loadFiles();
     const materialFiles: Array<ClFile> = res.material_files;
 

@@ -16,7 +16,7 @@ import { DecideSyncMode } from '../../src';
 import { SyncMode, ChangeState, ChangeLocation } from '../../src/types';
 
 import * as tool from './../tool/syncTestTool';
-import { streamToString, ReadableString } from './../../src/util';
+import { streamToString } from './../../src/util';
 import fsStub from './../tool/fsStub';
 
 const workdir = '/workdir';

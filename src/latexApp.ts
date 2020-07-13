@@ -13,7 +13,7 @@ export default class LatexApp extends EventEmitter {
     super();
     this.manager = new Manager(config, decideSyncMode,
       relativePath => {
-        return ![this.logPath, this.pdfPath, this.synctexPath].includes(relativePath);
+        return ![this.config.outDir, this.logPath, this.pdfPath, this.synctexPath].includes(relativePath);
       },
       logger);
   }

@@ -37,10 +37,13 @@ function fsStub(files: Record<string, string>) {
   ));
 
   Sinon.stub(fs.promises, 'mkdir').callsFake((path: fs.PathLike, options?: any) => (
-   originalMkdir(path, options).then((str: string) => {
-    watcher.emit('addDir', path);
-    return str;
-   })
+    fs.promises.stat(path).then(() => {
+      throw new Error(`EEXIST: file already exists, mkdir '${path}'`);
+    }).catch(async () => {
+      const str = await originalMkdir(path, options);
+      watcher.emit('addDir', path);
+      return str;
+    })
   ));
 
   Sinon.stub(fs.promises, 'unlink').callsFake((path: fs.PathLike) => (

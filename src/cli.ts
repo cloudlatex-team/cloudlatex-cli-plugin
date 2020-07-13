@@ -3,6 +3,7 @@
 import LatexApp from './latexApp';
 import { Config, ProjectInfo, AppInfo, SyncMode, DecideSyncMode } from './types';
 
+// TDOO
 function main() {
   console.log('hello');
   return;

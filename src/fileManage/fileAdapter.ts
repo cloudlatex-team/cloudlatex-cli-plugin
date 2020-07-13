@@ -1,6 +1,5 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { KeyType } from '../types';
 import Backend from '../backend/backend';
 import { FileRepository, FileInfo } from '../model/fileModel';
 import Logger from '../logger';
@@ -15,13 +14,17 @@ export default class FileAdapter {
 
   public async download(file: FileInfo): Promise<unknown> {
     if (file.isFolder) {
+      const absPath = path.join(this.rootPath, file.relativePath);
+      fs.promises.mkdir(absPath);
       return;
     }
 
     // # When failed download
     const stream = await this.backend.download(file);
     file.watcherSynced = false;
+    this.logger.log('before download', file);
     await this.saveAs(file.relativePath, stream);
+    this.logger.log('after download');
     file.localChange = 'no';
     this.fileRepo.save();
   }
@@ -31,7 +34,7 @@ export default class FileAdapter {
     const dirname = path.dirname(absPath);
     if (dirname !== relativePath) {
       try {
-        await fs.promises.mkdir(dirname, { recursive: true });
+        await fs.promises.mkdir(dirname);
       } catch (err) {
       }
     }
@@ -49,10 +52,20 @@ export default class FileAdapter {
   }
 
   public async upload(file: FileInfo, option?: any): Promise<void>  {
-    const stream = fs.createReadStream(path.join(this.rootPath, file.relativePath));
-    const { remoteId, remoteRevision } = await this.backend.upload(file, stream, option);
-    file.remoteId = remoteId;
-    file.remoteRevision = remoteRevision;
+    if (file.isFolder) {
+      const parent = this.fileRepo.findBy('relativePath', path.dirname(file.relativePath));
+      if (!parent) {
+        throw new Error('parent file is not found');
+      }
+      const { remoteId, remoteRevision } = await this.backend.createRemote(file, parent);
+      file.remoteId = remoteId;
+      file.remoteRevision = remoteRevision;
+    } else {
+      const stream = fs.createReadStream(path.join(this.rootPath, file.relativePath));
+      const { remoteId, remoteRevision } = await this.backend.upload(file, stream, option);
+      file.remoteId = remoteId;
+      file.remoteRevision = remoteRevision;
+    }
     file.localChange = 'no';
     this.fileRepo.save();
   }
@@ -72,9 +85,16 @@ export default class FileAdapter {
   }
 
   public async deleteLocal(file: FileInfo): Promise<void> {
+    const absPath = path.join(this.rootPath, file.relativePath);
+    if (file.isFolder) {
+      try {
+        fs.promises.rmdir(absPath);
+      } catch (e) { // Already deleted
+      }
+      return;
+    }
     file.watcherSynced = false;
     this.fileRepo.save();
-    const absPath = path.join(this.rootPath, file.relativePath);
     await fs.promises.unlink(absPath);
   }
 }
