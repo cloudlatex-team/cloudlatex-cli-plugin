@@ -33,8 +33,8 @@ export default class ClBackend extends Backend {
     return { remoteId: result.file.id, remoteRevision: result.file.revision };
   }
 
-  public async createRemote(file: FileInfo, parent: FileInfo): Promise<{remoteId: KeyType, remoteRevision: any}> {
-    const belongs = Number(parent.remoteId);
+  public async createRemote(file: FileInfo, parent: FileInfo | null): Promise<{remoteId: KeyType, remoteRevision: any}> {
+    const belongs = parent && Number(parent.remoteId);
     const result = await this.api.createFile(file.relativePath, belongs, file.isFolder);
     return { remoteId: result.file.id, remoteRevision: result.file.revision };
   }

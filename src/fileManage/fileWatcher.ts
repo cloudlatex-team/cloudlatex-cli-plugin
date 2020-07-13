@@ -26,6 +26,7 @@ export default class FileWatcher extends EventEmitter {
     };
     this.fileWatcher = chokidar.watch(this.rootPath, watcherOption);
     return new Promise((resolve, reject) => {
+      // TODO detect changes before running
       this.fileWatcher.on('ready', () => {
         this.fileWatcher.on('add', this.onFileCreated.bind(this));
         this.fileWatcher.on('addDir', (absPath) => this.onFileCreated(absPath, true));
@@ -134,7 +135,7 @@ export default class FileWatcher extends EventEmitter {
   }
 
   private onWatchingError (err: any) {
-    this.logger.error(err);
+    this.logger.error('onWatchingError', err);
   }
 
   private getRelativePath(absPath: string): string {

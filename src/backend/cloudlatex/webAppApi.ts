@@ -50,14 +50,15 @@ export default class CLWebAppApi {
     return JSON.parse(text);
   }
 
-  async createFile(name: string, belongs: number, is_folder: boolean) {
+  async createFile(name: string, belonging_to: number | null, is_folder: boolean) {
     const res = await fetch(
-      `${this.APIProjects}/${this.config.projectId}`,
+      `${this.APIProjects}/${this.config.projectId}/files`,
       { headers: this.headers({ json: true }),
       method: 'POST',
-      body: JSON.stringify({ name, is_folder, belongs }) }
+      body: JSON.stringify({ name, is_folder, belonging_to }) }
     );
-    return JSON.parse(await res.text());
+    const result = await res.text();
+    return JSON.parse(result);
   }
 
   async deleteFile(id: number) {

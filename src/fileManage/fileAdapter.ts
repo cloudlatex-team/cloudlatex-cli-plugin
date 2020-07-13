@@ -22,9 +22,7 @@ export default class FileAdapter {
     // # When failed download
     const stream = await this.backend.download(file);
     file.watcherSynced = false;
-    this.logger.log('before download', file);
     await this.saveAs(file.relativePath, stream);
-    this.logger.log('after download');
     file.localChange = 'no';
     this.fileRepo.save();
   }
@@ -54,9 +52,6 @@ export default class FileAdapter {
   public async upload(file: FileInfo, option?: any): Promise<void>  {
     if (file.isFolder) {
       const parent = this.fileRepo.findBy('relativePath', path.dirname(file.relativePath));
-      if (!parent) {
-        throw new Error('parent file is not found');
-      }
       const { remoteId, remoteRevision } = await this.backend.createRemote(file, parent);
       file.remoteId = remoteId;
       file.remoteRevision = remoteRevision;

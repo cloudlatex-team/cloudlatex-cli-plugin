@@ -70,7 +70,9 @@ export default class LatexApp extends EventEmitter {
       return;
     }
     this.logger.warn(`The network is offline or some trouble occur with the server.
-    You can edit your files, but your changes will not be reflected on the server.`);
+      You can edit your files, but your changes will not be reflected on the server
+      until it is enable to communicate with the server.
+      `);
     this.offline = true;
     this.emit('appinfo-updated');
   }
@@ -104,7 +106,6 @@ export default class LatexApp extends EventEmitter {
         this.manager.fileAdapter.saveAs(this.synctexPath, synctexStream);
       }
     } catch (err) {
-      console.error('err', err);
       this.logger.warn('Some error occured with compilation.!' + JSON.stringify(err));
     }
   }

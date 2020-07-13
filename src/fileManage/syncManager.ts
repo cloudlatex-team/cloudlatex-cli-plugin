@@ -25,7 +25,7 @@ export default class SyncManager {
       await this.sync();
     } catch (e) {
       this.syncing = false;
-      this.logger.error(JSON.stringify(e));
+      this.logger.error('error in syncSession: ' + JSON.stringify(e));
       return false;
     }
     this.syncing = false;
