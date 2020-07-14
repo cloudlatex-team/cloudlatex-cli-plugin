@@ -5,13 +5,20 @@ import { Config, ProjectInfo, AppInfo, DecideSyncMode } from './types';
 import Manager from './fileManage/index';
 
 export default class LatexApp extends EventEmitter {
-  private projectInfo?: ProjectInfo;
-  private offline: boolean = false;
   private manager: Manager;
+  public readonly appInfo: AppInfo;
 
   constructor(private config: Config, decideSyncMode: DecideSyncMode, private logger: Logger = new Logger()) {
     super();
-    this.manager = new Manager(config, decideSyncMode,
+    this.appInfo = {
+      offline: false,
+      conflictFiles: []
+    };
+    this.manager = new Manager(config,
+      async (conflictFiles) => {
+        this.appInfo.conflictFiles = conflictFiles;
+        return decideSyncMode(conflictFiles);
+      },
       relativePath => {
         return ![this.config.outDir, this.logPath, this.pdfPath, this.synctexPath].includes(relativePath);
       },
@@ -29,12 +36,14 @@ export default class LatexApp extends EventEmitter {
   }
 
   get targetName(): string {
-    if (!this.projectInfo) {
+    if (!this.appInfo.compileTarget) {
+      this.logger.error('Project info is not defined');
       throw new Error('Project info is not defined');
     }
-    const file = this.manager.fileRepo.findBy('remoteId', this.projectInfo.compile_target_file_id);
+    const file = this.manager.fileRepo.findBy('remoteId', this.appInfo.compileTarget);
     if (!file) {
-      throw new Error('target file is not found');
+      this.logger.error('Target file is not found');
+      throw new Error('Target file is not found');
     }
     return path.basename(file.relativePath, '.tex');
   }
@@ -51,29 +60,20 @@ export default class LatexApp extends EventEmitter {
     return path.join(this.config.outDir, this.targetName + '.synctex');
   }
 
-  get appInfo(): AppInfo {
-    return {
-      offline: this.offline,
-      backend: this.config.backend,
-      projectName: this.projectInfo?.title,
-      projectId: this.projectInfo?.id ? String(this.projectInfo.id) : ''
-    };
-  }
-
   private onOnline() {
-    this.offline = false;
+    this.appInfo.offline = false;
     this.emit('appinfo-updated');
   }
 
   private onOffline() {
-    if (this.offline) {
+    if (this.appInfo.offline) {
       return;
     }
     this.logger.warn(`The network is offline or some trouble occur with the server.
       You can edit your files, but your changes will not be reflected on the server
       until it is enable to communicate with the server.
       `);
-    this.offline = true;
+    this.appInfo.offline = true;
     this.emit('appinfo-updated');
   }
 
@@ -84,8 +84,10 @@ export default class LatexApp extends EventEmitter {
   public async compile() {
     this.logger.info('compiling...');
     try {
-      if (!this.projectInfo) {
-        this.projectInfo = await this.manager.backend.loadProjectInfo();
+      if (!this.appInfo.compileTarget) {
+        const projectInfo = await this.manager.backend.loadProjectInfo();
+        this.appInfo.compileTarget = projectInfo.compile_target_file_id;
+        this.appInfo.projectName = projectInfo.title;
       }
 
       const { pdfStream, logStream, synctexStream } = await this.manager.backend.compileProject();

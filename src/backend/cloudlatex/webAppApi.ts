@@ -29,25 +29,36 @@ export default class CLWebAppApi {
 
   async validateToken() {
     const res = await fetch(`${this.APIRoot}/auth/validate_token`, { headers: this.headers() });
+    if (!res.ok) {
+      return false;
+    }
     const json = await res.json();
     return !!json['success'];
   }
 
   async loadProjects() {
     const res = await fetch(this.APIProjects, { headers: this.headers() });
+    if (!res.ok) {
+      throw new Error(JSON.stringify(res));
+    }
     return JSON.parse(await res.json());
   }
 
   async loadProjectInfo() {
     const res = await fetch(`${this.APIProjects}/${this.config.projectId}`, { headers: this.headers() });
+    if (!res.ok) {
+      throw new Error(JSON.stringify(res));
+    }
     const text = await res.text();
     return JSON.parse(text)['project'] as ProjectInfo;
   }
 
   async loadFiles() {
     const res = await fetch(`${this.APIProjects}/${this.config.projectId}/files`, { headers: this.headers() });
-    const text = await res.text();
-    return JSON.parse(text);
+    if (!res.ok) {
+      throw new Error(JSON.stringify(res));
+    }
+    return JSON.parse(await res.text());
   }
 
   async createFile(name: string, belonging_to: number | null, is_folder: boolean) {
@@ -57,8 +68,10 @@ export default class CLWebAppApi {
       method: 'POST',
       body: JSON.stringify({ name, is_folder, belonging_to }) }
     );
-    const result = await res.text();
-    return JSON.parse(result);
+    if (!res.ok) {
+      throw new Error(JSON.stringify(res));
+    }
+    return JSON.parse(await res.text());
   }
 
   async deleteFile(id: number) {
@@ -67,6 +80,9 @@ export default class CLWebAppApi {
       { headers: this.headers(),
       method: 'DELETE' }
     );
+    if (!res.ok) {
+      throw new Error(JSON.stringify(res));
+    }
     return JSON.parse(await res.text());
   }
 
@@ -77,11 +93,10 @@ export default class CLWebAppApi {
       body: JSON.stringify({ material_file: params }),
       method: 'PUT' }
     );
-    const result = JSON.parse(await res.text());
     if (!res.ok) {
-      throw result;
+      throw new Error(JSON.stringify(res));
     }
-    return result;
+    return JSON.parse(await res.text());
   }
 
   async compileProject(): Promise<CompileResult> {
@@ -90,11 +105,10 @@ export default class CLWebAppApi {
       { headers: this.headers(),
       method: 'POST' }
     );
-    const result = JSON.parse(await res.text());
     if (!res.ok) {
-      throw result;
+      throw new Error(JSON.stringify(res));
     }
-    return result;
+    return JSON.parse(await res.text());
   }
 
   async uploadFile(stream: NodeJS.ReadableStream, relativeDir: string) {
@@ -108,17 +122,19 @@ export default class CLWebAppApi {
       body: form,
       method: 'POST' }
     );
-    const result = JSON.parse(await res.text());
     if (!res.ok) {
-      throw result;
+      throw new Error(JSON.stringify(res));
     }
-    return result;
+    return JSON.parse(await res.text());
   }
 
   async download(url: string): Promise<NodeJS.ReadableStream> {
     const res = await fetch(
       `${url}`
     );
+    if (!res.ok) {
+      throw new Error(JSON.stringify(res));
+    }
     return res.body;
   }
 

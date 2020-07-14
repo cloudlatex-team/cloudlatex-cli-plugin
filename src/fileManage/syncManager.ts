@@ -25,7 +25,7 @@ export default class SyncManager {
       await this.sync();
     } catch (e) {
       this.syncing = false;
-      this.logger.error('error in syncSession: ' + JSON.stringify(e));
+      this.logger.error('error in syncSession: ' + e.stack);
       return false;
     }
     this.syncing = false;
@@ -92,8 +92,6 @@ export default class SyncManager {
     let syncMode: SyncMode = 'download';
     if (this.fileRepo.findBy('changeLocation', 'both')) {
       syncMode = await this.decideSyncMode(
-        this.fileRepo.where({ 'changeLocation': 'remote' }).map(file => file.relativePath),
-        this.fileRepo.where({ 'changeLocation': 'local' }).map(file => file.relativePath),
         this.fileRepo.where({ 'changeLocation': 'both' }).map(file => file.relativePath),
       );
     }

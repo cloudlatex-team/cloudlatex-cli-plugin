@@ -59,7 +59,7 @@ export default class FileWatcher extends EventEmitter {
         this.emit('change-detected');
         return;
       }
-      return this.logger.error('New file detected, but already registered.: ' + absPath);
+      return this.logger.error(`New ${isFolder ? 'folder' : 'file'} detected, but already registered.: ${absPath}`);
     }
     this.logger.log(
       `new ${isFolder ? 'folder' : 'file'} detected: ${absPath}`

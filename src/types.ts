@@ -17,9 +17,9 @@ export interface Config {
 
 export interface AppInfo {
   offline: boolean;
-  backend?: string;
   projectName?: string;
-  projectId?: string;
+  compileTarget?: KeyType,
+  conflictFiles: string[]
 }
 
 export type KeyType = number | string;
@@ -29,8 +29,6 @@ export type ChangeLocation = 'no' | 'local' | 'remote' | 'both';
 
 export interface DecideSyncMode {
   (
-    remoteChangedFiles: string[],
-    localChangedFiles: string[],
-    bothChangedFiles: string[]
+    conflictFiles: string[]
   ): Promise<SyncMode>
 }
