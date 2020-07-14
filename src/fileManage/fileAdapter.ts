@@ -15,7 +15,17 @@ export default class FileAdapter {
   public async download(file: FileInfo): Promise<unknown> {
     if (file.isFolder) {
       const absPath = path.join(this.rootPath, file.relativePath);
-      fs.promises.mkdir(absPath);
+      try {
+        await fs.promises.mkdir(absPath);
+      } catch (err) {
+        // Tolerate only the error that file is alraady exist.
+        if (err.code !== 'EEXIST') {
+          throw err;
+        }
+      }
+      file.localChange = 'no';
+      file.localRevision = file.remoteRevision;
+      this.fileRepo.save();
       return;
     }
 
@@ -24,6 +34,7 @@ export default class FileAdapter {
     file.watcherSynced = false;
     await this.saveAs(file.relativePath, stream);
     file.localChange = 'no';
+    file.localRevision = file.remoteRevision;
     this.fileRepo.save();
   }
 
@@ -54,12 +65,12 @@ export default class FileAdapter {
       const parent = this.fileRepo.findBy('relativePath', path.dirname(file.relativePath));
       const { remoteId, remoteRevision } = await this.backend.createRemote(file, parent);
       file.remoteId = remoteId;
-      file.remoteRevision = remoteRevision;
+      file.localRevision = remoteRevision;
     } else {
       const stream = fs.createReadStream(path.join(this.rootPath, file.relativePath));
       const { remoteId, remoteRevision } = await this.backend.upload(file, stream, option);
       file.remoteId = remoteId;
-      file.remoteRevision = remoteRevision;
+      file.localRevision = remoteRevision;
     }
     file.localChange = 'no';
     this.fileRepo.save();
@@ -67,8 +78,7 @@ export default class FileAdapter {
 
   public async updateRemote(file: FileInfo): Promise<void>  {
     const stream = fs.createReadStream(path.join(this.rootPath, file.relativePath));
-    const remoteRevision = await this.backend.updateRemote(file, stream);
-    file.remoteRevision = remoteRevision;
+    file.localRevision  = await this.backend.updateRemote(file, stream);
     file.localChange = 'no';
     this.fileRepo.save();
   }
@@ -84,12 +94,23 @@ export default class FileAdapter {
     if (file.isFolder) {
       try {
         fs.promises.rmdir(absPath);
-      } catch (e) { // Already deleted
+      } catch (err) {
+        // Tolerate the error that file is already deleted
+        if (err.code !== 'ENOENT') {
+          throw err;
+        }
       }
       return;
     }
     file.watcherSynced = false;
     this.fileRepo.save();
-    await fs.promises.unlink(absPath);
+    try {
+      await fs.promises.unlink(absPath);
+    } catch (err) {
+      // Tolerate the error that file is already deleted
+      if (err.code !== 'ENOENT') {
+        throw err;
+      }
+    }
   }
 }

@@ -49,10 +49,12 @@ const setupInstances = async () => {
   const backend = new Backend();
   Object.keys(testFileAndFolderDict).map(absPath => {
     const relativePath = path.relative(workdir, absPath);
+    const revision = uuid();
     const fileInfo: Partial<FileInfo> = {
       relativePath,
       isFolder: testFileAndFolderDict[absPath] === null,
-      remoteRevision: uuid(),
+      localRevision: revision,
+      remoteRevision: revision,
       remoteId: uuid(),
       watcherSynced: true,
       localChange: 'no',

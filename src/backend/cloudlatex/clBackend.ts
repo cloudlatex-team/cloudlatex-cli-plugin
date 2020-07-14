@@ -64,14 +64,15 @@ export default class ClBackend extends Backend {
     return materialFiles.map(materialFile => {
       return {
         id: -1,
-        isFolder: materialFile.is_folder,
-        relativePath: materialFile.full_path,
-        url: materialFile.file_url,
-        remoteRevision: materialFile.revision,
+        isFolder: !!materialFile.is_folder,
+        relativePath: String(materialFile.full_path),
+        url: String(materialFile.file_url),
+        remoteRevision: String(materialFile.revision),
+        localRevision: String(materialFile.revision),
         localChange: 'no',
         remoteChange: 'no',
         changeLocation: 'no',
-        remoteId: materialFile.id,
+        remoteId: Number(materialFile.id),
         watcherSynced: false
       };
     });

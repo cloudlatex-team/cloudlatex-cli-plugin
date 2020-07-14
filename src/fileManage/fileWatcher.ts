@@ -28,7 +28,7 @@ export default class FileWatcher extends EventEmitter {
     return new Promise((resolve, reject) => {
       // TODO detect changes before running
       this.fileWatcher.on('ready', () => {
-        this.fileWatcher.on('add', this.onFileCreated.bind(this));
+        this.fileWatcher.on('add', (absPath) => this.onFileCreated(absPath, false));
         this.fileWatcher.on('addDir', (absPath) => this.onFileCreated(absPath, true));
         this.fileWatcher.on('change', this.onFileChanged.bind(this));
         this.fileWatcher.on('unlink', this.onFileDeleted.bind(this));

@@ -54,6 +54,20 @@ export default class BackendStub extends Backend {
     };
   }
 
+  async createRemote(file: FileInfo, parent: FileInfo | null): Promise<{remoteId: KeyType, remoteRevision: any}> {
+    if (this.isOffline) {
+      return Promise.reject('offline');
+    }
+    const newFile = this.remoteFiles.new({ ...file });
+    newFile.id = -1; // reset local id
+    const remoteId = newFile.remoteId = uuid();
+    const remoteRevision = newFile.remoteRevision = uuid();
+    return {
+      remoteId,
+      remoteRevision
+    };
+  }
+
   async download(file: FileInfo): Promise<NodeJS.ReadableStream> {
     if (this.isOffline) {
       return Promise.reject();

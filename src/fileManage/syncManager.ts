@@ -25,7 +25,7 @@ export default class SyncManager {
       await this.sync();
     } catch (e) {
       this.syncing = false;
-      this.logger.error('error in syncSession: ' + e.stack);
+      this.logger.error('error in syncSession: ' + (e && e.stack));
       return false;
     }
     this.syncing = false;
@@ -63,8 +63,12 @@ export default class SyncManager {
       if (!file) { // created in remote
         file = this.fileRepo.new(remoteFile);
         file.remoteChange = 'create';
-      } else if (file.remoteRevision !== remoteFile.remoteRevision) { // remote updated
-        file.remoteChange = 'update';
+      } else {
+        file.remoteRevision = remoteFile.remoteRevision;
+        file.url = remoteFile.url;
+        if (file.localRevision !== file.remoteRevision) { // remote updated
+          file.remoteChange = 'update';
+        }
       }
     });
     // Local to remote
