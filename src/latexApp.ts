@@ -4,6 +4,7 @@ import Logger from './logger';
 import { Config, ProjectInfo, AppInfo, DecideSyncMode } from './types';
 import Manager from './fileManage/index';
 
+// #TODO return from offline (will catch project info is not found error)
 export default class LatexApp extends EventEmitter {
   private manager: Manager;
   public readonly appInfo: AppInfo;
@@ -20,6 +21,9 @@ export default class LatexApp extends EventEmitter {
         return decideSyncMode(conflictFiles);
       },
       relativePath => {
+        if (!this.appInfo.projectName) {
+          return ![this.config.outDir].includes(relativePath);
+        }
         return ![this.config.outDir, this.logPath, this.pdfPath, this.synctexPath].includes(relativePath);
       },
       logger);
@@ -27,8 +31,10 @@ export default class LatexApp extends EventEmitter {
 
   async launch() {
     await this.manager.init();
-    this.manager.on('successfully-synced', () => {
-      this.compile();
+    this.manager.on('request-autobuild', () => {
+      if (this.config.autoBuild) {
+        this.compile();
+      }
     });
     this.manager.on('offline', this.onOffline.bind(this));
     this.manager.on('online', this.onOnline.bind(this));
@@ -82,7 +88,7 @@ export default class LatexApp extends EventEmitter {
   }
 
   public async compile() {
-    this.logger.info('compiling...');
+    this.emit('start-compile');
     try {
       if (!this.appInfo.compileTarget) {
         const projectInfo = await this.manager.backend.loadProjectInfo();
@@ -91,24 +97,27 @@ export default class LatexApp extends EventEmitter {
       }
 
       const { pdfStream, logStream, synctexStream } = await this.manager.backend.compileProject();
-      this.logger.info('Successfully Compiled.');
       // log
-      this.manager.fileAdapter.saveAs(this.logPath, logStream);
+      this.manager.fileAdapter.saveAs(this.logPath, logStream).catch(err => {
+        this.logger.error('Some error occurred with saving a log file.' + JSON.stringify(err));
+      });
 
       // download pdf
       this.manager.fileAdapter.saveAs(this.pdfPath, pdfStream).catch(err => {
-        this.logger.error('Some error occurred with downloading the compiled pdf file.', err);
-      }).then(() => {
-        this.emit('successfully-compiled');
-        return;
+        this.logger.error('Some error occurred with downloading the compiled pdf file.' + JSON.stringify(err));
       });
 
       // download synctex
       if (synctexStream) {
-        this.manager.fileAdapter.saveAs(this.synctexPath, synctexStream);
+        this.manager.fileAdapter.saveAs(this.synctexPath, synctexStream).catch(err => {
+          this.logger.error('Some error occurred with saving a synctex file.' + JSON.stringify(err));
+        });
       }
     } catch (err) {
-      this.logger.warn('Some error occured with compilation.!' + JSON.stringify(err));
+      this.logger.warn('Some error occured with compilation.' + JSON.stringify(err));
+      this.emit('failed-compile');
+      return;
     }
+    this.emit('successfully-compiled');
   }
 }

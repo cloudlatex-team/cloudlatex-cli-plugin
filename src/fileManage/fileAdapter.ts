@@ -5,31 +5,19 @@ import { FileRepository, FileInfo } from '../model/fileModel';
 import Logger from '../logger';
 
 export default class FileAdapter {
-  constructor(protected rootPath: string, private fileRepo: FileRepository, private backend: Backend, protected logger: Logger) {
+  constructor(
+    protected rootPath: string,
+    private fileRepo: FileRepository,
+    private backend: Backend,
+    protected logger: Logger
+  ) {
   }
 
   public loadFileList(): Promise<FileInfo[]> {
     return this.backend.loadFileList();
   }
 
-  public async download(file: FileInfo): Promise<unknown> {
-    if (file.isFolder) {
-      const absPath = path.join(this.rootPath, file.relativePath);
-      try {
-        await fs.promises.mkdir(absPath);
-      } catch (err) {
-        // Tolerate only the error that file is alraady exist.
-        if (err.code !== 'EEXIST') {
-          throw err;
-        }
-      }
-      file.localChange = 'no';
-      file.localRevision = file.remoteRevision;
-      this.fileRepo.save();
-      return;
-    }
-
-    // # When failed download
+  public async download(file: FileInfo): Promise<void> {
     const stream = await this.backend.download(file);
     file.watcherSynced = false;
     await this.saveAs(file.relativePath, stream);
@@ -60,18 +48,36 @@ export default class FileAdapter {
     });
   }
 
-  public async upload(file: FileInfo, option?: any): Promise<void>  {
-    if (file.isFolder) {
-      const parent = this.fileRepo.findBy('relativePath', path.dirname(file.relativePath));
-      const { remoteId, remoteRevision } = await this.backend.createRemote(file, parent);
-      file.remoteId = remoteId;
-      file.localRevision = remoteRevision;
-    } else {
-      const stream = fs.createReadStream(path.join(this.rootPath, file.relativePath));
-      const { remoteId, remoteRevision } = await this.backend.upload(file, stream, option);
-      file.remoteId = remoteId;
-      file.localRevision = remoteRevision;
+  public async createLocalFolder(file: FileInfo): Promise<void> {
+    const absPath = path.join(this.rootPath, file.relativePath);
+    try {
+      await fs.promises.mkdir(absPath);
+    } catch (err) {
+      // Allow only the error that file is alraady exist.
+      if (err.code !== 'EEXIST') {
+        throw err;
+      }
     }
+    file.localChange = 'no';
+    file.localRevision = file.remoteRevision;
+    this.fileRepo.save();
+    return;
+  };
+
+  public async createRemoteFolder(file: FileInfo): Promise<void> {
+    const parent = this.fileRepo.findBy('relativePath', path.dirname(file.relativePath));
+    const { remoteId, remoteRevision } = await this.backend.createRemote(file, parent);
+    file.remoteId = remoteId;
+    file.localRevision = remoteRevision;
+    file.localChange = 'no';
+    this.fileRepo.save();
+  }
+
+  public async upload(file: FileInfo, option?: any): Promise<void>  {
+    const stream = fs.createReadStream(path.join(this.rootPath, file.relativePath));
+    const { remoteId, remoteRevision } = await this.backend.upload(file, stream, option);
+    file.remoteId = remoteId;
+    file.localRevision = remoteRevision;
     file.localChange = 'no';
     this.fileRepo.save();
   }
@@ -95,7 +101,7 @@ export default class FileAdapter {
       try {
         fs.promises.rmdir(absPath);
       } catch (err) {
-        // Tolerate the error that file is already deleted
+        // Allow the error that file is already deleted
         if (err.code !== 'ENOENT') {
           throw err;
         }
@@ -107,7 +113,7 @@ export default class FileAdapter {
     try {
       await fs.promises.unlink(absPath);
     } catch (err) {
-      // Tolerate the error that file is already deleted
+      // Allow the error that file is already deleted
       if (err.code !== 'ENOENT') {
         throw err;
       }

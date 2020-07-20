@@ -123,7 +123,7 @@ class TestSituation {
     // await tool.sleep(0);
 
     // Verify syncronization result
-    await this.verify(syncResult);
+    await this.verify(syncResult.success);
   }
 
   private async applyFileChanges() {

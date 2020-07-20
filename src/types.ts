@@ -13,6 +13,7 @@ export interface Config {
   client: string;
   token: string;
   projectId: number;
+  autoBuild: boolean;
 }
 
 export interface AppInfo {

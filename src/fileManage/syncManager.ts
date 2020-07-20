@@ -4,9 +4,18 @@ import { FileRepository, FileInfo } from '../model/fileModel';
 import * as path from 'path';
 import Logger from './../logger';
 
+type SyncResult = {
+  success: boolean;
+  fileChanged: boolean;
+};
+
+// TODO solve problem that revive the folder when delete recursively
+// TODO detect file changes
 export default class SyncManager {
   private syncing: boolean = false;
   private syncReserved: boolean = false;
+  private fileChanged: boolean = false; // Whether any file (not folder) is changed
+
   constructor(
     private fileRepo: FileRepository,
     private fileAdapter: FileAdapter,
@@ -14,28 +23,42 @@ export default class SyncManager {
     private logger: Logger) {
   }
 
-  public async syncSession(): Promise<boolean> {
+  public async syncSession(): Promise<SyncResult> {
+    this.fileChanged = false;
     if (this.syncing) {
       this.syncReserved = true;
-      return true;
+      this.logger.log('Sync session is reserved');
+      return {
+        success: true,
+        fileChanged: false
+      };
     }
-    this.logger.info('Synchronizing files with server ...');
+    this.logger.log('Synchronizing files with server ...');
     this.syncing = true;
     try {
       await this.sync();
     } catch (e) {
       this.syncing = false;
       this.logger.error('error in syncSession: ' + (e && e.stack));
-      return false;
+      return {
+        success: false,
+        fileChanged: true
+      };
     }
     this.syncing = false;
 
     if (this.syncReserved) {
       this.syncReserved = false;
       setTimeout(this.syncSession.bind(this), 0);
-      return false;
+      return {
+        success: true,
+        fileChanged: false
+      };
     }
-    return true;
+    return {
+      success: true,
+      fileChanged: this.fileChanged
+    };;
   }
 
   private async sync() {
@@ -110,11 +133,17 @@ export default class SyncManager {
       if (file.changeLocation === 'remote' ||
         (file.changeLocation === 'both' && remoteSyncMode === 'download')) {
         tasks.push(this.syncWithRemoteTask(file));
+        if (!file.isFolder) {
+          this.fileChanged = true;
+        }
       } else if (
         file.changeLocation === 'local' ||
         (file.changeLocation === 'both' && remoteSyncMode === 'upload')
       ) {
         tasks.push(this.syncWithLocalTask(file));
+        if (!file.isFolder) {
+          this.fileChanged = true;
+        }
       }
     });
     return tasks;
@@ -124,9 +153,15 @@ export default class SyncManager {
     const priority = this.computePriority(file, 'local');
     switch (file.localChange) {
       case 'create':
+        if (file.isFolder) {
+          return new PriorityTask(() => this.fileAdapter.createRemoteFolder(file), priority);
+        }
         return new PriorityTask(() => this.fileAdapter.upload(file), priority);
       case 'update':
         if (file.remoteChange === 'delete') {
+          if (file.isFolder) {
+            return new PriorityTask(() => this.fileAdapter.createRemoteFolder(file), priority);
+          }
           return new PriorityTask(() => this.fileAdapter.upload(file), priority);
         }
         return new PriorityTask(() => this.fileAdapter.updateRemote(file), priority);
@@ -148,6 +183,9 @@ export default class SyncManager {
     switch (file.remoteChange) {
       case 'create':
       case 'update':
+        if (file.isFolder) {
+          return new PriorityTask(() => this.fileAdapter.createLocalFolder(file), priority);
+        }
         return new PriorityTask(() => this.fileAdapter.download(file), priority);
       case 'delete':
         if (file.localChange === 'delete') {

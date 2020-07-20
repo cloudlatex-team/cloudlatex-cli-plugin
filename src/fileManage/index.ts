@@ -83,8 +83,12 @@ export default class FileManager extends EventEmitter {
       this.emit('offline');
       return;
     }
-    if (await this.syncManager.syncSession()) {
+    const result = await this.syncManager.syncSession();
+    if (result.success) {
       this.emit('successfully-synced');
+      if (result.fileChanged) {
+        this.emit('request-autobuild');
+      }
     }
   }
 }

@@ -18,7 +18,8 @@ function main() {
     email: '',
     token: '',
     projectId: 0,
-    endpoint: 'http://localhost:3000/api'
+    endpoint: 'http://localhost:3000/api',
+    autoBuild: true
   }, () => Promise.resolve('upload'));
 }
 
