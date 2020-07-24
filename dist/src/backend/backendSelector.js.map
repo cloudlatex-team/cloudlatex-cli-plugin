@@ -1,0 +1,1 @@
+{"version":3,"file":"backendSelector.js","sourceRoot":"","sources":["../../../src/backend/backendSelector.ts"],"names":[],"mappings":";;AACA,sDAA+C;AAI/C,SAAwB,eAAe,CAAC,MAAc;IACpD,IAAI,MAAM,CAAC,OAAO,KAAK,YAAY,EAAE;QACnC,OAAO,IAAI,mBAAS,CAAC,MAAM,CAAC,CAAC;KAC9B;SAAM;QACL,MAAM,IAAI,KAAK,CAAC,4BAA4B,GAAG,MAAM,CAAC,OAAO,CAAC,CAAC;KAChE;AACH,CAAC;AAND,kCAMC"}
