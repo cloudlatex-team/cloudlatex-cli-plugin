@@ -9,7 +9,6 @@ type SyncResult = {
   fileChanged: boolean;
 };
 
-// TODO solve problem that revive the folder when delete recursively
 // TODO detect file changes
 export default class SyncManager {
   private syncing: boolean = false;

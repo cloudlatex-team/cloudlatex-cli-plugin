@@ -4,7 +4,6 @@ import Logger from './logger';
 import { Config, ProjectInfo, AppInfo, DecideSyncMode } from './types';
 import Manager from './fileManage/index';
 
-// #TODO return from offline (will catch project info is not found error)
 export default class LatexApp extends EventEmitter {
   private manager: Manager;
   public readonly appInfo: AppInfo;
