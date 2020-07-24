@@ -3,7 +3,7 @@ import * as Sinon from 'sinon';
 import * as chai from 'chai';
 import * as path from 'path';
 import * as fs from 'fs-extra';
-import { TypeDB, Repository } from 'type-db';
+import { TypeDB, Repository } from '@moritanian/type-db';
 import { FileRepository, FileInfoDesc } from '../../src/model/fileModel';
 import Logger from './../../src/logger';
 import * as tool from './../tool/syncTestTool';

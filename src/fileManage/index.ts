@@ -1,4 +1,4 @@
-import { TypeDB, Repository } from 'type-db';
+import { TypeDB, Repository } from '@moritanian/type-db';
 import * as path from 'path';
 import { Config, DecideSyncMode } from './../types';
 import Backend from './../backend/backend';

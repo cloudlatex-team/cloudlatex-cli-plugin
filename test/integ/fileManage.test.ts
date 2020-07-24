@@ -5,7 +5,7 @@ import * as path from 'path';
 import * as chai from 'chai';
 import { v4 as uuid } from 'uuid';
 
-import { TypeDB } from 'type-db';
+import { TypeDB } from '@moritanian/type-db';
 import { FileInfoDesc, FileInfo } from '../../src/model/fileModel';
 import FileWatcher from '../../src/fileManage/fileWatcher';
 import SyncManager from '../../src/fileManage/syncManager';
