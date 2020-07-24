@@ -7,8 +7,7 @@
     "latexcli": "./dist/src/cli.js"
   },
   "scripts": {
-    "install": "tsc",
-    "compile": "tsc",
+    "build": "tsc",
     "lint": "eslint src test --ext ts",
     "watch": "tsc -watch -p ./",
     "test": "nyc mocha -r ts-node/register \"test/**/*.ts\"",
