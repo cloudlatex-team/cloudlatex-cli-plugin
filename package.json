@@ -1,6 +1,6 @@
 {
   "name": "latex-extension",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "license": "MIT",
   "main": "./dist/src/index.js",
   "bin": {
@@ -15,6 +15,10 @@
     "integ": "nyc mocha -r ts-node/register \"test/integ/*.ts\"",
     "report-coverage": "nyc report --reporter=text-lcov > coverage.lcov"
   },
+  "types": "dist/src/index.d.ts",
+  "files": [
+    "dist"
+  ],
   "devDependencies": {
     "@types/chai": "^4.2.11",
     "@types/fs-extra": "^9.0.1",
