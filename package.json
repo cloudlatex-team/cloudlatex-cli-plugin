@@ -1,6 +1,6 @@
 {
   "name": "latex-extension",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "license": "MIT",
   "main": "./dist/src/index.js",
   "bin": {
@@ -15,6 +15,15 @@
     "integ": "nyc mocha -r ts-node/register \"test/integ/*.ts\"",
     "report-coverage": "nyc report --reporter=text-lcov > coverage.lcov"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cloudlatex-team/cloudlatex-cli-plugin.git"
+  },
+  "homepage": "https://github.com/cloudlatex-team/cloudlatex-cli-plugin",
+  "keywords": [
+    "db",
+    "typescript"
+  ],
   "types": "dist/src/index.d.ts",
   "files": [
     "dist"
@@ -41,16 +50,17 @@
     "nyc": "^15.0.1",
     "sinon": "^9.0.2",
     "ts-node": "^8.10.1",
-    "typescript": "^3.9.3",
-    "uuid": "^8.1.0"
+    "typescript": "^3.9.3"
   },
   "dependencies": {
+    "@moritanian/type-db": "^0.1.0",
     "@types/text-encoding": "^0.0.35",
     "chokidar": "^3.3.1",
     "eventemitter3": "^4.0.0",
     "form-data": "^3.0.0",
     "node-fetch": "^2.6.0",
     "pako": "^1.0.11",
-    "text-encoding": "^0.7.0"
+    "text-encoding": "^0.7.0",
+    "uuid": "^8.1.0"
   }
 }

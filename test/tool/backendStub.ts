@@ -1,6 +1,6 @@
 import Backend from '../../src/backend/backend';
 import { Config, ProjectInfo, KeyType } from '../../src/types';
-import { TypeDB, Repository } from 'type-db';
+import { TypeDB, Repository } from '@moritanian/type-db';
 import { FileInfoDesc, FileInfo } from '../../src/model/fileModel';
 import { v4 as uuid } from 'uuid';
 import { ReadableString, streamToString } from './../../src/util';

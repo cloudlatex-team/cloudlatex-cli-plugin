@@ -193,6 +193,11 @@
   resolved "https://registry.yarnpkg.com/@istanbuljs/schema/-/schema-0.1.2.tgz#26520bf09abe4a5644cd5414e37125a8954241dd"
   integrity sha512-tsAQNx32a8CoFhjhijUIhI4kccIAgmGhy8LZMZgGfmXcpMbPRUqn5LWmgRttILi6yeGmBJd2xsPkFMs0PzgPCw==
 
+"@moritanian/type-db@^0.1.0":
+  version "0.1.0"
+  resolved "https://registry.yarnpkg.com/@moritanian/type-db/-/type-db-0.1.0.tgz#82b1a357b0be3041e2dfa411c28efa4ddeeff9a3"
+  integrity sha512-2c1Ns7nQLk9AqQvXH5mF/54M8ICP9Pv3EGHaAQYPeCn32ORqeytqMON/4X/0Wh9zP+QFXtGJX6s3LkAHaiiadQ==
+
 "@sinonjs/commons@^1", "@sinonjs/commons@^1.6.0", "@sinonjs/commons@^1.7.0", "@sinonjs/commons@^1.7.2":
   version "1.8.0"
   resolved "https://registry.yarnpkg.com/@sinonjs/commons/-/commons-1.8.0.tgz#c8d68821a854c555bba172f3b06959a0039b236d"
