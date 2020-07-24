@@ -10,7 +10,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const backend_1 = require("../../src/backend/backend");
-const type_db_1 = require("type-db");
+const type_db_1 = require("@moritanian/type-db");
 const fileModel_1 = require("../../src/model/fileModel");
 const uuid_1 = require("uuid");
 const util_1 = require("./../../src/util");

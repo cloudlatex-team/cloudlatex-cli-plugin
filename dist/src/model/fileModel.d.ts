@@ -1,5 +1,5 @@
 import { ChangeState, ChangeLocation } from '../types';
-import { Repository } from 'type-db';
+import { Repository } from '@moritanian/type-db';
 export declare const FileInfoDesc: {
     name: string;
     columns: {

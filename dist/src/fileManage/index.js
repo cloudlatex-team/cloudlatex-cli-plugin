@@ -9,7 +9,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-const type_db_1 = require("type-db");
+const type_db_1 = require("@moritanian/type-db");
 const path = require("path");
 const backendSelector_1 = require("./../backend/backendSelector");
 const fileModel_1 = require("./../model/fileModel");

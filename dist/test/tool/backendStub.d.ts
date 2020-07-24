@@ -1,7 +1,7 @@
 /// <reference types="node" />
 import Backend from '../../src/backend/backend';
 import { ProjectInfo, KeyType } from '../../src/types';
-import { Repository } from 'type-db';
+import { Repository } from '@moritanian/type-db';
 import { FileInfoDesc, FileInfo } from '../../src/model/fileModel';
 export default class BackendStub extends Backend {
     isOffline: boolean;
