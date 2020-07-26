@@ -4,16 +4,39 @@ export interface ProjectInfo {
   title: string;
 }
 
+/**
+ * Configuration
+ */
 export interface Config {
+  /** full path of the directory to output compilation result */
   outDir: string;
+
+  /** full path of the root directory of the tex project*/
   rootPath: string;
+
+  /** currently only support cloudlatex */
   backend: string;
+
+  /** endpoint url of api */
   endpoint: string;
+
+  /** email address of user's account */
   email: string;
+
+  /** clinet ID of user's account */
   client: string;
+
+  /** token of user's account */
   token: string;
+
+  /** project ID */
   projectId: number;
+
+  /** set true if automatically compile when any file is saved */
   autoBuild: boolean;
+
+  /** full path of the directory to save meta data. */
+  storagePath: string;
 }
 
 export interface AppInfo {

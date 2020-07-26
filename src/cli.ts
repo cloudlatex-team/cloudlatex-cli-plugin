@@ -5,7 +5,7 @@ import { Config, ProjectInfo, AppInfo, SyncMode, DecideSyncMode } from './types'
 
 // TDOO
 function main() {
-  console.log('hello');
+  console.log('cli module is not currently supported');
   return;
   const args = process.argv.slice(2);
   const currentDir = process.cwd();
@@ -19,7 +19,8 @@ function main() {
     token: '',
     projectId: 0,
     endpoint: 'http://localhost:3000/api',
-    autoBuild: true
+    autoBuild: true,
+    storagePath: rootPath
   }, () => Promise.resolve('upload'));
 }
 
