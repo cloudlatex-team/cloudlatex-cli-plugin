@@ -20,15 +20,6 @@ export interface Config {
   /** endpoint url of api */
   endpoint: string;
 
-  /** email address of user's account */
-  email: string;
-
-  /** clinet ID of user's account */
-  client: string;
-
-  /** token of user's account */
-  token: string;
-
   /** project ID */
   projectId: number;
 
@@ -37,7 +28,24 @@ export interface Config {
 
   /** full path of the directory to save meta data. */
   storagePath: string;
+
+  /**
+   *  full path of the directory to save account.
+   *  set undefined not to store account.
+   */
+  accountStorePath?: string;
 }
+
+export type Account = {
+  /** token */
+  token: string,
+
+  /** email address */
+  email: string,
+
+  /** client ID */
+  client: string
+};
 
 export interface AppInfo {
   offline: boolean;

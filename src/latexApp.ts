@@ -1,18 +1,18 @@
 import * as path from 'path';
 import * as  EventEmitter from 'eventemitter3';
 import Logger from './logger';
-import { Config, ProjectInfo, AppInfo, DecideSyncMode } from './types';
+import { Config, ProjectInfo, AppInfo, DecideSyncMode, Account } from './types';
 import FileAdapter from './fileManage/fileAdapter';
 import SyncManager from './fileManage/syncManager';
 import FileWatcher from './fileManage/fileWatcher';
-
 import { TypeDB, Repository } from '@moritanian/type-db';
 import { FileInfoDesc } from './model/fileModel';
 import Backend from './backend/backend';
 import backendSelector from './backend/backendSelector';
+import AccountManager from './accountManager';
+import fsStub from '../test/tool/fsStub';
 
 // TODO delte db flle when the application is deactivated
-// TODO devide config into projectConifg and account
 export default class LatexApp extends EventEmitter {
   private config: Config;
   public readonly appInfo: AppInfo;
@@ -21,6 +21,8 @@ export default class LatexApp extends EventEmitter {
   private syncManager!: SyncManager;
   private fileWatcher!: FileWatcher;
   private backend: Backend;
+  private account: Account | null = null;
+  private accountManager: AccountManager<Account>;
 
   constructor(config: Config, private decideSyncMode: DecideSyncMode, private logger: Logger = new Logger()) {
     super();
@@ -29,7 +31,8 @@ export default class LatexApp extends EventEmitter {
       offline: true,
       conflictFiles: []
     };
-    this.backend = backendSelector(config);
+    this.accountManager = new AccountManager(config.accountStorePath || '');
+    this.backend = backendSelector(config, this.accountManager);
   }
 
   /**
@@ -41,6 +44,9 @@ export default class LatexApp extends EventEmitter {
    * The file Adapter abstructs file operations of local files and remote ones.
    */
   async launch() {
+    // Account
+
+
     // DB
     const dbFilePath = path.join(this.config.storagePath, `.${this.config.backend}.json`);
     const db = new TypeDB(dbFilePath);
@@ -188,11 +194,9 @@ export default class LatexApp extends EventEmitter {
     return 'valid';
   }
 
-  public updateConfig(config: Partial<Config>): void {
-    // Keep the reference of this.config
-    for (let [key, value] of Object.entries(config)) {
-      this.config[key as keyof Config] = value as never;
-    }
+  public setAccount(account: Account): void {
+    // Keep the reference of this.account
+    this.accountManager.save(account);
   }
 
   /**

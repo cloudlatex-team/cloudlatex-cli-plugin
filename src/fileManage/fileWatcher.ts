@@ -4,8 +4,9 @@ import * as  EventEmitter from 'eventemitter3';
 import { FileRepository } from '../model/fileModel';
 import Logger from './../logger';
 
-// TODO unuse eventemitter
-export default class FileWatcher extends EventEmitter {
+type EventType = 'change-detected';
+
+export default class FileWatcher extends EventEmitter<EventType> {
   private fileWatcher!: chokidar.FSWatcher;
 
   constructor(
