@@ -26,7 +26,7 @@ export default class LatexApp extends EventEmitter {
 
   constructor(config: Config, private decideSyncMode: DecideSyncMode, private logger: Logger = new Logger()) {
     super();
-    this.config = { ...config };
+    this.config = { ...config, outDir: path.join(config.outDir) };
     this.appInfo = {
       offline: true,
       conflictFiles: []
@@ -45,7 +45,7 @@ export default class LatexApp extends EventEmitter {
    */
   async launch() {
     // Account
-
+    await this.accountManager.load();
 
     // DB
     const dbFilePath = path.join(this.config.storagePath, `.${this.config.backend}.json`);
@@ -177,7 +177,7 @@ export default class LatexApp extends EventEmitter {
   /**
    * Validate account
    *
-   * @return true if the account is validated
+   * @return Promise<'valid' | 'invalid' | 'offline'>
    */
   public async validateAccount(): Promise<'valid' | 'invalid' | 'offline'> {
     try {

@@ -32,7 +32,13 @@ export default class CLWebAppApi {
   }
 
   async validateToken() {
-    const res = await fetch(`${this.APIRoot}/auth/validate_token`, { headers: this.headers() });
+    let headers;
+    try {
+      headers = this.headers();
+    } catch (err) {
+      return false; // account is not defined;
+    }
+    const res = await fetch(`${this.APIRoot}/auth/validate_token`, { headers });
     if (!res.ok) {
       return false;
     }
