@@ -6,14 +6,15 @@ import WebAppApi from './webAppApi';
 import { FileInfo } from '../../model/fileModel';
 import { ClFile } from './types';
 import Backend from '../backend';
-import { Config, ProjectInfo, KeyType } from './../../types';
+import { Config, ProjectInfo, KeyType, Account } from './../../types';
 import { streamToString, ReadableString } from './../../util';
+import AccountManager from '../../accountManager';
 
 export default class ClBackend extends Backend {
   private api: WebAppApi;
-  constructor(config: Config) {
-    super(config);
-    this.api = new WebAppApi(config);
+  constructor(config: Config, accountManager: AccountManager<Account>) {
+    super(config, accountManager);
+    this.api = new WebAppApi(config, accountManager);
   }
 
   public validateToken() {

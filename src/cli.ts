@@ -5,22 +5,25 @@ import { Config, ProjectInfo, AppInfo, SyncMode, DecideSyncMode } from './types'
 
 // TDOO
 function main() {
-  console.log('hello');
+  console.log('cli module is not currently supported');
   return;
   const args = process.argv.slice(2);
   const currentDir = process.cwd();
   const rootPath = currentDir;
-  new LatexApp({
+  const latexApp = new LatexApp({
     outDir: '.workspace',
     rootPath,
     backend: 'cloudlatex',
-    client: '',
-    email: '',
-    token: '',
     projectId: 0,
     endpoint: 'http://localhost:3000/api',
-    autoBuild: true
+    autoBuild: true,
+    storagePath: rootPath
   }, () => Promise.resolve('upload'));
+  latexApp.setAccount({
+    email: '',
+    token: '',
+    client: ''
+  });
 }
 
 main();

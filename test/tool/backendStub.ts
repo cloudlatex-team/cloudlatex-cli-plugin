@@ -1,9 +1,10 @@
 import Backend from '../../src/backend/backend';
-import { Config, ProjectInfo, KeyType } from '../../src/types';
+import { Config, ProjectInfo, KeyType, Account } from '../../src/types';
 import { TypeDB, Repository } from '@moritanian/type-db';
 import { FileInfoDesc, FileInfo } from '../../src/model/fileModel';
 import { v4 as uuid } from 'uuid';
 import { ReadableString, streamToString } from './../../src/util';
+import AccountManager from '../../src/accountManager';
 
 /*
  * BackendMock Class
@@ -16,7 +17,7 @@ export default class BackendStub extends Backend {
   public remoteContents: Record<string, string> = {};
   public remoteFiles: Repository<typeof FileInfoDesc>;
   constructor() {
-    super({} as Config);
+    super({} as Config, {} as AccountManager<Account>);
     const remotedb = new TypeDB();
     this.remoteFiles = remotedb.getRepository(FileInfoDesc);
   }

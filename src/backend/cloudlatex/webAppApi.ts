@@ -1,21 +1,25 @@
 import fetch from 'node-fetch';
 import { CompileResult } from './types';
 import * as FormData from 'form-data';
-import { Config, ProjectInfo } from '../../types';
+import { Config, ProjectInfo, Account } from '../../types';
+import AccountManager from '../../accountManager';
 
 export default class CLWebAppApi {
   private APIRoot: string;
   private APIProjects: string;
-  constructor(private config: Config) {
+  constructor(private config: Config, private accountManager: AccountManager<Account>) {
     this.APIRoot = config.endpoint;
     this.APIProjects = config.endpoint + '/projects';
   }
 
   private headers(option: {json?: boolean, form?: boolean} = {}) {
+    if (!this.accountManager.account) {
+      throw new Error('account is not defined');
+    }
     const headers: any = {
-      'uid': this.config.email,
-      'access-token': this.config.token,
-      'client': this.config.client,
+      'uid': this.accountManager.account.email,
+      'access-token': this.accountManager.account.token,
+      'client': this.accountManager.account.client,
       // 'accept-language': 'ja,en-US;q=0.9,en;q=0.8'
     };
     if (option.json) {
@@ -28,7 +32,13 @@ export default class CLWebAppApi {
   }
 
   async validateToken() {
-    const res = await fetch(`${this.APIRoot}/auth/validate_token`, { headers: this.headers() });
+    let headers;
+    try {
+      headers = this.headers();
+    } catch (err) {
+      return false; // account is not defined;
+    }
+    const res = await fetch(`${this.APIRoot}/auth/validate_token`, { headers });
     if (!res.ok) {
       return false;
     }
