@@ -1,3 +1,4 @@
-import { Config } from './../types';
+import { Config, Account } from './../types';
 import Backend from './backend';
-export default function backendSelector(config: Config): Backend;
+import AccountManager from '../accountManager';
+export default function backendSelector(config: Config, accountManager: AccountManager<Account>): Backend;

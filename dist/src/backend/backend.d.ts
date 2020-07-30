@@ -1,9 +1,11 @@
 /// <reference types="node" />
-import { ProjectInfo, Config, KeyType } from './../types';
+import { ProjectInfo, Config, KeyType, Account } from './../types';
 import { FileInfo } from './../model/fileModel';
+import AccountManager from '../accountManager';
 export default class Backend {
     protected config: Config;
-    constructor(config: Config);
+    private accountManager;
+    constructor(config: Config, accountManager: AccountManager<Account>);
     validateToken(): Promise<boolean>;
     loadProjectInfo(): Promise<ProjectInfo>;
     loadFileList(): Promise<FileInfo[]>;

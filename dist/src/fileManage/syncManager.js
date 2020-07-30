@@ -128,6 +128,7 @@ class SyncManager {
             if (file.changeLocation === 'remote' ||
                 (file.changeLocation === 'both' && remoteSyncMode === 'download')) {
                 tasks.push(this.syncWithRemoteTask(file));
+                this.logger.log('pull: ' + file.relativePath);
                 if (!file.isFolder) {
                     this.fileChanged = true;
                 }
@@ -135,6 +136,7 @@ class SyncManager {
             else if (file.changeLocation === 'local' ||
                 (file.changeLocation === 'both' && remoteSyncMode === 'upload')) {
                 tasks.push(this.syncWithLocalTask(file));
+                this.logger.log('push: ' + file.relativePath);
                 if (!file.isFolder) {
                     this.fileChanged = true;
                 }

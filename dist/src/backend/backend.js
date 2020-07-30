@@ -1,8 +1,9 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 class Backend {
-    constructor(config) {
+    constructor(config, accountManager) {
         this.config = config;
+        this.accountManager = accountManager;
     }
     validateToken() {
         throw new Error('No implementation');

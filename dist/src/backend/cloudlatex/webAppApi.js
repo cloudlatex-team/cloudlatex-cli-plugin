@@ -12,16 +12,20 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const node_fetch_1 = require("node-fetch");
 const FormData = require("form-data");
 class CLWebAppApi {
-    constructor(config) {
+    constructor(config, accountManager) {
         this.config = config;
+        this.accountManager = accountManager;
         this.APIRoot = config.endpoint;
         this.APIProjects = config.endpoint + '/projects';
     }
     headers(option = {}) {
+        if (!this.accountManager.account) {
+            throw new Error('account is not defined');
+        }
         const headers = {
-            'uid': this.config.email,
-            'access-token': this.config.token,
-            'client': this.config.client,
+            'uid': this.accountManager.account.email,
+            'access-token': this.accountManager.account.token,
+            'client': this.accountManager.account.client,
         };
         if (option.json) {
             headers['Content-Type'] = 'application/json';
@@ -33,7 +37,14 @@ class CLWebAppApi {
     }
     validateToken() {
         return __awaiter(this, void 0, void 0, function* () {
-            const res = yield node_fetch_1.default(`${this.APIRoot}/auth/validate_token`, { headers: this.headers() });
+            let headers;
+            try {
+                headers = this.headers();
+            }
+            catch (err) {
+                return false; // account is not defined;
+            }
+            const res = yield node_fetch_1.default(`${this.APIRoot}/auth/validate_token`, { headers });
             if (!res.ok) {
                 return false;
             }

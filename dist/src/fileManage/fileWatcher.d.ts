@@ -1,7 +1,8 @@
 import * as EventEmitter from 'eventemitter3';
 import { FileRepository } from '../model/fileModel';
 import Logger from './../logger';
-export default class FileWatcher extends EventEmitter {
+declare type EventType = 'change-detected';
+export default class FileWatcher extends EventEmitter<EventType> {
     private rootPath;
     private fileRepo;
     readonly watcherFileFilter: (relativePath: string) => boolean;
@@ -16,3 +17,4 @@ export default class FileWatcher extends EventEmitter {
     private getRelativePath;
     unwatch(): void;
 }
+export {};

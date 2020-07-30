@@ -1,11 +1,12 @@
 /// <reference types="node" />
 import { FileInfo } from '../../model/fileModel';
 import Backend from '../backend';
-import { Config, ProjectInfo, KeyType } from './../../types';
+import { Config, ProjectInfo, KeyType, Account } from './../../types';
 import { ReadableString } from './../../util';
+import AccountManager from '../../accountManager';
 export default class ClBackend extends Backend {
     private api;
-    constructor(config: Config);
+    constructor(config: Config, accountManager: AccountManager<Account>);
     validateToken(): Promise<boolean>;
     download(file: FileInfo): Promise<NodeJS.ReadableStream>;
     upload(file: FileInfo, stream: NodeJS.ReadableStream, option?: any): Promise<{

@@ -16,9 +16,9 @@ const webAppApi_1 = require("./webAppApi");
 const backend_1 = require("../backend");
 const util_1 = require("./../../util");
 class ClBackend extends backend_1.default {
-    constructor(config) {
-        super(config);
-        this.api = new webAppApi_1.default(config);
+    constructor(config, accountManager) {
+        super(config, accountManager);
+        this.api = new webAppApi_1.default(config, accountManager);
     }
     validateToken() {
         return this.api.validateToken();

@@ -22,7 +22,7 @@ const util_1 = require("./../../src/util");
  */
 class BackendStub extends backend_1.default {
     constructor() {
-        super({});
+        super({}, {});
         this.isOffline = false;
         this.remoteContents = {};
         const remotedb = new type_db_1.TypeDB();

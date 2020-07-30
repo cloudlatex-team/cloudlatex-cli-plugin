@@ -1,11 +1,13 @@
 /// <reference types="node" />
 import { CompileResult } from './types';
-import { Config, ProjectInfo } from '../../types';
+import { Config, ProjectInfo, Account } from '../../types';
+import AccountManager from '../../accountManager';
 export default class CLWebAppApi {
     private config;
+    private accountManager;
     private APIRoot;
     private APIProjects;
-    constructor(config: Config);
+    constructor(config: Config, accountManager: AccountManager<Account>);
     private headers;
     validateToken(): Promise<boolean>;
     loadProjects(): Promise<any>;
