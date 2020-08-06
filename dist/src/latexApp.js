@@ -19,7 +19,6 @@ const type_db_1 = require("@moritanian/type-db");
 const fileModel_1 = require("./model/fileModel");
 const backendSelector_1 = require("./backend/backendSelector");
 const accountManager_1 = require("./accountManager");
-// TODO delte db flle when the application is deactivated
 class LatexApp extends EventEmitter {
     constructor(config, decideSyncMode, logger = new logger_1.default()) {
         super();
@@ -28,7 +27,7 @@ class LatexApp extends EventEmitter {
         this.account = null;
         this.config = Object.assign(Object.assign({}, config), { outDir: path.join(config.outDir) });
         this.appInfo = {
-            offline: true,
+            offline: false,
             conflictFiles: []
         };
         this.accountManager = new accountManager_1.default(config.accountStorePath || '');
@@ -85,6 +84,15 @@ class LatexApp extends EventEmitter {
                 }
                 this.startSync();
             }));
+        });
+    }
+    relaunch(config) {
+        return __awaiter(this, void 0, void 0, function* () {
+            this.exit();
+            this.config = Object.assign(Object.assign({}, config), { outDir: path.join(config.outDir) });
+            this.accountManager = new accountManager_1.default(config.accountStorePath || '');
+            this.backend = backendSelector_1.default(config, this.accountManager);
+            this.launch();
         });
     }
     get targetName() {
@@ -188,21 +196,35 @@ class LatexApp extends EventEmitter {
     /**
      * Start to synchronize files with the remote server
      */
-    startSync() {
+    startSync(forceCompile = false) {
         return __awaiter(this, void 0, void 0, function* () {
+            this.emit('start-sync');
             const result = yield this.syncManager.syncSession();
             if (result.success) {
-                if (result.fileChanged && this.config.autoBuild) {
-                    this.compile();
+                this.emit('successfully-synced');
+                if (forceCompile || (result.fileChanged && this.config.autoBuild)) {
+                    yield this.compile();
                 }
             }
+            else {
+                this.emit('failed-sync');
+            }
         });
+    }
+    /**
+     * clear local changes to resolve sync problem
+     */
+    resetLocal() {
+        this.fileRepo.all().forEach(f => this.fileRepo.delete(f.id));
+        return this.startSync();
     }
     /**
      * stop watching file changes.
      */
     exit() {
-        this.fileWatcher.unwatch();
+        if (this.fileWatcher) {
+            this.fileWatcher.unwatch();
+        }
     }
 }
 exports.default = LatexApp;

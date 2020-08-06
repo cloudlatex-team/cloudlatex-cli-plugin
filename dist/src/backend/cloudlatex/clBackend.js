@@ -32,6 +32,9 @@ class ClBackend extends backend_1.default {
             if (relativeDir.length > 1 && relativeDir[0] === '/') {
                 relativeDir = relativeDir.slice(1);
             }
+            if (relativeDir === '.') {
+                relativeDir = '';
+            }
             const result = yield this.api.uploadFile(stream, relativeDir);
             return { remoteId: result.file.id, remoteRevision: result.file.revision };
         });

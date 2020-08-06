@@ -1,7 +1,8 @@
 import * as EventEmitter from 'eventemitter3';
 import Logger from './logger';
 import { Config, AppInfo, DecideSyncMode, Account } from './types';
-export default class LatexApp extends EventEmitter {
+declare type EventType = 'appinfo-updated' | 'start-sync' | 'failed-sync' | 'successfully-synced' | 'start-compile' | 'failed-compile' | 'successfully-compiled';
+export default class LatexApp extends EventEmitter<EventType> {
     private decideSyncMode;
     private logger;
     private config;
@@ -9,7 +10,7 @@ export default class LatexApp extends EventEmitter {
     private fileAdapter;
     private fileRepo;
     private syncManager;
-    private fileWatcher;
+    private fileWatcher?;
     private backend;
     private account;
     private accountManager;
@@ -23,6 +24,7 @@ export default class LatexApp extends EventEmitter {
      * The file Adapter abstructs file operations of local files and remote ones.
      */
     launch(): Promise<void>;
+    relaunch(config: Config): Promise<void>;
     get targetName(): string;
     get logPath(): string;
     get pdfPath(): string;
@@ -43,9 +45,14 @@ export default class LatexApp extends EventEmitter {
     /**
      * Start to synchronize files with the remote server
      */
-    startSync(): Promise<void>;
+    startSync(forceCompile?: boolean): Promise<void>;
+    /**
+     * clear local changes to resolve sync problem
+     */
+    resetLocal(): Promise<void>;
     /**
      * stop watching file changes.
      */
     exit(): void;
 }
+export {};
