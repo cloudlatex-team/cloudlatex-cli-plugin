@@ -13,13 +13,16 @@ import AccountManager from './accountManager';
 import fsStub from '../test/tool/fsStub';
 
 // TODO delte db flle when the application is deactivated
-export default class LatexApp extends EventEmitter {
+
+type EventType = 'appinfo-updated' | 'start-sync' | 'failed-sync' | 'successfully-synced' | 'start-compile' | 'failed-compile' | 'successfully-compiled';
+
+export default class LatexApp extends EventEmitter<EventType> {
   private config: Config;
   public readonly appInfo: AppInfo;
   private fileAdapter!: FileAdapter;
   private fileRepo!: Repository<typeof FileInfoDesc>;
   private syncManager!: SyncManager;
-  private fileWatcher!: FileWatcher;
+  private fileWatcher?: FileWatcher;
   private backend: Backend;
   private account: Account | null = null;
   private accountManager: AccountManager<Account>;
@@ -28,7 +31,7 @@ export default class LatexApp extends EventEmitter {
     super();
     this.config = { ...config, outDir: path.join(config.outDir) };
     this.appInfo = {
-      offline: true,
+      offline: false,
       conflictFiles: []
     };
     this.accountManager = new AccountManager(config.accountStorePath || '');
@@ -93,6 +96,14 @@ export default class LatexApp extends EventEmitter {
       }
       this.startSync();
     });
+  }
+
+  async relaunch(config: Config) {
+    this.exit();
+    this.config = { ...config, outDir: path.join(config.outDir) };
+    this.accountManager = new AccountManager(config.accountStorePath || '');
+    this.backend = backendSelector(config, this.accountManager);
+    this.launch();
   }
 
   get targetName(): string {
@@ -202,19 +213,33 @@ export default class LatexApp extends EventEmitter {
   /**
    * Start to synchronize files with the remote server
    */
-  public async startSync() {
+  public async startSync(forceCompile: boolean = false) {
+    this.emit('start-sync');
     const result = await this.syncManager.syncSession();
     if (result.success) {
-      if (result.fileChanged && this.config.autoBuild) {
-        this.compile();
+      this.emit('successfully-synced');
+      if (forceCompile || (result.fileChanged && this.config.autoBuild)) {
+        await this.compile();
       }
+    } else {
+      this.emit('failed-sync');
     }
+  }
+
+  /**
+   * clear local changes to resolve sync problem
+   */
+  public resetLocal() {
+    this.fileRepo.all().forEach(f => this.fileRepo.delete(f.id));
+    return this.startSync();
   }
 
   /**
    * stop watching file changes.
    */
   public exit() {
-    this.fileWatcher.unwatch();
+    if (this.fileWatcher) {
+      this.fileWatcher.unwatch();
+    }
   }
 }
