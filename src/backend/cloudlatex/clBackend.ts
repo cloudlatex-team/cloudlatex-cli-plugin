@@ -6,7 +6,7 @@ import WebAppApi from './webAppApi';
 import { FileInfo } from '../../model/fileModel';
 import { ClFile } from './types';
 import Backend from '../backend';
-import { Config, ProjectInfo, KeyType, Account } from './../../types';
+import { Config, ProjectInfo, KeyType, Account, CompileResult } from './../../types';
 import { streamToString, ReadableString } from './../../util';
 import AccountManager from '../../accountManager';
 
@@ -86,17 +86,34 @@ export default class ClBackend extends Backend {
     return this.api.loadSynctexObject(url);
   }
 
-  public async compileProject() {
-    let result = await this.api.compileProject();
+  public async compileProject(): Promise<{
+    exitCode: number,
+    logStream: NodeJS.ReadableStream,
+    pdfStream?: NodeJS.ReadableStream,
+    synctexStream?: NodeJS.ReadableStream,
+  } & CompileResult> {
+    const result = await this.api.compileProject();
+    const exitCode = Number(result.exit_code);
+    const logStream = new ReadableString( result.log );
+    const logs: CompileResult['logs'] = [...result.errors.map(err => ({
+      line: err.line || 1,
+      message: err.error_log,
+      type: 'error' as const,
+      file: path.join(this.config.rootPath, err.filename || '')
+    })), ...result.warnings.map(warn => ({
+      line: warn.line || 1,
+      message: warn.warning_log,
+      type: 'warning' as const,
+      file: path.join(this.config.rootPath, warn.filename || '')
+    }))];
 
-    if (Number(result.exit_code) !== 0) {
-      throw result;
+    if (exitCode !== 0) {
+      return {
+        exitCode,
+        logStream,
+        logs
+      };
     }
-
-    // log
-    const logStr = result.errors.join('\n') + result.warnings.join('\n') + '\n' + result.log;
-    const logStream = new ReadableString(logStr);
-
 
     // pdf
     const pdfStream = await this.api.download(result.uri);
@@ -107,9 +124,12 @@ export default class ClBackend extends Backend {
     let synctexStr = new TextDecoder('utf-8').decode(decompressed);
     synctexStr = synctexStr.replace(/\/data\/\./g, this.config.rootPath);
     const synctexStream = new ReadableString(synctexStr);
+
     return {
-      pdfStream,
+      exitCode,
       logStream,
+      logs,
+      pdfStream,
       synctexStream
     };
   }

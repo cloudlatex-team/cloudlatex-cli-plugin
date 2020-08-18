@@ -11,11 +11,28 @@ export interface ClFile {
   thumbnail_url?: string;
 }
 
+export interface ResultError {
+  error_log: string;
+  url?: string;
+  answer?: string;
+  filename?: string;
+  line?: number;
+}
+
+export interface ResultWarning {
+  warning_log: string;
+  url?: string;
+  answer?: string;
+  filename?: string;
+  line?: number;
+}
+
 export interface CompileResult {
-  exit_code: string,
-  uri: string,
+  exit_code: string;
+  timestamp: number;
   synctex_uri: string,
-  errors: Array<string>,
-  warnings: Array<string>,
-  log: string,
+  uri: string;
+  errors: Array<ResultError>;
+  warnings: Array<ResultWarning>;
+  log: string;
 }

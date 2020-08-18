@@ -10,7 +10,6 @@ import { FileInfoDesc } from './model/fileModel';
 import Backend from './backend/backend';
 import backendSelector from './backend/backendSelector';
 import AccountManager from './accountManager';
-import fsStub from '../test/tool/fsStub';
 
 // TODO delte db flle when the application is deactivated
 
@@ -153,6 +152,8 @@ export default class LatexApp extends EventEmitter<EventType> {
    */
   public async compile() {
     this.emit('start-compile');
+    this.logger.log('start compiling');
+    let result = null;
     try {
       if (!this.appInfo.compileTarget) {
         const projectInfo = await this.backend.loadProjectInfo();
@@ -160,29 +161,39 @@ export default class LatexApp extends EventEmitter<EventType> {
         this.appInfo.projectName = projectInfo.title;
       }
 
-      const { pdfStream, logStream, synctexStream } = await this.backend.compileProject();
+      result = await this.backend.compileProject();
+
+      if (result.exitCode !== 0) {
+        this.logger.warn('Compilation error');
+        this.emit('failed-compile', result);
+        return;
+      }
+
       // log
-      this.fileAdapter.saveAs(this.logPath, logStream).catch(err => {
+      this.fileAdapter.saveAs(this.logPath, result.logStream).catch(err => {
         this.logger.error('Some error occurred with saving a log file.' + JSON.stringify(err));
       });
 
       // download pdf
-      this.fileAdapter.saveAs(this.pdfPath, pdfStream).catch(err => {
-        this.logger.error('Some error occurred with downloading the compiled pdf file.' + JSON.stringify(err));
-      });
+      if (result.pdfStream) {
+        this.fileAdapter.saveAs(this.pdfPath, result.pdfStream).catch(err => {
+          this.logger.error('Some error occurred with downloading the compiled pdf file.' + JSON.stringify(err));
+        });
+      }
 
       // download synctex
-      if (synctexStream) {
-        this.fileAdapter.saveAs(this.synctexPath, synctexStream).catch(err => {
+      if (result.synctexStream) {
+        this.fileAdapter.saveAs(this.synctexPath, result.synctexStream).catch(err => {
           this.logger.error('Some error occurred with saving a synctex file.' + JSON.stringify(err));
         });
       }
     } catch (err) {
       this.logger.warn('Some error occured with compilation.' + JSON.stringify(err));
-      this.emit('failed-compile');
+      this.emit('failed-compile', result);
       return;
     }
-    this.emit('successfully-compiled');
+    this.logger.log('sucessfully compiled');
+    this.emit('successfully-compiled', result);
   }
 
   /**
