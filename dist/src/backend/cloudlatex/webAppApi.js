@@ -10,6 +10,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const node_fetch_1 = require("node-fetch");
+const https = require("https");
 const FormData = require("form-data");
 class CLWebAppApi {
     constructor(config, accountManager) {
@@ -35,16 +36,35 @@ class CLWebAppApi {
         }
         return headers;
     }
+    fetchOption(option = {}) {
+        const params = {
+            headers: Object.assign(Object.assign({}, this.headers(option && option.headerOption)), (option.headers || {}))
+        };
+        if (option.method) {
+            params.method = option.method;
+        }
+        if (option.body) {
+            params.body = option.body;
+        }
+        // Use insecure mode in qa env
+        if (this.APIRoot === 'https://qa.cloudlatex.io/api') {
+            params.agent = new https.Agent({
+                rejectUnauthorized: false,
+            });
+        }
+        return params;
+    }
     validateToken() {
         return __awaiter(this, void 0, void 0, function* () {
-            let headers;
+            let params;
             try {
-                headers = this.headers();
+                params = this.fetchOption();
             }
             catch (err) {
+                console.error(err);
                 return false; // account is not defined;
             }
-            const res = yield node_fetch_1.default(`${this.APIRoot}/auth/validate_token`, { headers });
+            const res = yield node_fetch_1.default(`${this.APIRoot}/auth/validate_token`, params);
             if (!res.ok) {
                 return false;
             }
@@ -54,7 +74,7 @@ class CLWebAppApi {
     }
     loadProjects() {
         return __awaiter(this, void 0, void 0, function* () {
-            const res = yield node_fetch_1.default(this.APIProjects, { headers: this.headers() });
+            const res = yield node_fetch_1.default(this.APIProjects, this.fetchOption());
             if (!res.ok) {
                 throw new Error(JSON.stringify(res));
             }
@@ -63,7 +83,7 @@ class CLWebAppApi {
     }
     loadProjectInfo() {
         return __awaiter(this, void 0, void 0, function* () {
-            const res = yield node_fetch_1.default(`${this.APIProjects}/${this.config.projectId}`, { headers: this.headers() });
+            const res = yield node_fetch_1.default(`${this.APIProjects}/${this.config.projectId}`, this.fetchOption());
             if (!res.ok) {
                 throw new Error(JSON.stringify(res));
             }
@@ -73,7 +93,7 @@ class CLWebAppApi {
     }
     loadFiles() {
         return __awaiter(this, void 0, void 0, function* () {
-            const res = yield node_fetch_1.default(`${this.APIProjects}/${this.config.projectId}/files`, { headers: this.headers() });
+            const res = yield node_fetch_1.default(`${this.APIProjects}/${this.config.projectId}/files`, this.fetchOption());
             if (!res.ok) {
                 throw new Error(JSON.stringify(res));
             }
@@ -82,9 +102,11 @@ class CLWebAppApi {
     }
     createFile(name, belonging_to, is_folder) {
         return __awaiter(this, void 0, void 0, function* () {
-            const res = yield node_fetch_1.default(`${this.APIProjects}/${this.config.projectId}/files`, { headers: this.headers({ json: true }),
+            const res = yield node_fetch_1.default(`${this.APIProjects}/${this.config.projectId}/files`, this.fetchOption({
                 method: 'POST',
-                body: JSON.stringify({ name, is_folder, belonging_to }) });
+                body: JSON.stringify({ name, is_folder, belonging_to }),
+                headerOption: { json: true }
+            }));
             if (!res.ok) {
                 throw new Error(JSON.stringify(res));
             }
@@ -93,8 +115,7 @@ class CLWebAppApi {
     }
     deleteFile(id) {
         return __awaiter(this, void 0, void 0, function* () {
-            const res = yield node_fetch_1.default(`${this.APIProjects}/${this.config.projectId}/files/${id}`, { headers: this.headers(),
-                method: 'DELETE' });
+            const res = yield node_fetch_1.default(`${this.APIProjects}/${this.config.projectId}/files/${id}`, this.fetchOption({ method: 'DELETE' }));
             if (!res.ok) {
                 throw new Error(JSON.stringify(res));
             }
@@ -103,9 +124,11 @@ class CLWebAppApi {
     }
     updateFile(id, params) {
         return __awaiter(this, void 0, void 0, function* () {
-            const res = yield node_fetch_1.default(`${this.APIProjects}/${this.config.projectId}/files/${id}`, { headers: this.headers({ json: true }),
+            const res = yield node_fetch_1.default(`${this.APIProjects}/${this.config.projectId}/files/${id}`, this.fetchOption({
+                method: 'PUT',
                 body: JSON.stringify({ material_file: params }),
-                method: 'PUT' });
+                headerOption: { json: true }
+            }));
             if (!res.ok) {
                 throw new Error(JSON.stringify(res));
             }
@@ -114,8 +137,9 @@ class CLWebAppApi {
     }
     compileProject() {
         return __awaiter(this, void 0, void 0, function* () {
-            const res = yield node_fetch_1.default(`${this.APIProjects}/${this.config.projectId}/compile`, { headers: this.headers(),
-                method: 'POST' });
+            const res = yield node_fetch_1.default(`${this.APIProjects}/${this.config.projectId}/compile`, this.fetchOption({
+                method: 'POST',
+            }));
             if (!res.ok) {
                 throw new Error(JSON.stringify(res));
             }
@@ -128,8 +152,11 @@ class CLWebAppApi {
             form.append('relative_path', relativeDir);
             form.append('file', stream);
             const headers = form.getHeaders();
-            const res = yield node_fetch_1.default(`${this.APIProjects}/${this.config.projectId}/files/upload`, { headers: Object.assign(Object.assign({}, this.headers()), headers), body: form,
-                method: 'POST' });
+            const res = yield node_fetch_1.default(`${this.APIProjects}/${this.config.projectId}/files/upload`, this.fetchOption({
+                method: 'POST',
+                body: form,
+                headers
+            }));
             if (!res.ok) {
                 throw new Error(JSON.stringify(res));
             }

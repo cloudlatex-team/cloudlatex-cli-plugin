@@ -1,8 +1,7 @@
 /// <reference types="node" />
 import { FileInfo } from '../../model/fileModel';
 import Backend from '../backend';
-import { Config, ProjectInfo, KeyType, Account } from './../../types';
-import { ReadableString } from './../../util';
+import { Config, ProjectInfo, KeyType, Account, CompileResult } from './../../types';
 import AccountManager from '../../accountManager';
 export default class ClBackend extends Backend {
     private api;
@@ -27,8 +26,9 @@ export default class ClBackend extends Backend {
     loadFileList(): Promise<FileInfo[]>;
     loadSynctexObject(url: string): Promise<any>;
     compileProject(): Promise<{
-        pdfStream: NodeJS.ReadableStream;
-        logStream: ReadableString;
-        synctexStream: ReadableString;
-    }>;
+        exitCode: number;
+        logStream: NodeJS.ReadableStream;
+        pdfStream?: NodeJS.ReadableStream;
+        synctexStream?: NodeJS.ReadableStream;
+    } & CompileResult>;
 }

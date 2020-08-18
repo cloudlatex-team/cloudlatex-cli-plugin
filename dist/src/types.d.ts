@@ -48,3 +48,12 @@ export declare type ChangeLocation = 'no' | 'local' | 'remote' | 'both';
 export interface DecideSyncMode {
     (conflictFiles: string[]): Promise<SyncMode>;
 }
+export interface CompileResult {
+    exitCode: number;
+    logs: {
+        type: 'warning' | 'error';
+        file: string;
+        line: number;
+        message: string;
+    }[];
+}

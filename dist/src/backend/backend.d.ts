@@ -1,5 +1,5 @@
 /// <reference types="node" />
-import { ProjectInfo, Config, KeyType, Account } from './../types';
+import { ProjectInfo, Config, KeyType, Account, CompileResult } from './../types';
 import { FileInfo } from './../model/fileModel';
 import AccountManager from '../accountManager';
 export default class Backend {
@@ -21,8 +21,9 @@ export default class Backend {
     updateRemote(file: FileInfo, stream: NodeJS.ReadableStream): Promise<KeyType>;
     deleteRemote(file: FileInfo): Promise<unknown>;
     compileProject(): Promise<{
+        exitCode: number;
         logStream: NodeJS.ReadableStream;
-        pdfStream: NodeJS.ReadableStream;
+        pdfStream?: NodeJS.ReadableStream;
         synctexStream?: NodeJS.ReadableStream;
-    }>;
+    } & CompileResult>;
 }

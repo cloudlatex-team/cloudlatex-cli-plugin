@@ -9,6 +9,7 @@ export default class CLWebAppApi {
     private APIProjects;
     constructor(config: Config, accountManager: AccountManager<Account>);
     private headers;
+    private fetchOption;
     validateToken(): Promise<boolean>;
     loadProjects(): Promise<any>;
     loadProjectInfo(): Promise<ProjectInfo>;

@@ -91,13 +91,27 @@ class ClBackend extends backend_1.default {
     }
     compileProject() {
         return __awaiter(this, void 0, void 0, function* () {
-            let result = yield this.api.compileProject();
-            if (Number(result.exit_code) !== 0) {
-                throw result;
+            const result = yield this.api.compileProject();
+            const exitCode = Number(result.exit_code);
+            const logStream = new util_1.ReadableString(result.log);
+            const logs = [...result.errors.map(err => ({
+                    line: err.line || 1,
+                    message: err.error_log,
+                    type: 'error',
+                    file: path.join(this.config.rootPath, err.filename || '')
+                })), ...result.warnings.map(warn => ({
+                    line: warn.line || 1,
+                    message: warn.warning_log,
+                    type: 'warning',
+                    file: path.join(this.config.rootPath, warn.filename || '')
+                }))];
+            if (exitCode !== 0) {
+                return {
+                    exitCode,
+                    logStream,
+                    logs
+                };
             }
-            // log
-            const logStr = result.errors.join('\n') + result.warnings.join('\n') + '\n' + result.log;
-            const logStream = new util_1.ReadableString(logStr);
             // pdf
             const pdfStream = yield this.api.download(result.uri);
             // download synctex
@@ -107,8 +121,10 @@ class ClBackend extends backend_1.default {
             synctexStr = synctexStr.replace(/\/data\/\./g, this.config.rootPath);
             const synctexStream = new util_1.ReadableString(synctexStr);
             return {
-                pdfStream,
+                exitCode,
                 logStream,
+                logs,
+                pdfStream,
                 synctexStream
             };
         });
