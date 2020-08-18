@@ -1,4 +1,4 @@
-import { ProjectInfo, Config, KeyType, Account } from './../types';
+import { ProjectInfo, Config, KeyType, Account, CompileResult } from './../types';
 import { FileInfo } from './../model/fileModel';
 import AccountManager from '../accountManager';
 
@@ -39,10 +39,11 @@ export default class Backend {
   }
 
   compileProject(): Promise<{
+    exitCode: number,
     logStream: NodeJS.ReadableStream,
-    pdfStream: NodeJS.ReadableStream,
+    pdfStream?: NodeJS.ReadableStream,
     synctexStream?: NodeJS.ReadableStream,
-  }> {
+  } & CompileResult> {
     throw new Error('No implementation');
   }
 }

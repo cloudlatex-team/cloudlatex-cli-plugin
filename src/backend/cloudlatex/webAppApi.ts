@@ -1,4 +1,5 @@
-import fetch from 'node-fetch';
+import fetch, { RequestInit, Headers } from 'node-fetch';
+import * as https from 'https';
 import { CompileResult } from './types';
 import * as FormData from 'form-data';
 import { Config, ProjectInfo, Account } from '../../types';
@@ -12,7 +13,7 @@ export default class CLWebAppApi {
     this.APIProjects = config.endpoint + '/projects';
   }
 
-  private headers(option: {json?: boolean, form?: boolean} = {}) {
+  private headers(option: {json?: boolean, form?: boolean} = {}): Headers {
     if (!this.accountManager.account) {
       throw new Error('account is not defined');
     }
@@ -31,14 +32,43 @@ export default class CLWebAppApi {
     return headers;
   }
 
+  private fetchOption(option: {
+    method?: 'GET' | 'POST' | 'PUT' | 'DELETE',
+    body?: any,
+    headerOption?: {json?: boolean, form?: boolean},
+    headers?: Headers | { [key: string]: string;}
+  } = {}): RequestInit {
+    const params: RequestInit = {
+      headers: {
+        ... this.headers(option && option.headerOption),
+        ... (option.headers || {})
+      }
+    };
+    if (option.method) {
+      params.method = option.method;
+    }
+    if (option.body) {
+      params.body = option.body;
+    }
+
+    // Use insecure mode in qa env
+    if (this.APIRoot === 'https://qa.cloudlatex.io/api') {
+      params.agent = new https.Agent({
+        rejectUnauthorized: false,
+      });
+    }
+    return params;
+  }
+
   async validateToken() {
-    let headers;
+    let params;
     try {
-      headers = this.headers();
+      params = this.fetchOption();
     } catch (err) {
+      console.error(err);
       return false; // account is not defined;
     }
-    const res = await fetch(`${this.APIRoot}/auth/validate_token`, { headers });
+    const res = await fetch(`${this.APIRoot}/auth/validate_token`, params);
     if (!res.ok) {
       return false;
     }
@@ -47,7 +77,7 @@ export default class CLWebAppApi {
   }
 
   async loadProjects() {
-    const res = await fetch(this.APIProjects, { headers: this.headers() });
+    const res = await fetch(this.APIProjects, this.fetchOption());
     if (!res.ok) {
       throw new Error(JSON.stringify(res));
     }
@@ -55,7 +85,7 @@ export default class CLWebAppApi {
   }
 
   async loadProjectInfo() {
-    const res = await fetch(`${this.APIProjects}/${this.config.projectId}`, { headers: this.headers() });
+    const res = await fetch(`${this.APIProjects}/${this.config.projectId}`, this.fetchOption() );
     if (!res.ok) {
       throw new Error(JSON.stringify(res));
     }
@@ -64,7 +94,7 @@ export default class CLWebAppApi {
   }
 
   async loadFiles() {
-    const res = await fetch(`${this.APIProjects}/${this.config.projectId}/files`, { headers: this.headers() });
+    const res = await fetch(`${this.APIProjects}/${this.config.projectId}/files`, this.fetchOption() );
     if (!res.ok) {
       throw new Error(JSON.stringify(res));
     }
@@ -74,9 +104,10 @@ export default class CLWebAppApi {
   async createFile(name: string, belonging_to: number | null, is_folder: boolean) {
     const res = await fetch(
       `${this.APIProjects}/${this.config.projectId}/files`,
-      { headers: this.headers({ json: true }),
-      method: 'POST',
-      body: JSON.stringify({ name, is_folder, belonging_to }) }
+      this.fetchOption({
+        method: 'POST',
+        body: JSON.stringify({ name, is_folder, belonging_to }),
+        headerOption: { json: true } })
     );
     if (!res.ok) {
       throw new Error(JSON.stringify(res));
@@ -87,8 +118,7 @@ export default class CLWebAppApi {
   async deleteFile(id: number) {
     const res = await fetch(
       `${this.APIProjects}/${this.config.projectId}/files/${id}`,
-      { headers: this.headers(),
-      method: 'DELETE' }
+      this.fetchOption({ method: 'DELETE' })
     );
     if (!res.ok) {
       throw new Error(JSON.stringify(res));
@@ -99,9 +129,11 @@ export default class CLWebAppApi {
   async updateFile(id: number, params: any): Promise<{revision: string}> {
     const res = await fetch(
       `${this.APIProjects}/${this.config.projectId}/files/${id}`,
-      { headers: this.headers({ json: true }),
-      body: JSON.stringify({ material_file: params }),
-      method: 'PUT' }
+      this.fetchOption({
+        method: 'PUT',
+        body: JSON.stringify({ material_file: params }),
+        headerOption: { json: true }
+      })
     );
     if (!res.ok) {
       throw new Error(JSON.stringify(res));
@@ -112,8 +144,9 @@ export default class CLWebAppApi {
   async compileProject(): Promise<CompileResult> {
     const res = await fetch(
       `${this.APIProjects}/${this.config.projectId}/compile`,
-      { headers: this.headers(),
-      method: 'POST' }
+      this.fetchOption({
+        method: 'POST',
+      })
     );
     if (!res.ok) {
       throw new Error(JSON.stringify(res));
@@ -128,9 +161,12 @@ export default class CLWebAppApi {
     const headers = form.getHeaders();
     const res = await fetch(
       `${this.APIProjects}/${this.config.projectId}/files/upload`,
-      { headers: { ...this.headers(), ...headers },
-      body: form,
-      method: 'POST' }
+      this.fetchOption({
+        method: 'POST',
+        body: form,
+        headers
+      })
+
     );
     if (!res.ok) {
       throw new Error(JSON.stringify(res));
