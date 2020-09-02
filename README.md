@@ -45,3 +45,6 @@ Local file changes will synchronized with the Cloud LaTeX server and compilation
 After the second time, run the same command as before.
 
 ＊ File changes when this tool is not running are not synchronized.
+
+# License
+Apache License 2.0
