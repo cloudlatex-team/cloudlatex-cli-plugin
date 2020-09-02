@@ -69,6 +69,7 @@ export default class LatexApp extends EventEmitter<EventType> {
     this.syncManager = new SyncManager(this.fileRepo, this.fileAdapter,
       async (conflictFiles) => {
         this.appInfo.conflictFiles = conflictFiles;
+        this.emit('appinfo-updated');
         return this.decideSyncMode(conflictFiles);
       }
       ,this.logger);
@@ -159,6 +160,7 @@ export default class LatexApp extends EventEmitter<EventType> {
         const projectInfo = await this.backend.loadProjectInfo();
         this.appInfo.compileTarget = projectInfo.compile_target_file_id;
         this.appInfo.projectName = projectInfo.title;
+        this.emit('appinfo-updated');
       }
 
       result = await this.backend.compileProject();
