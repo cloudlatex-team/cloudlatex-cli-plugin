@@ -1,4 +1,7 @@
 # Cloud LaTeX CLI
+
+＊CLI interface is under development. Check [VSCode CloudLaTeX Extension](https://github.com/cloudlatex-team/cloudlatex-vscode-extension/tree/master) if you are a VSCode user.
+
 *** Write locally and compile on cloud service.
 
 Cloud LaTeX CLI is an official tool written in nodejs to write tex files locally and compile with [Cloud LaTeX](https://cloudlatex.io/).
@@ -9,7 +12,7 @@ If you use VSCode, you can use [Cloud LaTeX VSCode Extension](https://github.com
 
 ## Features
 - Multi-platform
-- Offline mode
+- Offline support
 
 
 ## Installation
