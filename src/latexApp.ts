@@ -7,7 +7,7 @@ import SyncManager from './fileManage/syncManager';
 import FileWatcher from './fileManage/fileWatcher';
 import { TypeDB, Repository } from '@moritanian/type-db';
 import { FileInfoDesc } from './model/fileModel';
-import Backend from './backend/backend';
+import Backend from './backend/ibackend';
 import backendSelector from './backend/backendSelector';
 import AccountManager from './accountManager';
 

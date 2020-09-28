@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import Backend from '../backend/backend';
+import Backend from '../backend/ibackend';
 import { FileRepository, FileInfo } from '../model/fileModel';
 import Logger from '../logger';
 

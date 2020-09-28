@@ -5,15 +5,16 @@ import { TextDecoder } from 'text-encoding';
 import WebAppApi from './webAppApi';
 import { FileInfo } from '../../model/fileModel';
 import { ClFile } from './types';
-import Backend from '../backend';
+import IBackend from '../ibackend';
 import { Config, ProjectInfo, KeyType, Account, CompileResult } from './../../types';
 import { streamToString, ReadableString } from './../../util';
 import AccountManager from '../../accountManager';
 
-export default class ClBackend extends Backend {
+export default class ClBackend implements IBackend {
   private api: WebAppApi;
+  private config: Config;
   constructor(config: Config, accountManager: AccountManager<Account>) {
-    super(config, accountManager);
+    this.config = config;
     this.api = new WebAppApi(config, accountManager);
   }
 

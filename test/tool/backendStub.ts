@@ -1,4 +1,4 @@
-import Backend from '../../src/backend/backend';
+import IBackend from '../../src/backend/ibackend';
 import { Config, ProjectInfo, KeyType, Account } from '../../src/types';
 import { TypeDB, Repository } from '@moritanian/type-db';
 import { FileInfoDesc, FileInfo } from '../../src/model/fileModel';
@@ -12,14 +12,17 @@ import AccountManager from '../../src/accountManager';
  * [Warn]
  *  file.id in remoteFiles is not equal to file.id in local files.
  */
-export default class BackendStub extends Backend {
+export default class BackendStub implements IBackend {
   public isOffline: boolean = false;
   public remoteContents: Record<string, string> = {};
   public remoteFiles: Repository<typeof FileInfoDesc>;
   constructor() {
-    super({} as Config, {} as AccountManager<Account>);
     const remotedb = new TypeDB();
     this.remoteFiles = remotedb.getRepository(FileInfoDesc);
+  }
+
+  validateToken() {
+    return Promise.resolve(true);
   }
 
   loadProjectInfo(): Promise<ProjectInfo> {
