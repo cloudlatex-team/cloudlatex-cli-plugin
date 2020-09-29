@@ -2,7 +2,7 @@ import * as chokidar from 'chokidar';
 import * as path from 'path';
 import * as  EventEmitter from 'eventemitter3';
 import { FileRepository } from '../model/fileModel';
-import Logger from './../logger';
+import Logger from '../util/logger';
 
 type EventType = 'change-detected';
 

@@ -51,6 +51,11 @@ export interface AppInfo {
   offline: boolean;
   projectName?: string;
   compileTarget?: KeyType,
+  targetName?: string,
+  logPath?: string,
+  pdfPath?: string,
+  synctexPath?: string,
+  loaded: boolean,
   conflictFiles: string[]
 }
 
@@ -65,9 +70,10 @@ export interface DecideSyncMode {
   ): Promise<SyncMode>
 }
 
+export type CompileStatus = 'success' | 'compiler-error' | 'no-target-error' | 'saving-file-error' | 'unknown-error';
 export interface CompileResult {
-  exitCode: number,
-  logs: {
+  status: CompileStatus,
+  logs?: {
     type: 'warning' | 'error',
     file: string,
     line: number,

@@ -7,8 +7,8 @@ import { FileInfo } from '../../model/fileModel';
 import { ClFile } from './types';
 import IBackend from '../ibackend';
 import { Config, ProjectInfo, KeyType, Account, CompileResult } from './../../types';
-import { streamToString, ReadableString } from './../../util';
-import AccountManager from '../../accountManager';
+import { streamToString, ReadableString } from '../../util/stream';
+import AccountManager from '../../manager/accountManager';
 
 export default class ClBackend implements IBackend {
   private api: WebAppApi;
@@ -88,7 +88,6 @@ export default class ClBackend implements IBackend {
   }
 
   public async compileProject(): Promise<{
-    exitCode: number,
     logStream: NodeJS.ReadableStream,
     pdfStream?: NodeJS.ReadableStream,
     synctexStream?: NodeJS.ReadableStream,
@@ -110,7 +109,7 @@ export default class ClBackend implements IBackend {
 
     if (exitCode !== 0) {
       return {
-        exitCode,
+        status: 'compiler-error',
         logStream,
         logs
       };
@@ -127,7 +126,7 @@ export default class ClBackend implements IBackend {
     const synctexStream = new ReadableString(synctexStr);
 
     return {
-      exitCode,
+      status: 'success',
       logStream,
       logs,
       pdfStream,

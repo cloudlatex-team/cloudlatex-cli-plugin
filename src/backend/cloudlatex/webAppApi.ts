@@ -3,7 +3,7 @@ import * as https from 'https';
 import { CompileResult } from './types';
 import * as FormData from 'form-data';
 import { Config, ProjectInfo, Account } from '../../types';
-import AccountManager from '../../accountManager';
+import AccountManager from '../../manager/accountManager';
 
 export default class CLWebAppApi {
   private APIRoot: string;

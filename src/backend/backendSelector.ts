@@ -2,7 +2,7 @@
 import ClBackend from './cloudlatex/clBackend';
 import { Config, Account } from './../types';
 import IBackend from './ibackend';
-import AccountManager from '../accountManager';
+import AccountManager from '../manager/accountManager';
 
 export default function backendSelector(config: Config, accountManager: AccountManager<Account>): IBackend {
   if (config.backend === 'cloudlatex') {

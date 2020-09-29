@@ -2,7 +2,7 @@ import { SyncMode, DecideSyncMode, KeyType, ChangeLocation, ChangeState } from '
 import FileAdapter from './fileAdapter';
 import { FileRepository, FileInfo } from '../model/fileModel';
 import * as path from 'path';
-import Logger from './../logger';
+import Logger from '../util/logger';
 
 type SyncResult = {
   success: boolean;

@@ -7,16 +7,16 @@ import { v4 as uuid } from 'uuid';
 
 import { TypeDB } from '@moritanian/type-db';
 import { FileInfoDesc, FileInfo } from '../../src/model/fileModel';
-import FileWatcher from '../../src/fileManage/fileWatcher';
-import SyncManager from '../../src/fileManage/syncManager';
-import FileAdapter from '../../src/fileManage/FileAdapter';
+import FileWatcher from '../../src/fileService/fileWatcher';
+import SyncManager from '../../src/fileService/syncManager';
+import FileAdapter from '../../src/fileService/FileAdapter';
 import Backend from '../tool/backendStub';
-import Logger from '../../src/logger';
+import Logger from '../../src/util/logger';
 import { DecideSyncMode } from '../../src';
 import { SyncMode, ChangeState, ChangeLocation } from '../../src/types';
 
 import * as tool from './../tool/syncTestTool';
-import { streamToString } from './../../src/util';
+import { streamToString } from '../../src/util/stream';
 import fsStub from './../tool/fsStub';
 
 const workdir = '/workdir';

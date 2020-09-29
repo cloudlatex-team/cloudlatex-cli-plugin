@@ -3,8 +3,7 @@ import { Config, ProjectInfo, KeyType, Account } from '../../src/types';
 import { TypeDB, Repository } from '@moritanian/type-db';
 import { FileInfoDesc, FileInfo } from '../../src/model/fileModel';
 import { v4 as uuid } from 'uuid';
-import { ReadableString, streamToString } from './../../src/util';
-import AccountManager from '../../src/accountManager';
+import { ReadableString, streamToString } from '../../src/util/stream';
 
 /*
  * BackendMock Class
