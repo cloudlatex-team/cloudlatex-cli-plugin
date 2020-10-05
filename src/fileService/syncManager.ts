@@ -24,7 +24,11 @@ export default class SyncManager extends EventEmitter<EventType> {
     public decideSyncMode: DecideSyncMode,
     private logger: Logger) {
       super();
-      this.syncSession = _.debounce(this._syncSession.bind(this), 250);
+      this.syncSession = _.debounce(
+        this._syncSession.bind(this),
+        5000,
+        { trailing: true, leading: true }
+      );
   }
 
   async _syncSession(): Promise<void> {

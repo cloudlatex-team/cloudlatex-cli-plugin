@@ -73,6 +73,9 @@ export interface DecideSyncMode {
 export type CompileStatus = 'success' | 'compiler-error' | 'no-target-error' | 'saving-file-error' | 'unknown-error';
 export interface CompileResult {
   status: CompileStatus,
+  logStream?: NodeJS.ReadableStream,
+  pdfStream?: NodeJS.ReadableStream,
+  synctexStream?: NodeJS.ReadableStream,
   logs?: {
     type: 'warning' | 'error',
     file: string,

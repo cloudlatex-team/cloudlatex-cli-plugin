@@ -18,9 +18,5 @@ export default interface IBackend {
 
   deleteRemote(file: FileInfo): Promise<unknown>;
 
-  compileProject(): Promise<{
-    logStream: NodeJS.ReadableStream,
-    pdfStream?: NodeJS.ReadableStream,
-    synctexStream?: NodeJS.ReadableStream,
-  } & CompileResult>;
+  compileProject(): Promise<CompileResult>;
 };

@@ -1,7 +1,7 @@
 import * as path from 'path';
 import * as  EventEmitter from 'eventemitter3';
 import Logger from './util/logger';
-import { Config, DecideSyncMode, Account, CompileResult } from './types';
+import { Config, DecideSyncMode, Account, CompileResult, CompileStatus, AppInfo } from './types';
 import FileAdapter from './fileService/fileAdapter';
 import SyncManager from './fileService/syncManager';
 import FileWatcher from './fileService/fileWatcher';
@@ -16,9 +16,23 @@ import AppInfoService from './service/appInfoService';
 // TODO syncSession() debounce
 // TODO delte db flle when the application is deactivated
 
-type EventType = 'appinfo-updated' | 'start-sync' | 'failed-sync' | 'successfully-synced' | 'start-compile' | 'failed-compile' | 'successfully-compiled';
 
-export default class LatexApp extends EventEmitter<EventType> {
+type NoPayloadEvents = 'start-sync' | 'failed-sync' | 'successfully-synced' | 'start-compile';
+class LAEventEmitter extends EventEmitter<''> {
+}
+interface LAEventEmitter {
+  emit(eventName: NoPayloadEvents): boolean;
+  on(eventName: NoPayloadEvents, callback: () => unknown): this;
+  emit(eventName: 'successfully-compiled', result: CompileResult): void;
+  on(eventName: 'successfully-compiled', callback: (result: CompileResult) => unknown): void;
+  emit(eventName: 'failed-compile', result: CompileResult): void;
+  on(eventName: 'failed-compile', callback: (result: CompileResult) => unknown): void;
+  emit(eventName: 'updated-network', arg: boolean): void;
+  on(eventName: 'updated-network', callback: (arg: boolean) => unknown): void;
+  emit(eventName: 'loaded-project', arg: AppInfo): void;
+  on(eventName: 'loaded-project', callback: (arg: AppInfo) => unknown): void;
+}
+export default class LatexApp extends LAEventEmitter  {
   private syncManager: SyncManager;
   private fileWatcher: FileWatcher;
   /**
@@ -44,7 +58,6 @@ export default class LatexApp extends EventEmitter<EventType> {
     this.syncManager = new SyncManager(fileRepo, fileAdapter,
       async (conflictFiles) => {
         appInfoService.setConflicts(conflictFiles);
-        this.emit('appinfo-updated');
         return decideSyncMode(conflictFiles);
       }
       , logger);
@@ -171,7 +184,7 @@ export default class LatexApp extends EventEmitter<EventType> {
     }
     this.appInfoService.setOnline();
     this.logger.info('Your account is validated!');
-    this.emit('appinfo-updated');
+    this.emit('updated-network', this.appInfoService.appInfo.offline);
   }
 
   private onOffline() {
@@ -183,7 +196,7 @@ export default class LatexApp extends EventEmitter<EventType> {
       until it is enable to communicate with the server.
       `);
     this.appInfoService.setOffLine();
-    this.emit('appinfo-updated');
+    this.emit('updated-network', this.appInfo.offline);
   }
 
   private async loadProjectInfo() {
@@ -191,14 +204,14 @@ export default class LatexApp extends EventEmitter<EventType> {
     const file = this.fileRepo.findBy('remoteId', projectInfo.compile_target_file_id);
     if (!file) {
       this.logger.error('Target file is not found');
-      this.emit('failed-compile', { status: 'no-target' });
+      this.emit('failed-compile', { status: 'no-target-error' });
       return;
     }
     const targetName = path.basename(file.relativePath, '.tex');
     this.appInfoService.setProjectName(projectInfo.title);
     this.appInfoService.setTarget(projectInfo.compile_target_file_id, targetName);
     this.appInfoService.setLoaded();
-    this.emit('appinfo-updated');
+    this.emit('loaded-project', this.appInfo);
   }
 
   /**
@@ -223,9 +236,11 @@ export default class LatexApp extends EventEmitter<EventType> {
       const promises = [];
 
       // download log file
-      promises.push(this.fileAdapter.saveAs(this.appInfoService.appInfo.logPath!, result.logStream).catch(err => {
-        this.logger.error('Some error occurred with saving a log file.' + JSON.stringify(err));
-      }));
+      if (result.logStream) {
+        promises.push(this.fileAdapter.saveAs(this.appInfoService.appInfo.logPath!, result.logStream).catch(err => {
+          this.logger.error('Some error occurred with saving a log file.' + JSON.stringify(err));
+        }));
+      }
 
       // download pdf
       if (result.pdfStream) {
@@ -254,8 +269,12 @@ export default class LatexApp extends EventEmitter<EventType> {
 
   }
 
-
-  private async _validateAccount(): Promise<'valid' | 'invalid' | 'offline'> {
+  /**
+   * Validate account
+   *
+   * @return Promise<'valid' | 'invalid' | 'offline'>
+   */
+  public async validateAccount(): Promise<'valid' | 'invalid' | 'offline'> {
     try {
       const result = await this.backend.validateToken();
       if (!result) {
@@ -268,19 +287,6 @@ export default class LatexApp extends EventEmitter<EventType> {
       return 'offline';
     }
     return 'valid';
-  }
-
-  /**
-   * Validate account
-   *
-   * @return Promise<'valid' | 'invalid' | 'offline'>
-   */
-  public async validateAccount(): Promise<'valid' | 'invalid' | 'offline'> {
-    const result = await this._validateAccount();
-    if (result === 'offline') {
-      this.logger.warn('Cannot connect to the server.');
-    }
-    return result;
   }
 
   /**
