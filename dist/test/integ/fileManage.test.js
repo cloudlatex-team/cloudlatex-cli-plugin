@@ -16,13 +16,13 @@ const chai = require("chai");
 const uuid_1 = require("uuid");
 const type_db_1 = require("@moritanian/type-db");
 const fileModel_1 = require("../../src/model/fileModel");
-const fileWatcher_1 = require("../../src/fileManage/fileWatcher");
-const syncManager_1 = require("../../src/fileManage/syncManager");
-const FileAdapter_1 = require("../../src/fileManage/FileAdapter");
+const fileWatcher_1 = require("../../src/fileService/fileWatcher");
+const syncManager_1 = require("../../src/fileService/syncManager");
+const FileAdapter_1 = require("../../src/fileService/FileAdapter");
 const backendStub_1 = require("../tool/backendStub");
-const logger_1 = require("../../src/logger");
+const logger_1 = require("../../src/util/logger");
 const tool = require("./../tool/syncTestTool");
-const util_1 = require("./../../src/util");
+const stream_1 = require("../../src/util/stream");
 const fsStub_1 = require("./../tool/fsStub");
 const workdir = '/workdir';
 const testFileDict = {
@@ -66,7 +66,7 @@ const setupInstances = () => __awaiter(void 0, void 0, void 0, function* () {
     });
     fsStub_1.default(testFileDict);
     // File adapter
-    const fileAdapter = new FileAdapter_1.default(workdir, localFiles, backend, logger);
+    const fileAdapter = new FileAdapter_1.default(workdir, localFiles, backend);
     // Sync Manager
     const syncManager = new syncManager_1.default(localFiles, fileAdapter, decideSyncMode, logger);
     // File watcher
@@ -81,7 +81,7 @@ const setupInstances = () => __awaiter(void 0, void 0, void 0, function* () {
     };
 });
 const assertStream = (stream, expectedString) => __awaiter(void 0, void 0, void 0, function* () {
-    const str = yield util_1.streamToString(stream);
+    const str = yield stream_1.streamToString(stream);
     chai.assert.strictEqual(str, expectedString);
 });
 class TestSituation {
@@ -100,7 +100,11 @@ class TestSituation {
             // Apply file changes to remote and local filesystems
             yield this.applyFileChanges();
             // Wait unitl the system synchronizes local files and remote files
-            const syncResult = yield this.instances.syncManager.syncSession();
+            const waitTask = new Promise((resolve, reject) => {
+                this.instances.syncManager.on('sync-finished', resolve);
+            });
+            this.instances.syncManager.syncSession();
+            const syncResult = yield waitTask;
             // await tool.sleep(0);
             // Verify syncronization result
             yield this.verify(syncResult.success);

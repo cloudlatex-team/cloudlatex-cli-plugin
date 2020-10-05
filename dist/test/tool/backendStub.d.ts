@@ -1,13 +1,14 @@
 /// <reference types="node" />
-import Backend from '../../src/backend/backend';
+import IBackend from '../../src/backend/ibackend';
 import { ProjectInfo, KeyType } from '../../src/types';
 import { Repository } from '@moritanian/type-db';
 import { FileInfoDesc, FileInfo } from '../../src/model/fileModel';
-export default class BackendStub extends Backend {
+export default class BackendStub implements IBackend {
     isOffline: boolean;
     remoteContents: Record<string, string>;
     remoteFiles: Repository<typeof FileInfoDesc>;
     constructor();
+    validateToken(): Promise<boolean>;
     loadProjectInfo(): Promise<ProjectInfo>;
     loadFileList(): Promise<FileInfo[]>;
     upload(file: FileInfo, stream: NodeJS.ReadableStream, option?: any): Promise<{

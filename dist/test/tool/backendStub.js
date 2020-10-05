@@ -9,24 +9,25 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-const backend_1 = require("../../src/backend/backend");
 const type_db_1 = require("@moritanian/type-db");
 const fileModel_1 = require("../../src/model/fileModel");
 const uuid_1 = require("uuid");
-const util_1 = require("./../../src/util");
+const stream_1 = require("../../src/util/stream");
 /*
  * BackendMock Class
  *
  * [Warn]
  *  file.id in remoteFiles is not equal to file.id in local files.
  */
-class BackendStub extends backend_1.default {
+class BackendStub {
     constructor() {
-        super({}, {});
         this.isOffline = false;
         this.remoteContents = {};
         const remotedb = new type_db_1.TypeDB();
         this.remoteFiles = remotedb.getRepository(fileModel_1.FileInfoDesc);
+    }
+    validateToken() {
+        return Promise.resolve(true);
     }
     loadProjectInfo() {
         if (this.isOffline) {
@@ -53,7 +54,7 @@ class BackendStub extends backend_1.default {
             newFile.id = -1; // reset local id
             const remoteId = newFile.remoteId = uuid_1.v4();
             const remoteRevision = newFile.remoteRevision = uuid_1.v4();
-            this.remoteContents[remoteId] = yield util_1.streamToString(stream);
+            this.remoteContents[remoteId] = yield stream_1.streamToString(stream);
             return {
                 remoteId,
                 remoteRevision
@@ -90,7 +91,7 @@ class BackendStub extends backend_1.default {
             if (!(remoteFile.remoteId in this.remoteContents)) {
                 throw new Error('remote content is not found');
             }
-            return new util_1.ReadableString(this.remoteContents[remoteFile.remoteId]);
+            return new stream_1.ReadableString(this.remoteContents[remoteFile.remoteId]);
         });
     }
     updateRemote(file, stream) {
@@ -102,7 +103,7 @@ class BackendStub extends backend_1.default {
             if (!targetFile || !targetFile.remoteId) {
                 throw new Error('No update target file or no remote id');
             }
-            this.remoteContents[targetFile.remoteId] = yield util_1.streamToString(stream);
+            this.remoteContents[targetFile.remoteId] = yield stream_1.streamToString(stream);
             return targetFile.remoteRevision = uuid_1.v4();
         });
     }
@@ -131,7 +132,7 @@ class BackendStub extends backend_1.default {
         return __awaiter(this, void 0, void 0, function* () {
             const isOffline = this.isOffline;
             this.isOffline = false;
-            yield this.upload(fileInfo, new util_1.ReadableString(content));
+            yield this.upload(fileInfo, new stream_1.ReadableString(content));
             this.isOffline = isOffline;
         });
     }
@@ -143,7 +144,7 @@ class BackendStub extends backend_1.default {
             if (!remoteFiles || remoteFiles.length !== 1) {
                 throw new Error('Remote file is not found');
             }
-            yield this.updateRemote(remoteFiles[0], new util_1.ReadableString(content));
+            yield this.updateRemote(remoteFiles[0], new stream_1.ReadableString(content));
             this.isOffline = isOffline;
         });
     }

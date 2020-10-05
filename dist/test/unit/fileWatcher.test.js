@@ -9,14 +9,14 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-const fileWatcher_1 = require("./../../src/fileManage/fileWatcher");
+const fileWatcher_1 = require("./../../src/fileService/fileWatcher");
 const Sinon = require("sinon");
 const chai = require("chai");
 const path = require("path");
 const fs = require("fs-extra");
 const type_db_1 = require("@moritanian/type-db");
 const fileModel_1 = require("../../src/model/fileModel");
-const logger_1 = require("./../../src/logger");
+const logger_1 = require("../../src/util/logger");
 const tool = require("./../tool/syncTestTool");
 const fixturePath = path.resolve(__dirname, './../fixture');
 const workspacePath = path.resolve(__dirname, './../workspace');

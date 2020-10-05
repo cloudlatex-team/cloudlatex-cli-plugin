@@ -1,11 +1,12 @@
 /// <reference types="node" />
 import { FileInfo } from '../../model/fileModel';
-import Backend from '../backend';
+import IBackend from '../ibackend';
 import { Config, ProjectInfo, KeyType, Account, CompileResult } from './../../types';
-import AccountManager from '../../accountManager';
-export default class ClBackend extends Backend {
+import AccountService from '../../service/accountService';
+export default class ClBackend implements IBackend {
     private api;
-    constructor(config: Config, accountManager: AccountManager<Account>);
+    private config;
+    constructor(config: Config, accountService: AccountService<Account>);
     validateToken(): Promise<boolean>;
     download(file: FileInfo): Promise<NodeJS.ReadableStream>;
     upload(file: FileInfo, stream: NodeJS.ReadableStream, option?: any): Promise<{
@@ -26,7 +27,6 @@ export default class ClBackend extends Backend {
     loadFileList(): Promise<FileInfo[]>;
     loadSynctexObject(url: string): Promise<any>;
     compileProject(): Promise<{
-        exitCode: number;
         logStream: NodeJS.ReadableStream;
         pdfStream?: NodeJS.ReadableStream;
         synctexStream?: NodeJS.ReadableStream;

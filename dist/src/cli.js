@@ -9,19 +9,20 @@ function main() {
     const args = process.argv.slice(2);
     const currentDir = process.cwd();
     const rootPath = currentDir;
-    const latexApp = new latexApp_1.default({
+    latexApp_1.default.createApp({
         outDir: '.workspace',
         rootPath,
         backend: 'cloudlatex',
         projectId: 0,
         endpoint: 'http://localhost:3000/api',
-        autoBuild: true,
+        autoCompile: true,
         storagePath: rootPath
-    }, () => Promise.resolve('upload'));
-    latexApp.setAccount({
-        email: '',
-        token: '',
-        client: ''
+    }).then(latexApp => {
+        latexApp.setAccount({
+            email: '',
+            token: '',
+            client: ''
+        });
     });
 }
 main();

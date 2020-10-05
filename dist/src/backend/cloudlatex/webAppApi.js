@@ -13,20 +13,20 @@ const node_fetch_1 = require("node-fetch");
 const https = require("https");
 const FormData = require("form-data");
 class CLWebAppApi {
-    constructor(config, accountManager) {
+    constructor(config, accountService) {
         this.config = config;
-        this.accountManager = accountManager;
+        this.accountService = accountService;
         this.APIRoot = config.endpoint;
         this.APIProjects = config.endpoint + '/projects';
     }
     headers(option = {}) {
-        if (!this.accountManager.account) {
+        if (!this.accountService.account) {
             throw new Error('account is not defined');
         }
         const headers = {
-            'uid': this.accountManager.account.email,
-            'access-token': this.accountManager.account.token,
-            'client': this.accountManager.account.client,
+            'uid': this.accountService.account.email,
+            'access-token': this.accountService.account.token,
+            'client': this.accountService.account.client,
         };
         if (option.json) {
             headers['Content-Type'] = 'application/json';

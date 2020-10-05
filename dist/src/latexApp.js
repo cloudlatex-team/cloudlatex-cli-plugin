@@ -11,27 +11,77 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 const path = require("path");
 const EventEmitter = require("eventemitter3");
-const logger_1 = require("./logger");
-const fileAdapter_1 = require("./fileManage/fileAdapter");
-const syncManager_1 = require("./fileManage/syncManager");
-const fileWatcher_1 = require("./fileManage/fileWatcher");
+const logger_1 = require("./util/logger");
+const fileAdapter_1 = require("./fileService/fileAdapter");
+const syncManager_1 = require("./fileService/syncManager");
+const fileWatcher_1 = require("./fileService/fileWatcher");
 const type_db_1 = require("@moritanian/type-db");
 const fileModel_1 = require("./model/fileModel");
 const backendSelector_1 = require("./backend/backendSelector");
-const accountManager_1 = require("./accountManager");
-class LatexApp extends EventEmitter {
-    constructor(config, decideSyncMode, logger = new logger_1.default()) {
+const accountService_1 = require("./service/accountService");
+const appInfoService_1 = require("./service/appInfoService");
+class LAEventEmitter extends EventEmitter {
+}
+class LatexApp extends LAEventEmitter {
+    constructor(config, accountService, appInfoService, backend, fileAdapter, fileRepo, decideSyncMode, logger = new logger_1.default()) {
         super();
-        this.decideSyncMode = decideSyncMode;
+        this.config = config;
+        this.accountService = accountService;
+        this.appInfoService = appInfoService;
+        this.backend = backend;
+        this.fileAdapter = fileAdapter;
+        this.fileRepo = fileRepo;
         this.logger = logger;
-        this.account = null;
-        this.config = Object.assign(Object.assign({}, config), { outDir: path.join(config.outDir) });
-        this.appInfo = {
-            offline: false,
-            conflictFiles: []
-        };
-        this.accountManager = new accountManager_1.default(config.accountStorePath || '');
-        this.backend = backendSelector_1.default(config, this.accountManager);
+        /**
+         * Is required to compile initilally after launch app
+         * and validate account
+         */
+        this.initialCompile = false;
+        /**
+         * Sync Manager
+         */
+        this.syncManager = new syncManager_1.default(fileRepo, fileAdapter, (conflictFiles) => __awaiter(this, void 0, void 0, function* () {
+            appInfoService.setConflicts(conflictFiles);
+            return decideSyncMode(conflictFiles);
+        }), logger);
+        this.syncManager.on('sync-finished', (result) => {
+            if (result.success) {
+                this.emit('successfully-synced');
+                if (this.initialCompile || (result.fileChanged && this.config.autoCompile)) {
+                    this.initialCompile = false;
+                    this.compile();
+                }
+            }
+            else {
+                this.logger.error('error in syncSession: ' + result.errors.join(' '));
+                this.emit('failed-sync');
+            }
+        });
+        /**
+         * File watcher
+         */
+        this.fileWatcher = new fileWatcher_1.default(config.rootPath, fileRepo, relativePath => {
+            return ![
+                config.outDir,
+                appInfoService.appInfo.logPath,
+                appInfoService.appInfo.pdfPath,
+                appInfoService.appInfo.synctexPath
+            ].includes(relativePath);
+        }, logger);
+        this.fileWatcher.on('change-detected', () => __awaiter(this, void 0, void 0, function* () {
+            const result = yield this.validateAccount();
+            if (result === 'invalid') {
+                this.logger.error('Your account is invalid.');
+                return;
+            }
+            if (result === 'offline') {
+                return;
+            }
+            this.startSync();
+        }));
+    }
+    get appInfo() {
+        return this.appInfoService.appInfo;
     }
     /**
      * setup file management classes
@@ -41,12 +91,19 @@ class LatexApp extends EventEmitter {
      * The syncManager synchronize local files with remote ones.
      * The file Adapter abstructs file operations of local files and remote ones.
      */
-    launch() {
+    static createApp(config, option = {}) {
         return __awaiter(this, void 0, void 0, function* () {
+            // Config
+            config = Object.assign(Object.assign({}, config), { outDir: path.join(config.outDir) });
             // Account
-            yield this.accountManager.load();
+            const accountService = new accountService_1.default(config.accountStorePath || '');
+            yield accountService.load();
+            // AppInfo
+            const appInfoService = new appInfoService_1.default(config);
+            // Backend
+            const backend = backendSelector_1.default(config, accountService);
             // DB
-            const dbFilePath = path.join(this.config.storagePath, `.${this.config.backend}.json`);
+            const dbFilePath = path.join(config.storagePath, `.${config.backend}.json`);
             const db = new type_db_1.TypeDB(dbFilePath);
             try {
                 yield db.load();
@@ -54,82 +111,79 @@ class LatexApp extends EventEmitter {
             catch (err) {
                 // Not initialized because there is no db file.
             }
-            this.fileRepo = db.getRepository(fileModel_1.FileInfoDesc);
-            this.fileRepo.all().forEach(file => {
+            const fileRepo = db.getRepository(fileModel_1.FileInfoDesc);
+            fileRepo.all().forEach(file => {
                 file.watcherSynced = true;
             });
-            this.fileRepo.save();
-            this.fileAdapter = new fileAdapter_1.default(this.config.rootPath, this.fileRepo, this.backend, this.logger);
-            // Sync Manager
-            this.syncManager = new syncManager_1.default(this.fileRepo, this.fileAdapter, (conflictFiles) => __awaiter(this, void 0, void 0, function* () {
-                this.appInfo.conflictFiles = conflictFiles;
-                return this.decideSyncMode(conflictFiles);
-            }), this.logger);
-            // File watcher
-            this.fileWatcher = new fileWatcher_1.default(this.config.rootPath, this.fileRepo, relativePath => {
-                if (!this.appInfo.projectName) {
-                    return ![this.config.outDir].includes(relativePath);
-                }
-                return ![this.config.outDir, this.logPath, this.pdfPath, this.synctexPath].includes(relativePath);
-            }, this.logger);
-            yield this.fileWatcher.init();
-            this.fileWatcher.on('change-detected', () => __awaiter(this, void 0, void 0, function* () {
-                const result = yield this.validateAccount();
-                if (result === 'invalid') {
-                    this.logger.error('Your account is invalid.');
-                    return;
-                }
-                if (result === 'offline') {
-                    return;
-                }
-                this.startSync();
-            }));
+            fileRepo.save();
+            // logger
+            const logger = option.logger || new logger_1.default();
+            const fileAdapter = new fileAdapter_1.default(config.rootPath, fileRepo, backend);
+            const defaultDecideSyncMode = () => Promise.resolve('upload');
+            const decideSyncMode = option.decideSyncMode || defaultDecideSyncMode;
+            return new LatexApp(config, accountService, appInfoService, backend, fileAdapter, fileRepo, decideSyncMode, logger);
         });
     }
+    /**
+     * Launch application
+     */
+    launch() {
+        return __awaiter(this, void 0, void 0, function* () {
+            yield this.fileWatcher.init();
+            if (this.config.autoCompile && (yield this.validateAccount()) === 'valid') {
+                this.initialCompile = true;
+                this.startSync();
+            }
+        });
+    }
+    /**
+     * Relaunch app to change config
+     *
+     * @param config
+     */
     relaunch(config) {
         return __awaiter(this, void 0, void 0, function* () {
             this.exit();
             this.config = Object.assign(Object.assign({}, config), { outDir: path.join(config.outDir) });
-            this.accountManager = new accountManager_1.default(config.accountStorePath || '');
-            this.backend = backendSelector_1.default(config, this.accountManager);
+            this.accountService = new accountService_1.default(config.accountStorePath || '');
+            this.backend = backendSelector_1.default(config, this.accountService);
             this.launch();
         });
     }
-    get targetName() {
-        if (!this.appInfo.compileTarget) {
-            this.logger.error('Project info is not defined');
-            throw new Error('Project info is not defined');
-        }
-        const file = this.fileRepo.findBy('remoteId', this.appInfo.compileTarget);
-        if (!file) {
-            this.logger.error('Target file is not found');
-            throw new Error('Target file is not found');
-        }
-        return path.basename(file.relativePath, '.tex');
-    }
-    get logPath() {
-        return path.join(this.config.outDir, this.targetName + '.log');
-    }
-    get pdfPath() {
-        return path.join(this.config.outDir, this.targetName + '.pdf');
-    }
-    get synctexPath() {
-        return path.join(this.config.outDir, this.targetName + '.synctex');
-    }
     onOnline() {
-        this.appInfo.offline = false;
-        this.emit('appinfo-updated');
+        if (!this.appInfoService.appInfo.offline) {
+            return;
+        }
+        this.appInfoService.setOnline();
+        this.logger.info('Your account is validated!');
+        this.emit('updated-network', this.appInfoService.appInfo.offline);
     }
     onOffline() {
-        if (this.appInfo.offline) {
+        if (this.appInfoService.appInfo.offline) {
             return;
         }
         this.logger.warn(`The network is offline or some trouble occur with the server.
       You can edit your files, but your changes will not be reflected on the server
       until it is enable to communicate with the server.
       `);
-        this.appInfo.offline = true;
-        this.emit('appinfo-updated');
+        this.appInfoService.setOffLine();
+        this.emit('updated-network', this.appInfo.offline);
+    }
+    loadProjectInfo() {
+        return __awaiter(this, void 0, void 0, function* () {
+            const projectInfo = yield this.backend.loadProjectInfo();
+            const file = this.fileRepo.findBy('remoteId', projectInfo.compile_target_file_id);
+            if (!file) {
+                this.logger.error('Target file is not found');
+                this.emit('failed-compile', { status: 'no-target-error' });
+                return;
+            }
+            const targetName = path.basename(file.relativePath, '.tex');
+            this.appInfoService.setProjectName(projectInfo.title);
+            this.appInfoService.setTarget(projectInfo.compile_target_file_id, targetName);
+            this.appInfoService.setLoaded();
+            this.emit('loaded-project', this.appInfo);
+        });
     }
     /**
      * Compile and save pdf, synctex and log files.
@@ -138,43 +192,45 @@ class LatexApp extends EventEmitter {
         return __awaiter(this, void 0, void 0, function* () {
             this.emit('start-compile');
             this.logger.log('start compiling');
-            let result = null;
             try {
-                if (!this.appInfo.compileTarget) {
-                    const projectInfo = yield this.backend.loadProjectInfo();
-                    this.appInfo.compileTarget = projectInfo.compile_target_file_id;
-                    this.appInfo.projectName = projectInfo.title;
+                if (!this.appInfoService.appInfo.loaded) {
+                    yield this.loadProjectInfo();
                 }
-                result = yield this.backend.compileProject();
-                if (result.exitCode !== 0) {
-                    this.logger.warn('Compilation error');
+                let result = yield this.backend.compileProject();
+                if (result.status !== 'success') {
+                    this.logger.warn('Compilation error', result);
                     this.emit('failed-compile', result);
                     return;
                 }
-                // log
-                this.fileAdapter.saveAs(this.logPath, result.logStream).catch(err => {
-                    this.logger.error('Some error occurred with saving a log file.' + JSON.stringify(err));
-                });
+                const promises = [];
+                // download log file
+                if (result.logStream) {
+                    promises.push(this.fileAdapter.saveAs(this.appInfoService.appInfo.logPath, result.logStream).catch(err => {
+                        this.logger.error('Some error occurred with saving a log file.' + JSON.stringify(err));
+                    }));
+                }
                 // download pdf
                 if (result.pdfStream) {
-                    this.fileAdapter.saveAs(this.pdfPath, result.pdfStream).catch(err => {
+                    promises.push(this.fileAdapter.saveAs(this.appInfoService.appInfo.pdfPath, result.pdfStream).catch(err => {
                         this.logger.error('Some error occurred with downloading the compiled pdf file.' + JSON.stringify(err));
-                    });
+                    }));
                 }
                 // download synctex
                 if (result.synctexStream) {
-                    this.fileAdapter.saveAs(this.synctexPath, result.synctexStream).catch(err => {
+                    promises.push(this.fileAdapter.saveAs(this.appInfoService.appInfo.synctexPath, result.synctexStream).catch(err => {
                         this.logger.error('Some error occurred with saving a synctex file.' + JSON.stringify(err));
-                    });
+                    }));
                 }
+                // wait to download all files
+                yield Promise.all(promises);
+                this.logger.log('sucessfully compiled');
+                this.emit('successfully-compiled', result);
             }
             catch (err) {
                 this.logger.warn('Some error occured with compilation.' + JSON.stringify(err));
-                this.emit('failed-compile', result);
+                this.emit('failed-compile', { status: 'unknown-error' });
                 return;
             }
-            this.logger.log('sucessfully compiled');
-            this.emit('successfully-compiled', result);
         });
     }
     /**
@@ -199,26 +255,21 @@ class LatexApp extends EventEmitter {
             return 'valid';
         });
     }
+    /**
+     * Set account
+     *
+     * @param account Account
+     */
     setAccount(account) {
-        // Keep the reference of this.account
-        this.accountManager.save(account);
+        this.accountService.save(account);
     }
     /**
      * Start to synchronize files with the remote server
      */
-    startSync(forceCompile = false) {
+    startSync() {
         return __awaiter(this, void 0, void 0, function* () {
             this.emit('start-sync');
-            const result = yield this.syncManager.syncSession();
-            if (result.success) {
-                this.emit('successfully-synced');
-                if (forceCompile || (result.fileChanged && this.config.autoBuild)) {
-                    yield this.compile();
-                }
-            }
-            else {
-                this.emit('failed-sync');
-            }
+            yield this.syncManager.syncSession();
         });
     }
     /**
@@ -232,9 +283,7 @@ class LatexApp extends EventEmitter {
      * stop watching file changes.
      */
     exit() {
-        if (this.fileWatcher) {
-            this.fileWatcher.unwatch();
-        }
+        this.fileWatcher.unwatch();
     }
 }
 exports.default = LatexApp;

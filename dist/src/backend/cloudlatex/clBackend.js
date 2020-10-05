@@ -13,12 +13,11 @@ const path = require("path");
 const pako = require("pako");
 const text_encoding_1 = require("text-encoding");
 const webAppApi_1 = require("./webAppApi");
-const backend_1 = require("../backend");
-const util_1 = require("./../../util");
-class ClBackend extends backend_1.default {
-    constructor(config, accountManager) {
-        super(config, accountManager);
-        this.api = new webAppApi_1.default(config, accountManager);
+const stream_1 = require("../../util/stream");
+class ClBackend {
+    constructor(config, accountService) {
+        this.config = config;
+        this.api = new webAppApi_1.default(config, accountService);
     }
     validateToken() {
         return this.api.validateToken();
@@ -48,7 +47,7 @@ class ClBackend extends backend_1.default {
     }
     updateRemote(file, stream) {
         return __awaiter(this, void 0, void 0, function* () {
-            const content = yield util_1.streamToString(stream);
+            const content = yield stream_1.streamToString(stream);
             const result = yield this.api.updateFile(file.remoteId, {
                 content,
                 revision: file.remoteRevision
@@ -93,7 +92,7 @@ class ClBackend extends backend_1.default {
         return __awaiter(this, void 0, void 0, function* () {
             const result = yield this.api.compileProject();
             const exitCode = Number(result.exit_code);
-            const logStream = new util_1.ReadableString(result.log);
+            const logStream = new stream_1.ReadableString(result.log);
             const logs = [...result.errors.map(err => ({
                     line: err.line || 1,
                     message: err.error_log,
@@ -107,7 +106,7 @@ class ClBackend extends backend_1.default {
                 }))];
             if (exitCode !== 0) {
                 return {
-                    exitCode,
+                    status: 'compiler-error',
                     logStream,
                     logs
                 };
@@ -119,9 +118,9 @@ class ClBackend extends backend_1.default {
             const decompressed = pako.inflate(new Uint8Array(compressed));
             let synctexStr = new text_encoding_1.TextDecoder('utf-8').decode(decompressed);
             synctexStr = synctexStr.replace(/\/data\/\./g, this.config.rootPath);
-            const synctexStream = new util_1.ReadableString(synctexStr);
+            const synctexStream = new stream_1.ReadableString(synctexStr);
             return {
-                exitCode,
+                status: 'success',
                 logStream,
                 logs,
                 pdfStream,
