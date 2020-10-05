@@ -5,16 +5,17 @@ import { TextDecoder } from 'text-encoding';
 import WebAppApi from './webAppApi';
 import { FileInfo } from '../../model/fileModel';
 import { ClFile } from './types';
-import Backend from '../backend';
+import IBackend from '../ibackend';
 import { Config, ProjectInfo, KeyType, Account, CompileResult } from './../../types';
-import { streamToString, ReadableString } from './../../util';
-import AccountManager from '../../accountManager';
+import { streamToString, ReadableString } from '../../util/stream';
+import AccountService from '../../service/accountService';
 
-export default class ClBackend extends Backend {
+export default class ClBackend implements IBackend {
   private api: WebAppApi;
-  constructor(config: Config, accountManager: AccountManager<Account>) {
-    super(config, accountManager);
-    this.api = new WebAppApi(config, accountManager);
+  private config: Config;
+  constructor(config: Config, accountService: AccountService<Account>) {
+    this.config = config;
+    this.api = new WebAppApi(config, accountService);
   }
 
   public validateToken() {
@@ -87,7 +88,6 @@ export default class ClBackend extends Backend {
   }
 
   public async compileProject(): Promise<{
-    exitCode: number,
     logStream: NodeJS.ReadableStream,
     pdfStream?: NodeJS.ReadableStream,
     synctexStream?: NodeJS.ReadableStream,
@@ -109,7 +109,7 @@ export default class ClBackend extends Backend {
 
     if (exitCode !== 0) {
       return {
-        exitCode,
+        status: 'compiler-error',
         logStream,
         logs
       };
@@ -126,7 +126,7 @@ export default class ClBackend extends Backend {
     const synctexStream = new ReadableString(synctexStr);
 
     return {
-      exitCode,
+      status: 'success',
       logStream,
       logs,
       pdfStream,

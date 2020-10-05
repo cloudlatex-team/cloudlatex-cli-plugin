@@ -24,7 +24,7 @@ export interface Config {
   projectId: number;
 
   /** set true if automatically compile when any file is saved */
-  autoBuild: boolean;
+  autoCompile: boolean;
 
   /** full path of the directory to save meta data. */
   storagePath: string;
@@ -51,6 +51,11 @@ export interface AppInfo {
   offline: boolean;
   projectName?: string;
   compileTarget?: KeyType,
+  targetName?: string,
+  logPath?: string,
+  pdfPath?: string,
+  synctexPath?: string,
+  loaded: boolean,
   conflictFiles: string[]
 }
 
@@ -65,9 +70,13 @@ export interface DecideSyncMode {
   ): Promise<SyncMode>
 }
 
+export type CompileStatus = 'success' | 'compiler-error' | 'no-target-error' | 'saving-file-error' | 'unknown-error';
 export interface CompileResult {
-  exitCode: number,
-  logs: {
+  status: CompileStatus,
+  logStream?: NodeJS.ReadableStream,
+  pdfStream?: NodeJS.ReadableStream,
+  synctexStream?: NodeJS.ReadableStream,
+  logs?: {
     type: 'warning' | 'error',
     file: string,
     line: number,

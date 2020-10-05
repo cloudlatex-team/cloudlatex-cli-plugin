@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 
-export default class AccountManager<Account> {
+export default class AccountService<Account> {
   private _account: Account | null = null;
   constructor(private savePath?: string) {
 

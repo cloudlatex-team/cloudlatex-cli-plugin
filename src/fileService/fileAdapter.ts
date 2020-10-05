@@ -1,15 +1,13 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import Backend from '../backend/backend';
+import Backend from '../backend/ibackend';
 import { FileRepository, FileInfo } from '../model/fileModel';
-import Logger from '../logger';
 
 export default class FileAdapter {
   constructor(
     protected rootPath: string,
     private fileRepo: FileRepository,
     private backend: Backend,
-    protected logger: Logger
   ) {
   }
 

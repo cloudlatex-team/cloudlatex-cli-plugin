@@ -10,12 +10,12 @@
   ],
   "rules": {
     "@typescript-eslint/class-name-casing": "warn",
+    "semi": "off",
     "@typescript-eslint/semi": "warn",
     "curly": "warn",
     "object-curly-spacing": ["warn", "always"],
     "eqeqeq": "warn",
     "no-throw-literal": "warn",
-    "semi": ["error", "always"],
     "quotes": [2, "single", { "avoidEscape": true }],
     "no-trailing-spaces": "error",
     "keyword-spacing": ["error", {"before": true, "after": true}]

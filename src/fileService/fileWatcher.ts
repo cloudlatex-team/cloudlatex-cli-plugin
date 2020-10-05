@@ -2,7 +2,7 @@ import * as chokidar from 'chokidar';
 import * as path from 'path';
 import * as  EventEmitter from 'eventemitter3';
 import { FileRepository } from '../model/fileModel';
-import Logger from './../logger';
+import Logger from '../util/logger';
 
 type EventType = 'change-detected';
 
@@ -100,6 +100,11 @@ export default class FileWatcher extends EventEmitter<EventType> {
     if (changedFile.localChange !== 'create') {
       changedFile.localChange = 'update';
     }
+
+    this.logger.log(
+      `update of ${changedFile.isFolder ? 'folder' : 'file'} detected: ${absPath}`
+    );
+
     this.fileRepo.save();
     this.emit('change-detected');
   }
@@ -123,6 +128,10 @@ export default class FileWatcher extends EventEmitter<EventType> {
       this.fileRepo.save();
       return;
     }
+
+    this.logger.log(
+      `delete of ${file.isFolder ? 'folder' : 'file'} detected: ${absPath}`
+    );
 
     if (file.localChange === 'create') {
       this.fileRepo.delete(file.id);

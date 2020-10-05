@@ -3,24 +3,24 @@ import * as https from 'https';
 import { CompileResult } from './types';
 import * as FormData from 'form-data';
 import { Config, ProjectInfo, Account } from '../../types';
-import AccountManager from '../../accountManager';
+import AccountService from '../../service/accountService';
 
 export default class CLWebAppApi {
   private APIRoot: string;
   private APIProjects: string;
-  constructor(private config: Config, private accountManager: AccountManager<Account>) {
+  constructor(private config: Config, private accountService: AccountService<Account>) {
     this.APIRoot = config.endpoint;
     this.APIProjects = config.endpoint + '/projects';
   }
 
   private headers(option: {json?: boolean, form?: boolean} = {}): Headers {
-    if (!this.accountManager.account) {
+    if (!this.accountService.account) {
       throw new Error('account is not defined');
     }
     const headers: any = {
-      'uid': this.accountManager.account.email,
-      'access-token': this.accountManager.account.token,
-      'client': this.accountManager.account.client,
+      'uid': this.accountService.account.email,
+      'access-token': this.accountService.account.token,
+      'client': this.accountService.account.client,
       // 'accept-language': 'ja,en-US;q=0.9,en;q=0.8'
     };
     if (option.json) {
