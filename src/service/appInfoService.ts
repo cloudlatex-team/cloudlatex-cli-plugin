@@ -1,6 +1,6 @@
 import * as path from 'path';
-import { AppInfo, Config, ProjectInfo, KeyType } from  './../types';
-export default class AppInfoManager {
+import { AppInfo, Config, ProjectInfo, KeyType } from  '../types';
+export default class AppInfoService {
   public readonly appInfo: AppInfo;
   constructor(private config: Config) {
     this.appInfo = {
@@ -30,6 +30,10 @@ export default class AppInfoManager {
     this.appInfo.logPath = this._logPath();
     this.appInfo.pdfPath = this._pdfPath();
     this.appInfo.synctexPath = this._synctexPath();
+  }
+
+  setLoaded() {
+    this.appInfo.loaded = true;
   }
 
   setConflicts(files: string[]) {

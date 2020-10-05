@@ -8,7 +8,7 @@ import { v4 as uuid } from 'uuid';
 import { TypeDB } from '@moritanian/type-db';
 import { FileInfoDesc, FileInfo } from '../../src/model/fileModel';
 import FileWatcher from '../../src/fileService/fileWatcher';
-import SyncManager from '../../src/fileService/syncManager';
+import SyncManager, { SyncResult } from '../../src/fileService/syncManager';
 import FileAdapter from '../../src/fileService/FileAdapter';
 import Backend from '../tool/backendStub';
 import Logger from '../../src/util/logger';
@@ -67,7 +67,7 @@ const setupInstances = async () => {
 
   fsStub(testFileDict);
   // File adapter
-  const fileAdapter = new FileAdapter(workdir, localFiles, backend, logger);
+  const fileAdapter = new FileAdapter(workdir, localFiles, backend);
 
   // Sync Manager
   const syncManager = new SyncManager(localFiles, fileAdapter, decideSyncMode, logger);
@@ -119,7 +119,11 @@ class TestSituation {
     await this.applyFileChanges();
 
     // Wait unitl the system synchronizes local files and remote files
-    const syncResult = await this.instances.syncManager.syncSession();
+    const waitTask = new Promise((resolve: (result: SyncResult) => void, reject) => {
+      this.instances.syncManager.on('sync-finished', resolve);
+    });
+    this.instances.syncManager.syncSession();
+    const syncResult = await waitTask;
     // await tool.sleep(0);
 
     // Verify syncronization result

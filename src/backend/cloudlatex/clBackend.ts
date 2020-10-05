@@ -8,14 +8,14 @@ import { ClFile } from './types';
 import IBackend from '../ibackend';
 import { Config, ProjectInfo, KeyType, Account, CompileResult } from './../../types';
 import { streamToString, ReadableString } from '../../util/stream';
-import AccountManager from '../../manager/accountManager';
+import AccountService from '../../service/accountService';
 
 export default class ClBackend implements IBackend {
   private api: WebAppApi;
   private config: Config;
-  constructor(config: Config, accountManager: AccountManager<Account>) {
+  constructor(config: Config, accountService: AccountService<Account>) {
     this.config = config;
-    this.api = new WebAppApi(config, accountManager);
+    this.api = new WebAppApi(config, accountService);
   }
 
   public validateToken() {

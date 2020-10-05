@@ -2,35 +2,36 @@ import { SyncMode, DecideSyncMode, KeyType, ChangeLocation, ChangeState } from '
 import FileAdapter from './fileAdapter';
 import { FileRepository, FileInfo } from '../model/fileModel';
 import * as path from 'path';
+import * as  EventEmitter from 'eventemitter3';
+import * as _ from 'lodash';
 import Logger from '../util/logger';
 
-type SyncResult = {
+export type SyncResult = {
   success: boolean;
-  fileChanged: boolean;
+  fileChanged: boolean; // show if any file (not folder) is changed
+  errors: string[]
 };
 
-// TODO detect file changes
-export default class SyncManager {
-  private syncing: boolean = false;
-  private syncReserved: boolean = false;
-  private fileChanged: boolean = false; // Whether any file (not folder) is changed
+type EventType = 'sync-finished';
 
+export default class SyncManager extends EventEmitter<EventType> {
+  private syncing: boolean = false;
+  private fileChanged: boolean = false; // Whether any file (not folder) is changed
+  public syncSession: () => void;
   constructor(
     private fileRepo: FileRepository,
     private fileAdapter: FileAdapter,
     public decideSyncMode: DecideSyncMode,
     private logger: Logger) {
+      super();
+      this.syncSession = _.debounce(this._syncSession.bind(this), 250);
   }
 
-  public async syncSession(): Promise<SyncResult> {
+  async _syncSession(): Promise<void> {
     this.fileChanged = false;
     if (this.syncing) {
-      this.syncReserved = true;
-      this.logger.log('Sync session is reserved');
-      return {
-        success: true,
-        fileChanged: false
-      };
+      this.syncSession();
+      return;
     }
     this.logger.log('Synchronizing files with server ...');
     this.syncing = true;
@@ -38,26 +39,25 @@ export default class SyncManager {
       await this.sync();
     } catch (e) {
       this.syncing = false;
-      this.logger.error('error in syncSession: ' + (e && e.stack));
-      return {
+      this.emitSyncResult({
         success: false,
-        fileChanged: true
-      };
+        fileChanged: this.fileChanged,
+        errors: [JSON.stringify(e && e.stack || '')]
+      });
+      return;
     }
     this.syncing = false;
 
-    if (this.syncReserved) {
-      this.syncReserved = false;
-      setTimeout(this.syncSession.bind(this), 0);
-      return {
-        success: true,
-        fileChanged: false
-      };
-    }
-    return {
+    this.emitSyncResult({
       success: true,
-      fileChanged: this.fileChanged
-    };;
+      fileChanged: this.fileChanged,
+      errors: []
+    });
+    return;
+  }
+
+  private emitSyncResult(result: SyncResult) {
+    this.emit('sync-finished', result);
   }
 
   private async sync() {
@@ -151,6 +151,11 @@ export default class SyncManager {
     return tasks;
   }
 
+  /**
+   * Return task of applying local file change to remote file
+   *
+   * @param file FileInfo
+   */
   private syncWithLocalTask(file: FileInfo): PriorityTask {
     const priority = this.computePriority(file, 'local');
     switch (file.localChange) {
@@ -180,6 +185,11 @@ export default class SyncManager {
     }
   }
 
+  /**
+   * Return task of applying remote file change to local file
+   *
+   * @param file FileInfo
+   */
   private syncWithRemoteTask(file: FileInfo): PriorityTask {
     const priority = this.computePriority(file, 'remote');
     switch (file.remoteChange) {
@@ -202,6 +212,12 @@ export default class SyncManager {
     }
   }
 
+  /**
+   * Compute priority to handle file change
+   *
+   * @param file FileInfo
+   * @param syncDestination 'local' | 'remote'
+   */
   private computePriority(file: FileInfo, syncDestination: 'local' | 'remote'): number {
     let change: ChangeState = syncDestination === 'local' ?
       file.localChange :
