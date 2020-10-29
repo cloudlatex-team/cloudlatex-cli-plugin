@@ -89,11 +89,30 @@ export default class SyncManager extends EventEmitter<EventType> {
       if (!file) { // created in remote
         file = this.fileRepo.new(remoteFile);
         file.remoteChange = 'create';
-      } else {
-        file.remoteRevision = remoteFile.remoteRevision;
-        file.url = remoteFile.url;
-        if (file.localRevision !== file.remoteRevision) { // remote updated
-          file.remoteChange = 'update';
+        return;
+      }
+      file.remoteRevision = remoteFile.remoteRevision;
+      file.url = remoteFile.url;
+      if (file.localRevision !== file.remoteRevision) { // updated in remote
+        file.remoteChange = 'update';
+      } else if (file.relativePath !== remoteFile.relativePath) { // renamed in remote
+        if (file.localChange === 'no') {
+          // express rename as deleting original file and creating renamed file
+          file.remoteChange = 'delete';
+          const renamedFile = this.fileRepo.new(remoteFile);
+          renamedFile.remoteChange = 'create';
+        } else if (file.localChange === 'create') {
+          this.logger.error(
+            `Unexpected situation is detected: remote file is renamed and local file is created: ${file.relativePath}`
+          );
+        } else if (file.localChange === 'delete') {
+          this.logger.error(
+            `Unsupported situation is detected: remote file is renamed and local file is deleted: ${file.relativePath}`
+          );
+        } else if (file.localChange === 'update') {
+          this.logger.error(
+            `Unsupported situation is detected: remote file is renamed and local file is updated: ${file.relativePath}`
+          );
         }
       }
     });
