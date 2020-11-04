@@ -133,7 +133,7 @@ export default class LatexApp extends LAEventEmitter  {
 
 
     // DB
-    const dbFilePath = path.join(config.storagePath, `.${config.backend}.json`);
+    const dbFilePath = path.join(config.storagePath, `.${config.projectId}-${config.backend}.json`);
     const db = new TypeDB(dbFilePath);
     try {
       await db.load();
@@ -159,10 +159,13 @@ export default class LatexApp extends LAEventEmitter  {
    */
   public async launch() {
     await this.fileWatcher.init();
-    if (this.config.autoCompile && await this.validateAccount() === 'valid') {
-      this.initialCompile = true;
-      this.startSync();
+    if (await this.validateAccount() !== 'valid') {
+      return;
     }
+    if (this.config.autoCompile) {
+      this.initialCompile = true;
+    }
+    this.startSync();
   }
 
   /**
