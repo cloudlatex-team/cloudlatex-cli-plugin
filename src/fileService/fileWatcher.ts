@@ -7,7 +7,7 @@ import Logger from '../util/logger';
 type EventType = 'change-detected';
 
 export default class FileWatcher extends EventEmitter<EventType> {
-  private fileWatcher!: chokidar.FSWatcher;
+  private fileWatcher?: chokidar.FSWatcher;
 
   constructor(
     private rootPath: string,
@@ -26,16 +26,16 @@ export default class FileWatcher extends EventEmitter<EventType> {
         pollInterval: 100
       }
     };
-    this.fileWatcher = chokidar.watch(this.rootPath, watcherOption);
+    const fileWatcher = this.fileWatcher = chokidar.watch(this.rootPath, watcherOption);
     return new Promise((resolve, reject) => {
       // TODO detect changes before running
-      this.fileWatcher.on('ready', () => {
-        this.fileWatcher.on('add', (absPath) => this.onFileCreated(absPath, false));
-        this.fileWatcher.on('addDir', (absPath) => this.onFileCreated(absPath, true));
-        this.fileWatcher.on('change', this.onFileChanged.bind(this));
-        this.fileWatcher.on('unlink', this.onFileDeleted.bind(this));
-        this.fileWatcher.on('unlinkDir', this.onFileDeleted.bind(this));
-        this.fileWatcher.on('error', this.onWatchingError.bind(this));
+      fileWatcher.on('ready', () => {
+        fileWatcher.on('add', (absPath) => this.onFileCreated(absPath, false));
+        fileWatcher.on('addDir', (absPath) => this.onFileCreated(absPath, true));
+        fileWatcher.on('change', this.onFileChanged.bind(this));
+        fileWatcher.on('unlink', this.onFileDeleted.bind(this));
+        fileWatcher.on('unlinkDir', this.onFileDeleted.bind(this));
+        fileWatcher.on('error', this.onWatchingError.bind(this));
         resolve();
       });
     });
@@ -154,6 +154,6 @@ export default class FileWatcher extends EventEmitter<EventType> {
   }
 
   public unwatch() {
-    this.fileWatcher.unwatch(this.rootPath);
+    this.fileWatcher?.unwatch(this.rootPath);
   }
 }
