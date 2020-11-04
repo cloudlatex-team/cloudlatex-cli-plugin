@@ -43,6 +43,7 @@ export default class SyncManager extends EventEmitter<EventType> {
       await this.sync();
     } catch (e) {
       this.syncing = false;
+      this.logger.log('Failed to sync: ' + JSON.stringify(e && e.stack || ''));
       this.emitSyncResult({
         success: false,
         fileChanged: this.fileChanged,
@@ -52,6 +53,7 @@ export default class SyncManager extends EventEmitter<EventType> {
     }
     this.syncing = false;
 
+    this.logger.log('Succeeded in synchronizing!');
     this.emitSyncResult({
       success: true,
       fileChanged: this.fileChanged,
