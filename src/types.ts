@@ -28,12 +28,6 @@ export interface Config {
 
   /** full path of the directory to save meta data. */
   storagePath: string;
-
-  /**
-   *  full path of the directory to save account.
-   *  set undefined not to store account.
-   */
-  accountStorePath?: string;
 }
 
 export type Account = {

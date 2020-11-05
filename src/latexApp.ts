@@ -116,13 +116,14 @@ export default class LatexApp extends LAEventEmitter  {
    */
   static async createApp(config: Config, option: {
       decideSyncMode?: DecideSyncMode,
-      logger?: Logger
+      logger?: Logger,
+      accountService?: AccountService<Account>
     } = {}): Promise<LatexApp> {
     // Config
     config = { ...config, outDir: path.join(config.outDir) };
 
     // Account
-    const accountService: AccountService<Account> = new AccountService(config.accountStorePath || '');
+    const accountService = option.accountService || new AccountService();
     await accountService.load();
 
     // AppInfo
@@ -173,10 +174,12 @@ export default class LatexApp extends LAEventEmitter  {
    *
    * @param config
    */
-  async relaunch(config: Config) {
+  async relaunch(config: Config, accountService?: AccountService<Account>) {
     this.exit();
     this.config = { ...config, outDir: path.join(config.outDir) };
-    this.accountService = new AccountService(config.accountStorePath || '');
+    if (accountService) {
+      this.accountService = accountService;
+    }
     this.backend = backendSelector(config, this.accountService);
     this.launch();
   }
@@ -186,7 +189,7 @@ export default class LatexApp extends LAEventEmitter  {
       return;
     }
     this.appInfoService.setOnline();
-    this.logger.info('Your account is validated!');
+    this.logger.info('Your account has been validated!');
     this.emit('updated-network', this.appInfoService.appInfo.offline);
   }
 
