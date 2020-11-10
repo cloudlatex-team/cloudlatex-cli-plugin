@@ -51,12 +51,6 @@ export default class CLWebAppApi {
       params.body = option.body;
     }
 
-    // Use insecure mode in qa env
-    if (this.APIRoot === 'https://qa.cloudlatex.io/api') {
-      params.agent = new https.Agent({
-        rejectUnauthorized: false,
-      });
-    }
     return params;
   }
 
