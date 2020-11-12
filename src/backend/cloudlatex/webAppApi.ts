@@ -13,7 +13,7 @@ export default class CLWebAppApi {
     this.APIProjects = config.endpoint + '/projects';
   }
 
-  private headers(option: {json?: boolean, form?: boolean} = {}): Headers {
+  private headers(option: { json?: boolean, form?: boolean } = {}): Headers {
     if (!this.accountService.account) {
       throw new Error('account is not defined');
     }
@@ -35,8 +35,8 @@ export default class CLWebAppApi {
   private fetchOption(option: {
     method?: 'GET' | 'POST' | 'PUT' | 'DELETE',
     body?: any,
-    headerOption?: {json?: boolean, form?: boolean},
-    headers?: Headers | { [key: string]: string;}
+    headerOption?: { json?: boolean, form?: boolean },
+    headers?: Headers | { [key: string]: string; }
   } = {}): RequestInit {
     const params: RequestInit = {
       headers: {
@@ -79,7 +79,7 @@ export default class CLWebAppApi {
   }
 
   async loadProjectInfo() {
-    const res = await fetch(`${this.APIProjects}/${this.config.projectId}`, this.fetchOption() );
+    const res = await fetch(`${this.APIProjects}/${this.config.projectId}`, this.fetchOption());
     if (!res.ok) {
       throw new Error(JSON.stringify(res));
     }
@@ -88,7 +88,7 @@ export default class CLWebAppApi {
   }
 
   async loadFiles() {
-    const res = await fetch(`${this.APIProjects}/${this.config.projectId}/files`, this.fetchOption() );
+    const res = await fetch(`${this.APIProjects}/${this.config.projectId}/files`, this.fetchOption());
     if (!res.ok) {
       throw new Error(JSON.stringify(res));
     }
@@ -101,7 +101,8 @@ export default class CLWebAppApi {
       this.fetchOption({
         method: 'POST',
         body: JSON.stringify({ name, is_folder, belonging_to }),
-        headerOption: { json: true } })
+        headerOption: { json: true }
+      })
     );
     if (!res.ok) {
       throw new Error(JSON.stringify(res));
@@ -120,7 +121,7 @@ export default class CLWebAppApi {
     return JSON.parse(await res.text());
   }
 
-  async updateFile(id: number, params: any): Promise<{revision: string}> {
+  async updateFile(id: number, params: any): Promise<{ revision: string }> {
     const res = await fetch(
       `${this.APIProjects}/${this.config.projectId}/files/${id}`,
       this.fetchOption({
@@ -175,6 +176,11 @@ export default class CLWebAppApi {
     if (!res.ok) {
       throw new Error(JSON.stringify(res));
     }
+    return res.body;
+  }
+
+  async downdloadPreview(url: string): Promise<NodeJS.ReadableStream> {
+    const res = await fetch(url, this.fetchOption());
     return res.body;
   }
 

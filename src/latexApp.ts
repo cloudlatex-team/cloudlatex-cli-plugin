@@ -12,11 +12,6 @@ import backendSelector from './backend/backendSelector';
 import AccountService from './service/accountService';
 import AppInfoService from './service/appInfoService';
 
-// TODO syncSession() 返り値 か callback // callbackにしてユーザから直接叩く際は 　返り値？
-// TODO syncSession() debounce
-// TODO delte db flle when the application is deactivated
-
-
 type NoPayloadEvents = 'start-sync' | 'failed-sync' | 'successfully-synced' | 'start-compile';
 class LAEventEmitter extends EventEmitter<''> {
 }
@@ -32,7 +27,7 @@ interface LAEventEmitter {
   emit(eventName: 'loaded-project', arg: AppInfo): void;
   on(eventName: 'loaded-project', callback: (arg: AppInfo) => unknown): void;
 }
-export default class LatexApp extends LAEventEmitter  {
+export default class LatexApp extends LAEventEmitter {
   private syncManager: SyncManager;
   private fileWatcher: FileWatcher;
   /**
@@ -70,7 +65,7 @@ export default class LatexApp extends LAEventEmitter  {
           this.compile();
         }
       } else {
-        this.logger.error('error in syncSession: ' + result.errors.join(' '));
+        this.logger.error('error in syncSession: ' + result.errors.join('\n'));
         this.emit('failed-sync');
       }
     });
@@ -78,10 +73,13 @@ export default class LatexApp extends LAEventEmitter  {
     /**
      * File watcher
      */
+    const relativeOutDir = path.isAbsolute(config.outDir) ?
+      path.relative(config.rootPath, config.outDir) :
+      config.outDir;
     this.fileWatcher = new FileWatcher(config.rootPath, fileRepo,
       relativePath => {
         return ![
-          config.outDir,
+          relativeOutDir,
           appInfoService.appInfo.logPath,
           appInfoService.appInfo.pdfPath,
           appInfoService.appInfo.synctexPath
@@ -115,10 +113,10 @@ export default class LatexApp extends LAEventEmitter  {
    * The file Adapter abstructs file operations of local files and remote ones.
    */
   static async createApp(config: Config, option: {
-      decideSyncMode?: DecideSyncMode,
-      logger?: Logger,
-      accountService?: AccountService<Account>
-    } = {}): Promise<LatexApp> {
+    decideSyncMode?: DecideSyncMode,
+    logger?: Logger,
+    accountService?: AccountService<Account>
+  } = {}): Promise<LatexApp> {
     // Config
     config = { ...config, outDir: path.join(config.outDir) };
 
