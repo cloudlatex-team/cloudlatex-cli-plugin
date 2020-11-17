@@ -18,16 +18,22 @@ export default class FileAdapter {
   public async download(file: FileInfo): Promise<void> {
     const stream = await this.backend.download(file);
     file.watcherSynced = false;
-    await this.saveAs(file.relativePath, stream);
+    try {
+      await this.saveAs(file.relativePath, stream);
+    } catch (e) {
+      file.watcherSynced = true;
+      this.fileRepo.save();
+      throw e;
+    }
     file.localChange = 'no';
     file.localRevision = file.remoteRevision;
     this.fileRepo.save();
   }
 
-  public async saveAs(relativePath: string, stream: NodeJS.ReadableStream): Promise<void> {
-    const absPath = path.join(this.rootPath, relativePath);
+  public async saveAs(filePath: string, stream: NodeJS.ReadableStream): Promise<void> {
+    let absPath = path.isAbsolute(filePath) ? filePath : path.resolve(this.rootPath, filePath);
     const dirname = path.dirname(absPath);
-    if (dirname !== relativePath) {
+    if (dirname !== this.rootPath) {
       try {
         await fs.promises.mkdir(dirname);
       } catch (err) {
@@ -71,7 +77,7 @@ export default class FileAdapter {
     this.fileRepo.save();
   }
 
-  public async upload(file: FileInfo, option?: any): Promise<void>  {
+  public async upload(file: FileInfo, option?: any): Promise<void> {
     const stream = fs.createReadStream(path.join(this.rootPath, file.relativePath));
     const { remoteId, remoteRevision } = await this.backend.upload(file, stream, option);
     file.remoteId = remoteId;
@@ -80,14 +86,14 @@ export default class FileAdapter {
     this.fileRepo.save();
   }
 
-  public async updateRemote(file: FileInfo): Promise<void>  {
+  public async updateRemote(file: FileInfo): Promise<void> {
     const stream = fs.createReadStream(path.join(this.rootPath, file.relativePath));
-    file.localRevision  = await this.backend.updateRemote(file, stream);
+    file.localRevision = await this.backend.updateRemote(file, stream);
     file.localChange = 'no';
     this.fileRepo.save();
   }
 
-  public async deleteRemote(file: FileInfo): Promise<void>  {
+  public async deleteRemote(file: FileInfo): Promise<void> {
     await this.backend.deleteRemote(file);
     this.fileRepo.delete(file.id);
     this.fileRepo.save();
@@ -111,6 +117,8 @@ export default class FileAdapter {
     try {
       await fs.promises.unlink(absPath);
     } catch (err) {
+      file.watcherSynced = true;
+      this.fileRepo.save();
       // Allow the error that file is already deleted
       if (err.code !== 'ENOENT') {
         throw err;
