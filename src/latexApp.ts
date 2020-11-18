@@ -27,6 +27,37 @@ interface LAEventEmitter {
   emit(eventName: 'loaded-project', arg: AppInfo): void;
   on(eventName: 'loaded-project', callback: (arg: AppInfo) => unknown): void;
 }
+
+const IgnoreFiles = [
+  '*.aux',
+  '*.bbl',
+  '*.blg',
+  '*.idx',
+  '*.ind',
+  '*.lof',
+  '*.lot',
+  '*.out',
+  '*.toc',
+  '*.acn',
+  '*.acr',
+  '*.alg',
+  '*.glg',
+  '*.glo',
+  '*.gls',
+  '*.fls',
+  '*.log',
+  '*.fdb_latexmk',
+  '*.snm',
+  '*.synctex',
+  '*.synctex(busy)',
+  '*.synctex.gz(busy)',
+  '*.nav'
+];
+
+const wildcard2regexp = (wildcardExp: string) => {
+  return '^' + wildcardExp.replace(/\./g, '\\\.').replace(/\*/g, '.*').replace(/\(/g, '\\(').replace(/\)/g, '\\)') + '$';
+};
+
 export default class LatexApp extends LAEventEmitter {
   private syncManager: SyncManager;
   private fileWatcher: FileWatcher;
@@ -36,6 +67,9 @@ export default class LatexApp extends LAEventEmitter {
    */
   private initialCompile = false;
 
+  /**
+   * Do not use this constructor and instantiate LatexApp by createApp()
+   */
   constructor(
     private config: Config,
     private accountService: AccountService<Account>,
@@ -73,17 +107,16 @@ export default class LatexApp extends LAEventEmitter {
     /**
      * File watcher
      */
-    const relativeOutDir = path.isAbsolute(config.outDir) ?
-      path.relative(config.rootPath, config.outDir) :
-      config.outDir;
-    this.fileWatcher = new FileWatcher(config.rootPath, fileRepo,
+    this.fileWatcher = new FileWatcher(this.config.rootPath, fileRepo,
       relativePath => {
         return ![
-          relativeOutDir,
+          this.config.outDir,
           appInfoService.appInfo.logPath,
           appInfoService.appInfo.pdfPath,
           appInfoService.appInfo.synctexPath
-        ].includes(relativePath);
+        ].includes(relativePath) &&
+          !IgnoreFiles
+            .some(ignoreFile => relativePath.match(wildcard2regexp(ignoreFile)));
       },
       logger);
 
@@ -117,8 +150,12 @@ export default class LatexApp extends LAEventEmitter {
     logger?: Logger,
     accountService?: AccountService<Account>
   } = {}): Promise<LatexApp> {
+
     // Config
-    config = { ...config, outDir: path.join(config.outDir) };
+    const relativeOutDir = path.isAbsolute(config.outDir) ?
+      path.relative(config.rootPath, config.outDir) :
+      path.join(config.outDir);
+    config = { ...config, outDir: relativeOutDir };
 
     // Account
     const accountService = option.accountService || new AccountService();

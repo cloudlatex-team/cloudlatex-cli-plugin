@@ -13,7 +13,7 @@ export default class FileWatcher extends EventEmitter<EventType> {
     private rootPath: string,
     private fileRepo: FileRepository,
     public readonly watcherFileFilter: (relativePath: string) => boolean = (_) => true,
-    private logger: Logger
+    private logger: Logger = new Logger()
   ) {
     super();
   }
@@ -145,7 +145,7 @@ export default class FileWatcher extends EventEmitter<EventType> {
     this.emit('change-detected');
   }
 
-  private onWatchingError (err: any) {
+  private onWatchingError(err: any) {
     this.logger.error('onWatchingError', err);
   }
 

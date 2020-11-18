@@ -1,5 +1,5 @@
 import * as path from 'path';
-import { AppInfo, Config, ProjectInfo, KeyType } from  '../types';
+import { AppInfo, Config, ProjectInfo, KeyType } from '../types';
 export default class AppInfoService {
   public readonly appInfo: AppInfo;
   constructor(private config: Config) {

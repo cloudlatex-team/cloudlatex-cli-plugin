@@ -8,7 +8,7 @@ export interface ProjectInfo {
  * Configuration
  */
 export interface Config {
-  /** abs path of the directory to output compilation result */
+  /** abs path or relative path of the directory to output compilation result */
   outDir: string;
 
   /** abs path of the root directory of the tex project */
