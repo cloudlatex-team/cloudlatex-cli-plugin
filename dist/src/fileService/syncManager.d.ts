@@ -5,6 +5,7 @@ import * as EventEmitter from 'eventemitter3';
 import Logger from '../util/logger';
 export declare type SyncResult = {
     success: boolean;
+    canceled: boolean;
     fileChanged: boolean;
     errors: string[];
 };
@@ -34,6 +35,13 @@ export default class SyncManager extends EventEmitter<EventType> {
      * @param file FileInfo
      */
     private syncWithRemoteTask;
+    /**
+     * Wrap sync task for exceptions
+     *
+     * @param syncTask
+     * @param file FileInfo
+     */
+    private wrapSyncTask;
     /**
      * Compute priority to handle file change
      *

@@ -22,7 +22,38 @@ const accountService_1 = require("./service/accountService");
 const appInfoService_1 = require("./service/appInfoService");
 class LAEventEmitter extends EventEmitter {
 }
+const IgnoreFiles = [
+    '*.aux',
+    '*.bbl',
+    '*.blg',
+    '*.idx',
+    '*.ind',
+    '*.lof',
+    '*.lot',
+    '*.out',
+    '*.toc',
+    '*.acn',
+    '*.acr',
+    '*.alg',
+    '*.glg',
+    '*.glo',
+    '*.gls',
+    '*.fls',
+    '*.log',
+    '*.fdb_latexmk',
+    '*.snm',
+    '*.synctex',
+    '*.synctex(busy)',
+    '*.synctex.gz(busy)',
+    '*.nav'
+];
+const wildcard2regexp = (wildcardExp) => {
+    return '^' + wildcardExp.replace(/\./g, '\\\.').replace(/\*/g, '.*').replace(/\(/g, '\\(').replace(/\)/g, '\\)') + '$';
+};
 class LatexApp extends LAEventEmitter {
+    /**
+     * Do not use this constructor and instantiate LatexApp by createApp()
+     */
     constructor(config, accountService, appInfoService, backend, fileAdapter, fileRepo, decideSyncMode, logger = new logger_1.default()) {
         super();
         this.config = config;
@@ -52,21 +83,25 @@ class LatexApp extends LAEventEmitter {
                     this.compile();
                 }
             }
+            else if (result.canceled) {
+            }
             else {
-                this.logger.error('error in syncSession: ' + result.errors.join(' '));
+                this.logger.error('error in syncSession: ' + result.errors.join('\n'));
                 this.emit('failed-sync');
             }
         });
         /**
          * File watcher
          */
-        this.fileWatcher = new fileWatcher_1.default(config.rootPath, fileRepo, relativePath => {
+        this.fileWatcher = new fileWatcher_1.default(this.config.rootPath, fileRepo, relativePath => {
             return ![
-                config.outDir,
+                this.config.outDir,
                 appInfoService.appInfo.logPath,
                 appInfoService.appInfo.pdfPath,
                 appInfoService.appInfo.synctexPath
-            ].includes(relativePath);
+            ].includes(relativePath) &&
+                !IgnoreFiles
+                    .some(ignoreFile => relativePath.match(wildcard2regexp(ignoreFile)));
         }, logger);
         this.fileWatcher.on('change-detected', () => __awaiter(this, void 0, void 0, function* () {
             const result = yield this.validateAccount();
@@ -94,16 +129,19 @@ class LatexApp extends LAEventEmitter {
     static createApp(config, option = {}) {
         return __awaiter(this, void 0, void 0, function* () {
             // Config
-            config = Object.assign(Object.assign({}, config), { outDir: path.join(config.outDir) });
+            const relativeOutDir = path.isAbsolute(config.outDir) ?
+                path.relative(config.rootPath, config.outDir) :
+                path.join(config.outDir);
+            config = Object.assign(Object.assign({}, config), { outDir: relativeOutDir });
             // Account
-            const accountService = new accountService_1.default(config.accountStorePath || '');
+            const accountService = option.accountService || new accountService_1.default();
             yield accountService.load();
             // AppInfo
             const appInfoService = new appInfoService_1.default(config);
             // Backend
             const backend = backendSelector_1.default(config, accountService);
             // DB
-            const dbFilePath = path.join(config.storagePath, `.${config.backend}.json`);
+            const dbFilePath = path.join(config.storagePath, `.${config.projectId}-${config.backend}.json`);
             const db = new type_db_1.TypeDB(dbFilePath);
             try {
                 yield db.load();
@@ -130,10 +168,13 @@ class LatexApp extends LAEventEmitter {
     launch() {
         return __awaiter(this, void 0, void 0, function* () {
             yield this.fileWatcher.init();
-            if (this.config.autoCompile && (yield this.validateAccount()) === 'valid') {
-                this.initialCompile = true;
-                this.startSync();
+            if ((yield this.validateAccount()) !== 'valid') {
+                return;
             }
+            if (this.config.autoCompile) {
+                this.initialCompile = true;
+            }
+            this.startSync();
         });
     }
     /**
@@ -141,11 +182,13 @@ class LatexApp extends LAEventEmitter {
      *
      * @param config
      */
-    relaunch(config) {
+    relaunch(config, accountService) {
         return __awaiter(this, void 0, void 0, function* () {
             this.exit();
             this.config = Object.assign(Object.assign({}, config), { outDir: path.join(config.outDir) });
-            this.accountService = new accountService_1.default(config.accountStorePath || '');
+            if (accountService) {
+                this.accountService = accountService;
+            }
             this.backend = backendSelector_1.default(config, this.accountService);
             this.launch();
         });
@@ -155,7 +198,7 @@ class LatexApp extends LAEventEmitter {
             return;
         }
         this.appInfoService.setOnline();
-        this.logger.info('Your account is validated!');
+        this.logger.info('Your account has been validated!');
         this.emit('updated-network', this.appInfoService.appInfo.offline);
     }
     onOffline() {

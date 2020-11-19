@@ -7,8 +7,8 @@ export default class FileWatcher extends EventEmitter<EventType> {
     private fileRepo;
     readonly watcherFileFilter: (relativePath: string) => boolean;
     private logger;
-    private fileWatcher;
-    constructor(rootPath: string, fileRepo: FileRepository, watcherFileFilter: (relativePath: string) => boolean, logger: Logger);
+    private fileWatcher?;
+    constructor(rootPath: string, fileRepo: FileRepository, watcherFileFilter?: (relativePath: string) => boolean, logger?: Logger);
     init(): Promise<void>;
     private onFileCreated;
     private onFileChanged;

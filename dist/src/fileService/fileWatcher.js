@@ -12,8 +12,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const chokidar = require("chokidar");
 const path = require("path");
 const EventEmitter = require("eventemitter3");
+const logger_1 = require("../util/logger");
 class FileWatcher extends EventEmitter {
-    constructor(rootPath, fileRepo, watcherFileFilter = (_) => true, logger) {
+    constructor(rootPath, fileRepo, watcherFileFilter = (_) => true, logger = new logger_1.default()) {
         super();
         this.rootPath = rootPath;
         this.fileRepo = fileRepo;
@@ -28,16 +29,16 @@ class FileWatcher extends EventEmitter {
                 pollInterval: 100
             }
         };
-        this.fileWatcher = chokidar.watch(this.rootPath, watcherOption);
+        const fileWatcher = this.fileWatcher = chokidar.watch(this.rootPath, watcherOption);
         return new Promise((resolve, reject) => {
             // TODO detect changes before running
-            this.fileWatcher.on('ready', () => {
-                this.fileWatcher.on('add', (absPath) => this.onFileCreated(absPath, false));
-                this.fileWatcher.on('addDir', (absPath) => this.onFileCreated(absPath, true));
-                this.fileWatcher.on('change', this.onFileChanged.bind(this));
-                this.fileWatcher.on('unlink', this.onFileDeleted.bind(this));
-                this.fileWatcher.on('unlinkDir', this.onFileDeleted.bind(this));
-                this.fileWatcher.on('error', this.onWatchingError.bind(this));
+            fileWatcher.on('ready', () => {
+                fileWatcher.on('add', (absPath) => this.onFileCreated(absPath, false));
+                fileWatcher.on('addDir', (absPath) => this.onFileCreated(absPath, true));
+                fileWatcher.on('change', this.onFileChanged.bind(this));
+                fileWatcher.on('unlink', this.onFileDeleted.bind(this));
+                fileWatcher.on('unlinkDir', this.onFileDeleted.bind(this));
+                fileWatcher.on('error', this.onWatchingError.bind(this));
                 resolve();
             });
         });
@@ -136,7 +137,8 @@ class FileWatcher extends EventEmitter {
         return path.relative(this.rootPath, absPath);
     }
     unwatch() {
-        this.fileWatcher.unwatch(this.rootPath);
+        var _a;
+        (_a = this.fileWatcher) === null || _a === void 0 ? void 0 : _a.unwatch(this.rootPath);
     }
 }
 exports.default = FileWatcher;

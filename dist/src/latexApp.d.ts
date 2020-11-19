@@ -37,6 +37,9 @@ export default class LatexApp extends LAEventEmitter {
      * and validate account
      */
     private initialCompile;
+    /**
+     * Do not use this constructor and instantiate LatexApp by createApp()
+     */
     constructor(config: Config, accountService: AccountService<Account>, appInfoService: AppInfoService, backend: Backend, fileAdapter: FileAdapter, fileRepo: Repository<typeof FileInfoDesc>, decideSyncMode: DecideSyncMode, logger?: Logger);
     get appInfo(): AppInfo;
     /**
@@ -50,6 +53,7 @@ export default class LatexApp extends LAEventEmitter {
     static createApp(config: Config, option?: {
         decideSyncMode?: DecideSyncMode;
         logger?: Logger;
+        accountService?: AccountService<Account>;
     }): Promise<LatexApp>;
     /**
      * Launch application
@@ -60,7 +64,7 @@ export default class LatexApp extends LAEventEmitter {
      *
      * @param config
      */
-    relaunch(config: Config): Promise<void>;
+    relaunch(config: Config, accountService?: AccountService<Account>): Promise<void>;
     private onOnline;
     private onOffline;
     private loadProjectInfo;

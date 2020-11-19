@@ -33,24 +33,26 @@ class SyncManager extends EventEmitter {
             this.logger.log('Synchronizing files with server ...');
             this.syncing = true;
             try {
-                yield this.sync();
+                const result = yield this.sync();
+                if (result.success) {
+                    this.logger.log('Successfully synchronized!');
+                }
+                else if (result.canceled) {
+                    this.logger.log('Synchronizing is canceled');
+                }
+                this.syncing = false;
+                this.emitSyncResult(result);
             }
             catch (e) {
                 this.syncing = false;
+                this.logger.log('Failed to sync: ' + JSON.stringify(e && e.stack || ''));
                 this.emitSyncResult({
                     success: false,
+                    canceled: false,
                     fileChanged: this.fileChanged,
                     errors: [JSON.stringify(e && e.stack || '')]
                 });
-                return;
             }
-            this.syncing = false;
-            this.emitSyncResult({
-                success: true,
-                fileChanged: this.fileChanged,
-                errors: []
-            });
-            return;
         });
     }
     emitSyncResult(result) {
@@ -80,12 +82,28 @@ class SyncManager extends EventEmitter {
                 if (!file) { // created in remote
                     file = this.fileRepo.new(remoteFile);
                     file.remoteChange = 'create';
+                    return;
                 }
-                else {
-                    file.remoteRevision = remoteFile.remoteRevision;
-                    file.url = remoteFile.url;
-                    if (file.localRevision !== file.remoteRevision) { // remote updated
-                        file.remoteChange = 'update';
+                file.remoteRevision = remoteFile.remoteRevision;
+                file.url = remoteFile.url;
+                if (file.localRevision !== file.remoteRevision) { // updated in remote
+                    file.remoteChange = 'update';
+                }
+                else if (file.relativePath !== remoteFile.relativePath) { // renamed in remote
+                    if (file.localChange === 'no') {
+                        // express rename as deleting original file and creating renamed file
+                        file.remoteChange = 'delete';
+                        const renamedFile = this.fileRepo.new(remoteFile);
+                        renamedFile.remoteChange = 'create';
+                    }
+                    else if (file.localChange === 'create') {
+                        this.logger.error(`Unexpected situation is detected: remote file is renamed and local file is created: ${file.relativePath}`);
+                    }
+                    else if (file.localChange === 'delete') {
+                        this.logger.error(`Unsupported situation is detected: remote file is renamed and local file is deleted: ${file.relativePath}`);
+                    }
+                    else if (file.localChange === 'update') {
+                        this.logger.error(`Unsupported situation is detected: remote file is renamed and local file is updated: ${file.relativePath}`);
                     }
                 }
             });
@@ -112,9 +130,35 @@ class SyncManager extends EventEmitter {
             this.fileRepo.save();
             let syncMode = 'download';
             if (this.fileRepo.findBy('changeLocation', 'both')) {
-                syncMode = yield this.decideSyncMode(this.fileRepo.where({ 'changeLocation': 'both' }).map(file => file.relativePath));
+                try {
+                    syncMode = yield this.decideSyncMode(this.fileRepo.where({ 'changeLocation': 'both' })
+                        .map(file => file.relativePath));
+                }
+                catch (e) {
+                    return {
+                        success: false,
+                        canceled: true,
+                        fileChanged: this.fileChanged,
+                        errors: []
+                    };
+                }
             }
-            yield new TasksExecuter(this.generateSyncTasks(syncMode)).execute();
+            const results = yield new TasksExecuter(this.generateSyncTasks(syncMode)).execute();
+            const fails = results.filter(result => !result.success);
+            if (fails.length > 0) {
+                return {
+                    success: false,
+                    canceled: false,
+                    fileChanged: this.fileChanged,
+                    errors: fails.map(result => result.message)
+                };
+            }
+            return {
+                success: true,
+                canceled: false,
+                fileChanged: this.fileChanged,
+                errors: fails.map(result => result.message)
+            };
         });
     }
     generateSyncTasks(remoteSyncMode) {
@@ -149,27 +193,27 @@ class SyncManager extends EventEmitter {
         switch (file.localChange) {
             case 'create':
                 if (file.isFolder) {
-                    return new PriorityTask(() => this.fileAdapter.createRemoteFolder(file), priority);
+                    return new PriorityTask(this.wrapSyncTask('createRemoteFolder', file), priority);
                 }
-                return new PriorityTask(() => this.fileAdapter.upload(file), priority);
+                return new PriorityTask(this.wrapSyncTask('upload', file), priority);
             case 'update':
                 if (file.remoteChange === 'delete') {
                     if (file.isFolder) {
-                        return new PriorityTask(() => this.fileAdapter.createRemoteFolder(file), priority);
+                        return new PriorityTask(this.wrapSyncTask('createRemoteFolder', file), priority);
                     }
-                    return new PriorityTask(() => this.fileAdapter.upload(file), priority);
+                    return new PriorityTask(this.wrapSyncTask('upload', file), priority);
                 }
-                return new PriorityTask(() => this.fileAdapter.updateRemote(file), priority);
+                return new PriorityTask(this.wrapSyncTask('updateRemote', file), priority);
             case 'delete':
                 if (file.remoteChange === 'delete') {
                     // The same file is already deleted both in local and remote.
                     this.fileRepo.delete(file.id);
                     this.fileRepo.save();
-                    return new PriorityTask(() => Promise.resolve(), priority);
+                    return new PriorityTask(() => Promise.resolve({ success: true, message: '' }), priority);
                 }
-                return new PriorityTask(() => this.fileAdapter.deleteRemote(file), priority);
+                return new PriorityTask(this.wrapSyncTask('deleteRemote', file), priority);
             case 'no':
-                return new PriorityTask(() => Promise.resolve(), priority);
+                return new PriorityTask(() => Promise.resolve({ success: true, message: '' }), priority);
         }
     }
     /**
@@ -183,20 +227,45 @@ class SyncManager extends EventEmitter {
             case 'create':
             case 'update':
                 if (file.isFolder) {
-                    return new PriorityTask(() => this.fileAdapter.createLocalFolder(file), priority);
+                    return new PriorityTask(this.wrapSyncTask('createLocalFolder', file), priority);
                 }
-                return new PriorityTask(() => this.fileAdapter.download(file), priority);
+                return new PriorityTask(this.wrapSyncTask('download', file), priority);
             case 'delete':
                 if (file.localChange === 'delete') {
                     // The same file is already deleted both in local and remote.
                     this.fileRepo.delete(file.id);
                     this.fileRepo.save();
-                    return new PriorityTask(() => Promise.resolve(), priority);
+                    return new PriorityTask(() => Promise.resolve({ success: true, message: '' }), priority);
                 }
-                return new PriorityTask(() => this.fileAdapter.deleteLocal(file), priority);
+                return new PriorityTask(this.wrapSyncTask('deleteLocal', file), priority);
             case 'no':
-                return new PriorityTask(() => Promise.resolve(), priority);
+                return new PriorityTask(() => Promise.resolve({ success: true, message: '' }), priority);
         }
+    }
+    /**
+     * Wrap sync task for exceptions
+     *
+     * @param syncTask
+     * @param file FileInfo
+     */
+    wrapSyncTask(task, 
+    // syncTask: (file: FileInfo) => Promise<unknown>,
+    file) {
+        return () => __awaiter(this, void 0, void 0, function* () {
+            try {
+                yield this.fileAdapter[task](file);
+            }
+            catch (e) {
+                return {
+                    success: false,
+                    message: `${task} : '${file.relativePath}' : ${file.url} : ${(e && e.stack || '')}`
+                };
+            }
+            return {
+                success: true,
+                message: ''
+            };
+        });
     }
     /**
      * Compute priority to handle file change
@@ -238,9 +307,10 @@ class SyncManager extends EventEmitter {
 }
 exports.default = SyncManager;
 class PriorityTask {
-    constructor(run, priority) {
+    constructor(run, priority, name = '') {
         this.run = run;
         this.priority = priority;
+        this.name = name;
     }
 }
 /*
@@ -255,6 +325,7 @@ class TasksExecuter {
     }
     execute() {
         return __awaiter(this, void 0, void 0, function* () {
+            const results = [];
             const taskSeries = [];
             const sortedTaskList = this.taskList.sort((task1, task2) => task1.priority - task2.priority);
             // sortedTaskList[0] has lowest priority and sortedTaskList[-1] has highest priority.
@@ -268,8 +339,9 @@ class TasksExecuter {
             }
             let task;
             while (task = taskSeries.pop()) {
-                yield task();
+                results.push(...yield task());
             }
+            return results;
         });
     }
 }

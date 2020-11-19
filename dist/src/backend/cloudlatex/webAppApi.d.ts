@@ -22,5 +22,6 @@ export default class CLWebAppApi {
     compileProject(): Promise<CompileResult>;
     uploadFile(stream: NodeJS.ReadableStream, relativeDir: string): Promise<any>;
     download(url: string): Promise<NodeJS.ReadableStream>;
+    downdloadPreview(url: string): Promise<NodeJS.ReadableStream>;
     loadSynctexObject(url: string): Promise<ArrayBuffer>;
 }

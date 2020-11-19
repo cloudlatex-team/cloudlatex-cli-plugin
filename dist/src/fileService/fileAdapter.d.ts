@@ -8,7 +8,7 @@ export default class FileAdapter {
     constructor(rootPath: string, fileRepo: FileRepository, backend: Backend);
     loadFileList(): Promise<FileInfo[]>;
     download(file: FileInfo): Promise<void>;
-    saveAs(relativePath: string, stream: NodeJS.ReadableStream): Promise<void>;
+    saveAs(filePath: string, stream: NodeJS.ReadableStream): Promise<void>;
     createLocalFolder(file: FileInfo): Promise<void>;
     createRemoteFolder(file: FileInfo): Promise<void>;
     upload(file: FileInfo, option?: any): Promise<void>;

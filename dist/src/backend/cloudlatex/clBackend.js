@@ -10,6 +10,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const path = require("path");
+const url = require("url");
 const pako = require("pako");
 const text_encoding_1 = require("text-encoding");
 const webAppApi_1 = require("./webAppApi");
@@ -23,6 +24,14 @@ class ClBackend {
         return this.api.validateToken();
     }
     download(file) {
+        /*
+         * url of some files such as pdf begins with '/'
+         *    like '/projects/180901/files/1811770/preview'
+         */
+        if (file.url[0] === '/') {
+            const fileUrl = url.resolve(url.resolve(this.config.endpoint, '..'), file.url);
+            return this.api.downdloadPreview(fileUrl);
+        }
         return this.api.download(file.url);
     }
     upload(file, stream, option) {

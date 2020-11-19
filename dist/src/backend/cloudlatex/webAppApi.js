@@ -10,7 +10,6 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const node_fetch_1 = require("node-fetch");
-const https = require("https");
 const FormData = require("form-data");
 class CLWebAppApi {
     constructor(config, accountService) {
@@ -45,12 +44,6 @@ class CLWebAppApi {
         }
         if (option.body) {
             params.body = option.body;
-        }
-        // Use insecure mode in qa env
-        if (this.APIRoot === 'https://qa.cloudlatex.io/api') {
-            params.agent = new https.Agent({
-                rejectUnauthorized: false,
-            });
         }
         return params;
     }
@@ -169,6 +162,12 @@ class CLWebAppApi {
             if (!res.ok) {
                 throw new Error(JSON.stringify(res));
             }
+            return res.body;
+        });
+    }
+    downdloadPreview(url) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const res = yield node_fetch_1.default(url, this.fetchOption());
             return res.body;
         });
     }

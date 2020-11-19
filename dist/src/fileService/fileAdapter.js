@@ -24,17 +24,24 @@ class FileAdapter {
         return __awaiter(this, void 0, void 0, function* () {
             const stream = yield this.backend.download(file);
             file.watcherSynced = false;
-            yield this.saveAs(file.relativePath, stream);
+            try {
+                yield this.saveAs(file.relativePath, stream);
+            }
+            catch (e) {
+                file.watcherSynced = true;
+                this.fileRepo.save();
+                throw e;
+            }
             file.localChange = 'no';
             file.localRevision = file.remoteRevision;
             this.fileRepo.save();
         });
     }
-    saveAs(relativePath, stream) {
+    saveAs(filePath, stream) {
         return __awaiter(this, void 0, void 0, function* () {
-            const absPath = path.join(this.rootPath, relativePath);
+            let absPath = path.isAbsolute(filePath) ? filePath : path.resolve(this.rootPath, filePath);
             const dirname = path.dirname(absPath);
-            if (dirname !== relativePath) {
+            if (dirname !== this.rootPath) {
                 try {
                     yield fs.promises.mkdir(dirname);
                 }
@@ -128,6 +135,8 @@ class FileAdapter {
                 yield fs.promises.unlink(absPath);
             }
             catch (err) {
+                file.watcherSynced = true;
+                this.fileRepo.save();
                 // Allow the error that file is already deleted
                 if (err.code !== 'ENOENT') {
                     throw err;
