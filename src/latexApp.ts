@@ -12,11 +12,6 @@ import backendSelector from './backend/backendSelector';
 import AccountService from './service/accountService';
 import AppInfoService from './service/appInfoService';
 
-// TODO syncSession() 返り値 か callback // callbackにしてユーザから直接叩く際は 　返り値？
-// TODO syncSession() debounce
-// TODO delte db flle when the application is deactivated
-
-
 type NoPayloadEvents = 'start-sync' | 'failed-sync' | 'successfully-synced' | 'start-compile';
 class LAEventEmitter extends EventEmitter<''> {
 }
@@ -32,7 +27,38 @@ interface LAEventEmitter {
   emit(eventName: 'loaded-project', arg: AppInfo): void;
   on(eventName: 'loaded-project', callback: (arg: AppInfo) => unknown): void;
 }
-export default class LatexApp extends LAEventEmitter  {
+
+const IgnoreFiles = [
+  '*.aux',
+  '*.bbl',
+  '*.blg',
+  '*.idx',
+  '*.ind',
+  '*.lof',
+  '*.lot',
+  '*.out',
+  '*.toc',
+  '*.acn',
+  '*.acr',
+  '*.alg',
+  '*.glg',
+  '*.glo',
+  '*.gls',
+  '*.fls',
+  '*.log',
+  '*.fdb_latexmk',
+  '*.snm',
+  '*.synctex',
+  '*.synctex(busy)',
+  '*.synctex.gz(busy)',
+  '*.nav'
+];
+
+const wildcard2regexp = (wildcardExp: string) => {
+  return '^' + wildcardExp.replace(/\./g, '\\\.').replace(/\*/g, '.*').replace(/\(/g, '\\(').replace(/\)/g, '\\)') + '$';
+};
+
+export default class LatexApp extends LAEventEmitter {
   private syncManager: SyncManager;
   private fileWatcher: FileWatcher;
   /**
@@ -41,6 +67,9 @@ export default class LatexApp extends LAEventEmitter  {
    */
   private initialCompile = false;
 
+  /**
+   * Do not use this constructor and instantiate LatexApp by createApp()
+   */
   constructor(
     private config: Config,
     private accountService: AccountService<Account>,
@@ -69,8 +98,9 @@ export default class LatexApp extends LAEventEmitter  {
           this.initialCompile = false;
           this.compile();
         }
+      } else if (result.canceled) {
       } else {
-        this.logger.error('error in syncSession: ' + result.errors.join(' '));
+        this.logger.error('error in syncSession: ' + result.errors.join('\n'));
         this.emit('failed-sync');
       }
     });
@@ -78,14 +108,16 @@ export default class LatexApp extends LAEventEmitter  {
     /**
      * File watcher
      */
-    this.fileWatcher = new FileWatcher(config.rootPath, fileRepo,
+    this.fileWatcher = new FileWatcher(this.config.rootPath, fileRepo,
       relativePath => {
         return ![
-          config.outDir,
+          this.config.outDir,
           appInfoService.appInfo.logPath,
           appInfoService.appInfo.pdfPath,
           appInfoService.appInfo.synctexPath
-        ].includes(relativePath);
+        ].includes(relativePath) &&
+          !IgnoreFiles
+            .some(ignoreFile => relativePath.match(wildcard2regexp(ignoreFile)));
       },
       logger);
 
@@ -115,14 +147,19 @@ export default class LatexApp extends LAEventEmitter  {
    * The file Adapter abstructs file operations of local files and remote ones.
    */
   static async createApp(config: Config, option: {
-      decideSyncMode?: DecideSyncMode,
-      logger?: Logger
-    } = {}): Promise<LatexApp> {
+    decideSyncMode?: DecideSyncMode,
+    logger?: Logger,
+    accountService?: AccountService<Account>
+  } = {}): Promise<LatexApp> {
+
     // Config
-    config = { ...config, outDir: path.join(config.outDir) };
+    const relativeOutDir = path.isAbsolute(config.outDir) ?
+      path.relative(config.rootPath, config.outDir) :
+      path.join(config.outDir);
+    config = { ...config, outDir: relativeOutDir };
 
     // Account
-    const accountService: AccountService<Account> = new AccountService(config.accountStorePath || '');
+    const accountService = option.accountService || new AccountService();
     await accountService.load();
 
     // AppInfo
@@ -133,7 +170,7 @@ export default class LatexApp extends LAEventEmitter  {
 
 
     // DB
-    const dbFilePath = path.join(config.storagePath, `.${config.backend}.json`);
+    const dbFilePath = path.join(config.storagePath, `.${config.projectId}-${config.backend}.json`);
     const db = new TypeDB(dbFilePath);
     try {
       await db.load();
@@ -159,10 +196,13 @@ export default class LatexApp extends LAEventEmitter  {
    */
   public async launch() {
     await this.fileWatcher.init();
-    if (this.config.autoCompile && await this.validateAccount() === 'valid') {
-      this.initialCompile = true;
-      this.startSync();
+    if (await this.validateAccount() !== 'valid') {
+      return;
     }
+    if (this.config.autoCompile) {
+      this.initialCompile = true;
+    }
+    this.startSync();
   }
 
   /**
@@ -170,10 +210,12 @@ export default class LatexApp extends LAEventEmitter  {
    *
    * @param config
    */
-  async relaunch(config: Config) {
+  async relaunch(config: Config, accountService?: AccountService<Account>) {
     this.exit();
     this.config = { ...config, outDir: path.join(config.outDir) };
-    this.accountService = new AccountService(config.accountStorePath || '');
+    if (accountService) {
+      this.accountService = accountService;
+    }
     this.backend = backendSelector(config, this.accountService);
     this.launch();
   }
@@ -183,7 +225,7 @@ export default class LatexApp extends LAEventEmitter  {
       return;
     }
     this.appInfoService.setOnline();
-    this.logger.info('Your account is validated!');
+    this.logger.info('Your account has been validated!');
     this.emit('updated-network', this.appInfoService.appInfo.offline);
   }
 

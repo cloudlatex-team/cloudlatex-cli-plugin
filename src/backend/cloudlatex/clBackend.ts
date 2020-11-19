@@ -1,4 +1,5 @@
 import * as path from 'path';
+import * as url from 'url';
 import * as pako from 'pako';
 import { TextDecoder } from 'text-encoding';
 
@@ -23,10 +24,19 @@ export default class ClBackend implements IBackend {
   }
 
   public download(file: FileInfo) {
+    /*
+     * url of some files such as pdf begins with '/'
+     *    like '/projects/180901/files/1811770/preview'
+     */
+    if (file.url[0] === '/') {
+      const fileUrl = url.resolve(url.resolve(this.config.endpoint, '..'), file.url);
+      return this.api.downdloadPreview(fileUrl);
+    }
+
     return this.api.download(file.url);
   }
 
-  public async upload(file: FileInfo, stream: NodeJS.ReadableStream, option?: any): Promise<{remoteId: KeyType, remoteRevision: any}> {
+  public async upload(file: FileInfo, stream: NodeJS.ReadableStream, option?: any): Promise<{ remoteId: KeyType, remoteRevision: any }> {
     let relativeDir = path.dirname(file.relativePath);
     if (relativeDir.length > 1 && relativeDir[0] === '/') {
       relativeDir = relativeDir.slice(1);
@@ -38,13 +48,13 @@ export default class ClBackend implements IBackend {
     return { remoteId: result.file.id, remoteRevision: result.file.revision };
   }
 
-  public async createRemote(file: FileInfo, parent: FileInfo | null): Promise<{remoteId: KeyType, remoteRevision: any}> {
+  public async createRemote(file: FileInfo, parent: FileInfo | null): Promise<{ remoteId: KeyType, remoteRevision: any }> {
     const belongs = parent && Number(parent.remoteId);
     const result = await this.api.createFile(path.basename(file.relativePath), belongs, file.isFolder);
     return { remoteId: result.file.id, remoteRevision: result.file.revision };
   }
 
-  public async updateRemote(file: FileInfo & {remoteId: number}, stream: NodeJS.ReadableStream): Promise<KeyType> {
+  public async updateRemote(file: FileInfo & { remoteId: number }, stream: NodeJS.ReadableStream): Promise<KeyType> {
     const content = await streamToString(stream);
 
     const result = await this.api.updateFile(file.remoteId, {
@@ -54,7 +64,7 @@ export default class ClBackend implements IBackend {
     return result.revision;
   }
 
-  public async deleteRemote(file: FileInfo & {remoteId: number}) {
+  public async deleteRemote(file: FileInfo & { remoteId: number }) {
     return this.api.deleteFile(file.remoteId);
   }
 
@@ -94,7 +104,7 @@ export default class ClBackend implements IBackend {
   } & CompileResult> {
     const result = await this.api.compileProject();
     const exitCode = Number(result.exit_code);
-    const logStream = new ReadableString( result.log );
+    const logStream = new ReadableString(result.log);
     const logs: CompileResult['logs'] = [...result.errors.map(err => ({
       line: err.line || 1,
       message: err.error_log,

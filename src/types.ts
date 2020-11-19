@@ -8,10 +8,10 @@ export interface ProjectInfo {
  * Configuration
  */
 export interface Config {
-  /** full path of the directory to output compilation result */
+  /** abs path or relative path of the directory to output compilation result */
   outDir: string;
 
-  /** full path of the root directory of the tex project*/
+  /** abs path of the root directory of the tex project */
   rootPath: string;
 
   /** currently only support cloudlatex */
@@ -28,12 +28,6 @@ export interface Config {
 
   /** full path of the directory to save meta data. */
   storagePath: string;
-
-  /**
-   *  full path of the directory to save account.
-   *  set undefined not to store account.
-   */
-  accountStorePath?: string;
 }
 
 export type Account = {
