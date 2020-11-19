@@ -98,6 +98,7 @@ export default class LatexApp extends LAEventEmitter {
           this.initialCompile = false;
           this.compile();
         }
+      } else if (result.canceled) {
       } else {
         this.logger.error('error in syncSession: ' + result.errors.join('\n'));
         this.emit('failed-sync');
