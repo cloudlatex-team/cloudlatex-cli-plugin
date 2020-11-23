@@ -19,7 +19,7 @@ export default class FileWatcher extends EventEmitter<EventType> {
   }
 
   public init(): Promise<void> {
-    const watcherOption = {
+    const watcherOption: chokidar.WatchOptions = {
       ignored: /\.git|\.cloudlatex\.json|synctex\.gz|\.vscode|.DS\_Store/, //#TODO
       awaitWriteFinish: {
         stabilityThreshold: 500,
@@ -30,12 +30,12 @@ export default class FileWatcher extends EventEmitter<EventType> {
     return new Promise((resolve, reject) => {
       // TODO detect changes before running
       fileWatcher.on('ready', () => {
-        fileWatcher.on('add', (absPath) => this.onFileCreated(absPath, false));
-        fileWatcher.on('addDir', (absPath) => this.onFileCreated(absPath, true));
-        fileWatcher.on('change', this.onFileChanged.bind(this));
-        fileWatcher.on('unlink', this.onFileDeleted.bind(this));
-        fileWatcher.on('unlinkDir', this.onFileDeleted.bind(this));
-        fileWatcher.on('error', this.onWatchingError.bind(this));
+        fileWatcher.on('add', (absPath) => this.onFileCreated(absPath.replace(/\\/g, path.posix.sep), false));
+        fileWatcher.on('addDir', (absPath) => this.onFileCreated(absPath.replace(/\\/g, path.posix.sep), true));
+        fileWatcher.on('change', (absPath) => this.onFileChanged(absPath.replace(/\\/g, path.posix.sep)));
+        fileWatcher.on('unlink', (absPath) => this.onFileDeleted(absPath.replace(/\\/g, path.posix.sep)));
+        fileWatcher.on('unlinkDir', (absPath) => this.onFileDeleted(absPath.replace(/\\/g, path.posix.sep)));
+        fileWatcher.on('error', (err) => this.onWatchingError(err));
         resolve();
       });
     });
@@ -150,7 +150,7 @@ export default class FileWatcher extends EventEmitter<EventType> {
   }
 
   private getRelativePath(absPath: string): string {
-    return path.relative(this.rootPath, absPath);
+    return path.posix.relative(this.rootPath, absPath);
   }
 
   public unwatch() {

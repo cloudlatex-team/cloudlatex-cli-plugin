@@ -152,10 +152,7 @@ export default class LatexApp extends LAEventEmitter {
   } = {}): Promise<LatexApp> {
 
     // Config
-    const relativeOutDir = path.isAbsolute(config.outDir) ?
-      path.relative(config.rootPath, config.outDir) :
-      path.join(config.outDir);
-    config = { ...config, outDir: relativeOutDir };
+    config = this.sanitizeConfig(config);
 
     // Account
     const accountService = option.accountService || new AccountService();
@@ -190,6 +187,15 @@ export default class LatexApp extends LAEventEmitter {
     return new LatexApp(config, accountService, appInfoService, backend, fileAdapter, fileRepo, decideSyncMode, logger);
   }
 
+  private static sanitizeConfig(config: Config): Config {
+    let relativeOutDir = path.isAbsolute(config.outDir) ?
+      path.relative(config.rootPath, config.outDir) :
+      path.join(config.outDir);
+    relativeOutDir = relativeOutDir.replace(/\\/g, path.posix.sep); // for windows
+    const rootPath = config.rootPath.replace(/\\/g, path.posix.sep); // for windows
+    return { ...config, outDir: relativeOutDir, rootPath };
+  }
+
   /**
    * Launch application
    */
@@ -211,7 +217,7 @@ export default class LatexApp extends LAEventEmitter {
    */
   async relaunch(config: Config, accountService?: AccountService<Account>) {
     this.exit();
-    this.config = { ...config, outDir: path.join(config.outDir) };
+    this.config = LatexApp.sanitizeConfig(config);
     if (accountService) {
       this.accountService = accountService;
     }
@@ -248,7 +254,7 @@ export default class LatexApp extends LAEventEmitter {
       this.emit('failed-compile', { status: 'no-target-error' });
       return;
     }
-    const targetName = path.basename(file.relativePath, '.tex');
+    const targetName = path.posix.basename(file.relativePath, '.tex');
     this.appInfoService.setProjectName(projectInfo.title);
     this.appInfoService.setTarget(projectInfo.compile_target_file_id, targetName);
     this.appInfoService.setLoaded();

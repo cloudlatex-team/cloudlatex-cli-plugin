@@ -1,4 +1,5 @@
 import * as fs from 'fs';
+import * as path from 'path';
 
 export default class AccountService<Account> {
   private _account: Account | null = null;
@@ -16,7 +17,9 @@ export default class AccountService<Account> {
     if (!this.savePath) {
       return Promise.resolve();
     }
-    return fs.promises.writeFile(this.savePath, JSON.stringify(account));
+    return fs.promises.writeFile(
+      this.savePath.replace(new RegExp(path.posix.sep, 'g'), path.sep), JSON.stringify(account)
+    );
   }
 
   /**
@@ -27,7 +30,10 @@ export default class AccountService<Account> {
       return this._account;
     }
     try {
-      this._account = JSON.parse(await fs.promises.readFile(this.savePath, 'utf-8'));
+      this._account = JSON.parse(
+        await fs.promises.readFile(
+          this.savePath.replace(new RegExp(path.posix.sep, 'g'), path.sep), 'utf-8')
+      );
     } catch (e) {
     }
     return this._account;

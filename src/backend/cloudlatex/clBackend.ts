@@ -37,7 +37,7 @@ export default class ClBackend implements IBackend {
   }
 
   public async upload(file: FileInfo, stream: NodeJS.ReadableStream, option?: any): Promise<{ remoteId: KeyType, remoteRevision: any }> {
-    let relativeDir = path.dirname(file.relativePath);
+    let relativeDir = path.posix.dirname(file.relativePath);
     if (relativeDir.length > 1 && relativeDir[0] === '/') {
       relativeDir = relativeDir.slice(1);
     }
@@ -50,7 +50,7 @@ export default class ClBackend implements IBackend {
 
   public async createRemote(file: FileInfo, parent: FileInfo | null): Promise<{ remoteId: KeyType, remoteRevision: any }> {
     const belongs = parent && Number(parent.remoteId);
-    const result = await this.api.createFile(path.basename(file.relativePath), belongs, file.isFolder);
+    const result = await this.api.createFile(path.posix.basename(file.relativePath), belongs, file.isFolder);
     return { remoteId: result.file.id, remoteRevision: result.file.revision };
   }
 
@@ -109,12 +109,12 @@ export default class ClBackend implements IBackend {
       line: err.line || 1,
       message: err.error_log,
       type: 'error' as const,
-      file: path.join(this.config.rootPath, err.filename || '')
+      file: path.posix.join(this.config.rootPath, err.filename || '')
     })), ...result.warnings.map(warn => ({
       line: warn.line || 1,
       message: warn.warning_log,
       type: 'warning' as const,
-      file: path.join(this.config.rootPath, warn.filename || '')
+      file: path.posix.join(this.config.rootPath, warn.filename || '')
     }))];
 
     if (exitCode !== 0) {

@@ -43,8 +43,11 @@ export default class SyncManager extends EventEmitter<EventType> {
       this.syncSession();
       return;
     }
+
     this.logger.log('Synchronizing files with server ...');
+
     this.syncing = true;
+
     try {
       const results = await this.sync();
       const fails = results.filter(result => !result.success);
@@ -67,9 +70,11 @@ export default class SyncManager extends EventEmitter<EventType> {
       });
       return;
     }
+
     this.syncing = false;
 
     this.logger.log('Succeeded in synchronizing!');
+
     this.emitSyncResult({
       success: true,
       fileChanged: this.fileChanged,
@@ -304,7 +309,7 @@ export default class SyncManager extends EventEmitter<EventType> {
         *    -1: folder1/folder2/
         *    -2: folder1/folder2/folder3/
         */
-        return - (file.relativePath.split(path.sep).length - 1);
+        return - (file.relativePath.split(path.posix.sep).length - 1);
       case 'delete':
         /*
         *  Deletion priority is correlated with the depth of the path
@@ -315,7 +320,7 @@ export default class SyncManager extends EventEmitter<EventType> {
         *    1: folder1/folder2/
         *    0: folder1/
         */
-        return file.relativePath.split(path.sep).length - 1;
+        return file.relativePath.split(path.posix.sep).length - 1;
     }
     return 0; // Default priority is 0
   }
