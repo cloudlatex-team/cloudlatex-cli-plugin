@@ -49,3 +49,7 @@ export default class Logger {
     console.error(message, ...optinalParams);
   }
 }
+
+export function getErrorTraceStr(e: any) {
+  return (e || '').toString() + '\n' + (e && e.trace || '');
+}

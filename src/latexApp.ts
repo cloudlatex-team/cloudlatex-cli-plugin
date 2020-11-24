@@ -1,6 +1,6 @@
 import * as path from 'path';
 import * as  EventEmitter from 'eventemitter3';
-import Logger from './util/logger';
+import Logger, { getErrorTraceStr } from './util/logger';
 import { Config, DecideSyncMode, Account, CompileResult, CompileStatus, AppInfo } from './types';
 import FileAdapter from './fileService/fileAdapter';
 import SyncManager from './fileService/syncManager';
@@ -285,21 +285,21 @@ export default class LatexApp extends LAEventEmitter {
       // download log file
       if (result.logStream) {
         promises.push(this.fileAdapter.saveAs(this.appInfoService.appInfo.logPath!, result.logStream).catch(err => {
-          this.logger.error('Some error occurred with saving a log file.' + JSON.stringify(err));
+          this.logger.error('Some error occurred with saving a log file.' + getErrorTraceStr(err));
         }));
       }
 
       // download pdf
       if (result.pdfStream) {
         promises.push(this.fileAdapter.saveAs(this.appInfoService.appInfo.pdfPath!, result.pdfStream).catch(err => {
-          this.logger.error('Some error occurred with downloading the compiled pdf file.' + JSON.stringify(err));
+          this.logger.error('Some error occurred with downloading the compiled pdf file.' + getErrorTraceStr(err));
         }));
       }
 
       // download synctex
       if (result.synctexStream) {
         promises.push(this.fileAdapter.saveAs(this.appInfoService.appInfo.synctexPath!, result.synctexStream).catch(err => {
-          this.logger.error('Some error occurred with saving a synctex file.' + JSON.stringify(err));
+          this.logger.error('Some error occurred with saving a synctex file.' + getErrorTraceStr(err));
         }));
       }
 
@@ -309,7 +309,7 @@ export default class LatexApp extends LAEventEmitter {
       this.logger.log('sucessfully compiled');
       this.emit('successfully-compiled', result);
     } catch (err) {
-      this.logger.warn('Some error occured with compilation.' + JSON.stringify(err));
+      this.logger.warn('Some error occured with compilation.' + getErrorTraceStr(err));
       this.emit('failed-compile', { status: 'unknown-error' });
       return;
     }

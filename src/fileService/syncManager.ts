@@ -4,7 +4,7 @@ import { FileRepository, FileInfo } from '../model/fileModel';
 import * as path from 'path';
 import * as  EventEmitter from 'eventemitter3';
 import * as _ from 'lodash';
-import Logger from '../util/logger';
+import Logger, { getErrorTraceStr } from '../util/logger';
 
 export type SyncResult = {
   success: boolean;
@@ -62,11 +62,11 @@ export default class SyncManager extends EventEmitter<EventType> {
       }
     } catch (e) {
       this.syncing = false;
-      this.logger.log('Failed to sync: ' + JSON.stringify(e && e.stack || ''));
+      this.logger.log('Failed to sync: ' + getErrorTraceStr(e));
       this.emitSyncResult({
         success: false,
         fileChanged: this.fileChanged,
-        errors: [JSON.stringify(e && e.stack || '')]
+        errors: [getErrorTraceStr(e)]
       });
       return;
     }
