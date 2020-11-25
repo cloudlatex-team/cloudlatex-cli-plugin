@@ -275,7 +275,6 @@ export default class LatexApp extends LAEventEmitter {
       let result = await this.backend.compileProject();
 
       if (result.status !== 'success') {
-        this.logger.warn('Compilation error', result);
         this.emit('failed-compile', result);
         return;
       }
