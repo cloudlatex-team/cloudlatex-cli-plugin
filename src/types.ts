@@ -24,7 +24,7 @@ export interface Config {
   projectId: number;
 
   /** set true if automatically compile when any file is saved */
-  autoCompile: boolean;
+  autoCompile?: boolean;
 
   /** full path of the directory to save meta data. */
   storagePath: string;

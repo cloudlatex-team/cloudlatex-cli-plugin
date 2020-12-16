@@ -20,26 +20,21 @@ export default class FileWatcher extends EventEmitter<EventType> {
 
   public init(): Promise<void> {
     const watcherOption: chokidar.WatchOptions = {
-      ignored: /\.git|\.cloudlatex\.json|synctex\.gz|\.vscode|.DS\_Store/, //#TODO
+      ignored: /\.git|\.cloudlatex\.json|synctex\.gz|\.vscode(\\|\/|$)|.DS\_Store/, //#TODO
       awaitWriteFinish: {
         stabilityThreshold: 500,
         pollInterval: 100
       }
     };
-    this.logger.log('[debug] watch chokidar ' + this.rootPath);
     const fileWatcher = this.fileWatcher = chokidar.watch(this.rootPath, watcherOption);
     return new Promise((resolve, reject) => {
-      this.logger.log('[debug] before waiting chokidar ready event');
       // TODO detect changes before running
       fileWatcher.on('ready', () => {
-        this.logger.log('[debug] on chokidar ready event');
+        this.logger.log('On chokidar ready event');
 
         fileWatcher.on('add', (absPath) => this.onFileCreated(absPath.replace(/\\/g, path.posix.sep), false));
         fileWatcher.on('addDir', (absPath) => this.onFileCreated(absPath.replace(/\\/g, path.posix.sep), true));
-        fileWatcher.on('change', (absPath) => {
-          this.logger.log(`[debug] onFileCreated absPath ${absPath} : ${absPath.replace(/\\/g, path.posix.sep)}`);
-          this.onFileChanged(absPath.replace(/\\/g, path.posix.sep));
-        });
+        fileWatcher.on('change', (absPath) => this.onFileChanged(absPath.replace(/\\/g, path.posix.sep)));
         fileWatcher.on('unlink', (absPath) => this.onFileDeleted(absPath.replace(/\\/g, path.posix.sep)));
         fileWatcher.on('unlinkDir', (absPath) => this.onFileDeleted(absPath.replace(/\\/g, path.posix.sep)));
         fileWatcher.on('error', (err) => this.onWatchingError(err));
@@ -49,8 +44,6 @@ export default class FileWatcher extends EventEmitter<EventType> {
   }
 
   private onFileCreated(absPath: string, isFolder: boolean = false) {
-    this.logger.log(`[debug] onFileCreated is called: ${absPath} ${this.getRelativePath(absPath)}`);
-
     const relativePath = this.getRelativePath(absPath);
     if (!this.watcherFileFilter(relativePath)) {
       return;
@@ -87,8 +80,6 @@ export default class FileWatcher extends EventEmitter<EventType> {
   }
 
   private async onFileChanged(absPath: string) {
-    this.logger.log('[debug] onFileChanged is called');
-
     const relativePath = this.getRelativePath(absPath);
     if (!this.watcherFileFilter(relativePath)) {
       return;
@@ -121,8 +112,6 @@ export default class FileWatcher extends EventEmitter<EventType> {
   }
 
   private async onFileDeleted(absPath: string) {
-    this.logger.log('[debug] onFileDeleted is called');
-
     const relativePath = this.getRelativePath(absPath);
     if (!this.watcherFileFilter(relativePath)) {
       return;
@@ -166,7 +155,8 @@ export default class FileWatcher extends EventEmitter<EventType> {
     return path.posix.relative(this.rootPath, absPath);
   }
 
-  public unwatch() {
-    this.fileWatcher?.unwatch(this.rootPath);
+  public stop() {
+    this.logger.log('Stop watching file system', this.rootPath);
+    return this.fileWatcher ? this.fileWatcher.close() : Promise.resolve();
   }
 }

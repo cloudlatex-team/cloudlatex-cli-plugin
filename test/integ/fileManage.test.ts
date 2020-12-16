@@ -37,7 +37,7 @@ let fileWatcher: FileWatcher;
 const setupInstances = async () => {
 
   // Sync Mode Decision
-  let syncModeRef: {instance: SyncMode} = { instance: 'upload' };
+  let syncModeRef: { instance: SyncMode } = { instance: 'upload' };
   const decideSyncMode: DecideSyncMode = () => Promise.resolve(syncModeRef.instance);
   const decideSyncModeSpy = Sinon.spy(decideSyncMode);
 
@@ -106,8 +106,7 @@ class TestSituation {
     private fileDict: Record<string, string>,
     private changeSet: ChangeSet,
     private config: tool.TestConfig,
-    private instances: ReturnType<typeof setupInstances> extends Promise<infer T> ? T : never)
-  {
+    private instances: ReturnType<typeof setupInstances> extends Promise<infer T> ? T : never) {
   }
 
   async executeTest() {
@@ -304,7 +303,7 @@ class TestSituation {
 
 afterEach(() => {
   fsStub.restore();
-  fileWatcher.unwatch();
+  fileWatcher.stop();
 });
 
 
