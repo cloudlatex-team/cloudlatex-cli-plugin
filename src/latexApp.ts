@@ -88,6 +88,7 @@ export default class LatexApp extends LAEventEmitter {
     this.syncManager.on('sync-finished', (result) => {
       if (result.success) {
         this.emit('successfully-synced', result);
+      } else if (result.canceled) {
       } else {
         this.logger.error('error in syncSession: ' + result.errors.join('\n'));
         this.emit('sync-failed');
