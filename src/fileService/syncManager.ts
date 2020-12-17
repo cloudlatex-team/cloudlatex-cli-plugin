@@ -68,18 +68,6 @@ export default class SyncManager extends EventEmitter<EventType> {
         errors: [getErrorTraceStr(e)]
       });
     }
-
-    this.syncing = false;
-
-    this.logger.log('Succeeded in synchronizing!');
-
-    this.emitSyncResult({
-      success: true,
-      canceled: false,
-      fileChanged: this.fileChanged,
-      errors: []
-    });
-    return;
   }
 
   private emitSyncResult(result: SyncResult) {

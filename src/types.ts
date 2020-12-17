@@ -9,7 +9,7 @@ export interface ProjectInfo {
  */
 export interface Config {
   /** abs path or relative path of the directory to output compilation result */
-  outDir: string;
+  outDir?: string | null;
 
   /** abs path of the root directory of the tex project */
   rootPath: string;
@@ -27,7 +27,7 @@ export interface Config {
   autoCompile?: boolean;
 
   /** full path of the directory to save meta data. */
-  storagePath: string;
+  storagePath?: string | null;
 }
 
 export type Account = {

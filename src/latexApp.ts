@@ -148,7 +148,9 @@ export default class LatexApp extends LAEventEmitter {
     const backend = backendSelector(config, accountService);
 
     // DB
-    const dbFilePath = path.join(config.storagePath, `.${config.projectId}-${config.backend}.json`);
+    const dbFilePath = config.storagePath ? path.join(
+      config.storagePath, `.${config.projectId}-${config.backend}.json`
+    ) : undefined;
     const db = new TypeDB(dbFilePath);
     try {
       await db.load();
@@ -170,9 +172,10 @@ export default class LatexApp extends LAEventEmitter {
   }
 
   private static sanitizeConfig(config: Config): Config {
-    let relativeOutDir = path.isAbsolute(config.outDir) ?
-      path.relative(config.rootPath, config.outDir) :
-      path.join(config.outDir);
+    const outDir = config.outDir || config.rootPath;
+    let relativeOutDir = path.isAbsolute(outDir) ?
+      path.relative(config.rootPath, outDir) :
+      path.join(outDir);
     relativeOutDir = relativeOutDir.replace(/\\/g, path.posix.sep); // for windows
     const rootPath = config.rootPath.replace(/\\/g, path.posix.sep); // for windows
     return { ...config, outDir: relativeOutDir, rootPath };
