@@ -143,7 +143,7 @@ export default class CLWebAppApi {
       })
     );
     if (!res.ok) {
-      throw new Error(JSON.stringify(res));
+      throw new Error(await res.text());
     }
     return JSON.parse(await res.text());
   }

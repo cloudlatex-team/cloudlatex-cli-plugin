@@ -1,5 +1,6 @@
 import * as path from 'path';
 import { AppInfo, Config, ProjectInfo, KeyType } from '../types';
+import { FileInfo } from './../model/fileModel';
 export default class AppInfoService {
   public readonly appInfo: AppInfo;
   constructor(private config: Config) {
@@ -36,7 +37,7 @@ export default class AppInfoService {
     this.appInfo.loaded = true;
   }
 
-  setConflicts(files: string[]) {
+  setConflicts(files: FileInfo[]) {
     this.appInfo.conflictFiles = files;
   }
 

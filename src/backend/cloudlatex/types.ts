@@ -2,7 +2,7 @@ export interface ClFile {
   is_folder: boolean;
   id: number;
   name: string;
-  revision: string;
+  revision: string | null;
   size: number;
   mimetype: string;
   belonging_to: number;  // id

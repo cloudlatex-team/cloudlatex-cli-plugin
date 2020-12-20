@@ -1,3 +1,4 @@
+import { FileInfo } from './model/fileModel';
 export interface ProjectInfo {
   id: number;
   compile_target_file_id: number;
@@ -50,7 +51,7 @@ export interface AppInfo {
   pdfPath?: string,
   synctexPath?: string,
   loaded: boolean,
-  conflictFiles: string[]
+  conflictFiles: FileInfo[]
 }
 
 export type KeyType = number | string;
@@ -60,11 +61,11 @@ export type ChangeLocation = 'no' | 'local' | 'remote' | 'both';
 
 export interface DecideSyncMode {
   (
-    conflictFiles: string[]
+    conflictFiles: FileInfo[]
   ): Promise<SyncMode>
 }
 
-export type CompileStatus = 'success' | 'compiler-error' | 'no-target-error' | 'saving-file-error' | 'unknown-error';
+export type CompileStatus = 'success' | 'compiler-error' | 'no-target-error' | 'unknown-error';
 export interface CompileResult {
   status: CompileStatus,
   logStream?: NodeJS.ReadableStream,

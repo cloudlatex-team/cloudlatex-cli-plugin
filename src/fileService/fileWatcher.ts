@@ -148,7 +148,18 @@ export default class FileWatcher extends EventEmitter<EventType> {
   }
 
   private onWatchingError(err: any) {
-    this.logger.error('onWatchingError', err);
+    if (process.platform === 'win32' && err['errno'] === -4048 && err['code'] === 'EPERM') {
+      /**
+       * Ignore permission error on windows
+       *
+       * https://github.com/nodejs/node/issues/31702
+       * https://github.com/paulmillr/chokidar/issues/566
+       */
+      //
+      this.logger.log('Ignore permission error', err);
+      return;
+    }
+    { this.logger.error('onWatchingError', err); }
   }
 
   private getRelativePath(absPath: string): string {

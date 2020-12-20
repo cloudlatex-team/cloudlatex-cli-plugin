@@ -1,6 +1,7 @@
 import * as path from 'path';
 import * as  EventEmitter from 'eventemitter3';
 import Logger, { getErrorTraceStr } from './util/logger';
+import { wildcard2regexp } from './util/pathUtil';
 import { Config, DecideSyncMode, Account, CompileResult, CompileStatus, AppInfo } from './types';
 import FileAdapter from './fileService/fileAdapter';
 import SyncManager, { SyncResult } from './fileService/syncManager';
@@ -53,9 +54,6 @@ const IgnoreFiles = [
   '*.nav'
 ];
 
-const wildcard2regexp = (wildcardExp: string) => {
-  return '^' + wildcardExp.replace(/\./g, '\\\.').replace(/\*/g, '.*').replace(/\(/g, '\\(').replace(/\)/g, '\\)') + '$';
-};
 
 export default class LatexApp extends LAEventEmitter {
   private syncManager: SyncManager;
@@ -106,8 +104,9 @@ export default class LatexApp extends LAEventEmitter {
           appInfoService.appInfo.pdfPath,
           appInfoService.appInfo.synctexPath
         ].includes(relativePath) &&
-          !IgnoreFiles
-            .some(ignoreFile => relativePath.match(wildcard2regexp(ignoreFile)));
+          !IgnoreFiles.some(
+            ignoreFile => relativePath.match(wildcard2regexp(ignoreFile))
+          );
       },
       logger);
 
