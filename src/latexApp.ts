@@ -177,6 +177,9 @@ export default class LatexApp extends LAEventEmitter {
       path.join(outDir);
     relativeOutDir = relativeOutDir.replace(/\\/g, path.posix.sep); // for windows
     const rootPath = config.rootPath.replace(/\\/g, path.posix.sep); // for windows
+    if (relativeOutDir === path.posix.sep || relativeOutDir === `.${path.posix.sep}`) {
+      relativeOutDir = '';
+    }
     return { ...config, outDir: relativeOutDir, rootPath };
   }
 
