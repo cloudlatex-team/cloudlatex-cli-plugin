@@ -42,14 +42,14 @@ export default class AppInfoService {
   }
 
   private _logPath(): string {
-    return path.posix.join(this.config.outDir || this.config.rootPath, this.appInfo.targetName + '.log');
+    return path.posix.join(this.config.outDir || '', this.appInfo.targetName + '.log');
   }
 
   private _pdfPath(): string {
-    return path.posix.join(this.config.outDir || this.config.rootPath, this.appInfo.targetName + '.pdf');
+    return path.posix.join(this.config.outDir || '', this.appInfo.targetName + '.pdf');
   }
 
   private _synctexPath(): string {
-    return path.posix.join(this.config.outDir || this.config.rootPath, this.appInfo.targetName + '.synctex');
+    return path.posix.join(this.config.outDir || '', this.appInfo.targetName + '.synctex');
   }
 }

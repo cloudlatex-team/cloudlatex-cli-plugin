@@ -195,7 +195,7 @@ export default class SyncManager extends EventEmitter<EventType> {
       if (file.changeLocation === 'remote' ||
         (file.changeLocation === 'both' && remoteSyncMode === 'download')) {
         tasks.push(this.syncWithRemoteTask(file));
-        this.logger.log('pull: ' + file.relativePath);
+        this.logger.log('Pull: ' + file.relativePath);
         if (!file.isFolder) {
           this.fileChanged = true;
         }
@@ -205,7 +205,7 @@ export default class SyncManager extends EventEmitter<EventType> {
       ) {
         const task = this.syncWithLocalTask(file);
         tasks.push(task);
-        this.logger.log(`push: ${file.relativePath} ${task.name}`);
+        this.logger.log(`Push: ${file.relativePath} ${task.name}`);
 
         if (!file.isFolder) {
           this.fileChanged = true;

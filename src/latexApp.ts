@@ -88,7 +88,7 @@ export default class LatexApp extends LAEventEmitter {
         this.emit('successfully-synced', result);
       } else if (result.canceled) {
       } else {
-        this.logger.error('error in syncSession: ' + result.errors.join('\n'));
+        this.logger.error('Error in syncSession: ' + result.errors.join('\n'));
         this.emit('sync-failed');
       }
     });
@@ -98,12 +98,14 @@ export default class LatexApp extends LAEventEmitter {
      */
     this.fileWatcher = new FileWatcher(this.config.rootPath, fileRepo,
       relativePath => {
-        return ![
+        const outFilePaths = [
           this.config.outDir,
           appInfoService.appInfo.logPath,
           appInfoService.appInfo.pdfPath,
           appInfoService.appInfo.synctexPath
-        ].includes(relativePath) &&
+        ];
+
+        return !outFilePaths.includes(relativePath) &&
           !IgnoreFiles.some(
             ignoreFile => relativePath.match(wildcard2regexp(ignoreFile))
           );
@@ -132,6 +134,9 @@ export default class LatexApp extends LAEventEmitter {
     logger?: Logger,
     accountService?: AccountService<Account>
   } = {}): Promise<LatexApp> {
+
+    const logger = option.logger || new Logger();
+    logger.log(`latex-cli ${'0.0.8.2'}`);
 
     // Config
     config = this.sanitizeConfig(config);
@@ -162,8 +167,6 @@ export default class LatexApp extends LAEventEmitter {
     });
     fileRepo.save();
 
-    // logger
-    const logger = option.logger || new Logger();
     const fileAdapter = new FileAdapter(config.rootPath, fileRepo, backend);
     const defaultDecideSyncMode: DecideSyncMode = () => Promise.resolve('upload');
     const decideSyncMode: DecideSyncMode = option.decideSyncMode || defaultDecideSyncMode;
@@ -223,7 +226,7 @@ export default class LatexApp extends LAEventEmitter {
    * Compile and save pdf, synctex and log files.
    */
   public async compile(): Promise<CompileResult> {
-    this.logger.log('start compiling');
+    this.logger.log('Start compiling');
     try {
       if (!this.appInfoService.appInfo.loaded) {
         const projectInfo = await this.backend.loadProjectInfo();
@@ -271,7 +274,7 @@ export default class LatexApp extends LAEventEmitter {
       // wait to download all files
       await Promise.all(promises);
 
-      this.logger.log('sucessfully compiled');
+      this.logger.log('Sucessfully compiled');
       return result;
     } catch (err) {
       this.logger.warn('Some error occured with compilation.' + getErrorTraceStr(err));
