@@ -54,7 +54,6 @@ class CLWebAppApi {
                 params = this.fetchOption();
             }
             catch (err) {
-                console.error(err);
                 return false; // account is not defined;
             }
             const res = yield node_fetch_1.default(`${this.APIRoot}/auth/validate_token`, params);
@@ -134,7 +133,7 @@ class CLWebAppApi {
                 method: 'POST',
             }));
             if (!res.ok) {
-                throw new Error(JSON.stringify(res));
+                throw new Error(yield res.text());
             }
             return JSON.parse(yield res.text());
         });

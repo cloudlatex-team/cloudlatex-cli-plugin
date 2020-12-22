@@ -52,7 +52,7 @@ before(setupWorkspace);
 after(cleanupWorkspace);
 afterEach(() => {
     if (watcher) {
-        watcher.unwatch();
+        watcher.stop();
         watcher = null;
     }
 });

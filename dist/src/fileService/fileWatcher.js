@@ -23,7 +23,7 @@ class FileWatcher extends EventEmitter {
     }
     init() {
         const watcherOption = {
-            ignored: /\.git|\.cloudlatex\.json|synctex\.gz|\.vscode|.DS\_Store/,
+            ignored: /\.git|\.cloudlatex\.json|synctex\.gz|\.vscode(\\|\/|$)|.DS\_Store/,
             awaitWriteFinish: {
                 stabilityThreshold: 500,
                 pollInterval: 100
@@ -33,12 +33,13 @@ class FileWatcher extends EventEmitter {
         return new Promise((resolve, reject) => {
             // TODO detect changes before running
             fileWatcher.on('ready', () => {
-                fileWatcher.on('add', (absPath) => this.onFileCreated(absPath, false));
-                fileWatcher.on('addDir', (absPath) => this.onFileCreated(absPath, true));
-                fileWatcher.on('change', this.onFileChanged.bind(this));
-                fileWatcher.on('unlink', this.onFileDeleted.bind(this));
-                fileWatcher.on('unlinkDir', this.onFileDeleted.bind(this));
-                fileWatcher.on('error', this.onWatchingError.bind(this));
+                this.logger.log('On chokidar ready event');
+                fileWatcher.on('add', (absPath) => this.onFileCreated(absPath.replace(/\\/g, path.posix.sep), false));
+                fileWatcher.on('addDir', (absPath) => this.onFileCreated(absPath.replace(/\\/g, path.posix.sep), true));
+                fileWatcher.on('change', (absPath) => this.onFileChanged(absPath.replace(/\\/g, path.posix.sep)));
+                fileWatcher.on('unlink', (absPath) => this.onFileDeleted(absPath.replace(/\\/g, path.posix.sep)));
+                fileWatcher.on('unlinkDir', (absPath) => this.onFileDeleted(absPath.replace(/\\/g, path.posix.sep)));
+                fileWatcher.on('error', (err) => this.onWatchingError(err));
                 resolve();
             });
         });
@@ -65,7 +66,7 @@ class FileWatcher extends EventEmitter {
             }
             return this.logger.error(`New ${isFolder ? 'folder' : 'file'} detected, but already registered.: ${absPath}`);
         }
-        this.logger.log(`new ${isFolder ? 'folder' : 'file'} detected: ${absPath}`);
+        this.logger.log(`New ${isFolder ? 'folder' : 'file'} detected: ${absPath}`);
         file = this.fileRepo.new({
             relativePath,
             localChange: 'create',
@@ -84,7 +85,7 @@ class FileWatcher extends EventEmitter {
             }
             const changedFile = this.fileRepo.findBy('relativePath', relativePath);
             if (!changedFile) {
-                this.logger.error(`local-changed-error: The fileInfo is not found at onFileChanged: ${absPath}`);
+                this.logger.error(`Local-changed-error: The fileInfo is not found at onFileChanged: ${absPath}`);
                 return;
             }
             // file was changed by downloading
@@ -96,7 +97,7 @@ class FileWatcher extends EventEmitter {
             if (changedFile.localChange !== 'create') {
                 changedFile.localChange = 'update';
             }
-            this.logger.log(`update of ${changedFile.isFolder ? 'folder' : 'file'} detected: ${absPath}`);
+            this.logger.log(`Update of ${changedFile.isFolder ? 'folder' : 'file'} detected: ${absPath}`);
             this.fileRepo.save();
             this.emit('change-detected');
         });
@@ -109,7 +110,7 @@ class FileWatcher extends EventEmitter {
             }
             const file = this.fileRepo.findBy('relativePath', relativePath);
             if (!file) {
-                this.logger.error(`local-changed-error: The fileInfo is not found at onFileDeleted: ${absPath}`);
+                this.logger.error(`Local-changed-error: The fileInfo is not found at onFileDeleted: ${absPath}`);
                 return;
             }
             // The file was deleted by deleteLocal() because remote file is deleted.
@@ -118,7 +119,7 @@ class FileWatcher extends EventEmitter {
                 this.fileRepo.save();
                 return;
             }
-            this.logger.log(`delete of ${file.isFolder ? 'folder' : 'file'} detected: ${absPath}`);
+            this.logger.log(`Delete of ${file.isFolder ? 'folder' : 'file'} detected: ${absPath}`);
             if (file.localChange === 'create') {
                 this.fileRepo.delete(file.id);
                 this.fileRepo.save();
@@ -131,14 +132,27 @@ class FileWatcher extends EventEmitter {
         });
     }
     onWatchingError(err) {
-        this.logger.error('onWatchingError', err);
+        if (process.platform === 'win32' && err['errno'] === -4048 && err['code'] === 'EPERM') {
+            /**
+             * Ignore permission error on windows
+             *
+             * https://github.com/nodejs/node/issues/31702
+             * https://github.com/paulmillr/chokidar/issues/566
+             */
+            //
+            this.logger.log('Ignore permission error', err);
+            return;
+        }
+        {
+            this.logger.error('OnWatchingError', err);
+        }
     }
     getRelativePath(absPath) {
-        return path.relative(this.rootPath, absPath);
+        return path.posix.relative(this.rootPath, absPath);
     }
-    unwatch() {
-        var _a;
-        (_a = this.fileWatcher) === null || _a === void 0 ? void 0 : _a.unwatch(this.rootPath);
+    stop() {
+        this.logger.log('Stop watching file system', this.rootPath);
+        return this.fileWatcher ? this.fileWatcher.close() : Promise.resolve();
     }
 }
 exports.default = FileWatcher;

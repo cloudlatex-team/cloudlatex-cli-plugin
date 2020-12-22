@@ -10,6 +10,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const fs = require("fs");
+const path = require("path");
 class AccountService {
     constructor(savePath) {
         this.savePath = savePath;
@@ -25,7 +26,7 @@ class AccountService {
         if (!this.savePath) {
             return Promise.resolve();
         }
-        return fs.promises.writeFile(this.savePath, JSON.stringify(account));
+        return fs.promises.writeFile(this.savePath.replace(new RegExp(path.posix.sep, 'g'), path.sep), JSON.stringify(account));
     }
     /**
      * load account
@@ -36,7 +37,7 @@ class AccountService {
                 return this._account;
             }
             try {
-                this._account = JSON.parse(yield fs.promises.readFile(this.savePath, 'utf-8'));
+                this._account = JSON.parse(yield fs.promises.readFile(this.savePath.replace(new RegExp(path.posix.sep, 'g'), path.sep), 'utf-8'));
             }
             catch (e) {
             }

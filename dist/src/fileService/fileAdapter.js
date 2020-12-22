@@ -11,6 +11,13 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 const fs = require("fs");
 const path = require("path");
+/**
+ * FileAdapter class
+ *
+ * Provide operations of remote and local files
+ * The file path is expressed with `path.posix.sep` internally
+ * and only convert native path (`path.sep`) when this class operates local file.
+ */
 class FileAdapter {
     constructor(rootPath, fileRepo, backend) {
         this.rootPath = rootPath;
@@ -39,19 +46,22 @@ class FileAdapter {
     }
     saveAs(filePath, stream) {
         return __awaiter(this, void 0, void 0, function* () {
-            let absPath = path.isAbsolute(filePath) ? filePath : path.resolve(this.rootPath, filePath);
-            const dirname = path.dirname(absPath);
+            let absPath = path.isAbsolute(filePath) ? filePath : path.posix.join(this.rootPath, filePath);
+            const dirname = path.posix.dirname(absPath);
             if (dirname !== this.rootPath) {
                 try {
-                    yield fs.promises.mkdir(dirname);
+                    yield fs.promises.mkdir(dirname.replace(new RegExp(path.posix.sep, 'g'), path.sep));
                 }
                 catch (err) {
                 }
             }
             return yield new Promise((resolve, reject) => {
-                const fileStream = fs.createWriteStream(absPath);
+                const fileStream = fs.createWriteStream(absPath.replace(new RegExp(path.posix.sep, 'g'), path.sep));
                 stream.pipe(fileStream);
                 stream.on('error', (err) => {
+                    reject(err);
+                });
+                fileStream.on('error', (err) => {
                     reject(err);
                 });
                 fileStream.on('finish', () => {
@@ -62,9 +72,9 @@ class FileAdapter {
     }
     createLocalFolder(file) {
         return __awaiter(this, void 0, void 0, function* () {
-            const absPath = path.join(this.rootPath, file.relativePath);
+            const absPath = path.posix.join(this.rootPath, file.relativePath);
             try {
-                yield fs.promises.mkdir(absPath);
+                yield fs.promises.mkdir(absPath.replace(new RegExp(path.posix.sep, 'g'), path.sep));
             }
             catch (err) {
                 // Allow only the error that file is alraady exist.
@@ -81,7 +91,7 @@ class FileAdapter {
     ;
     createRemoteFolder(file) {
         return __awaiter(this, void 0, void 0, function* () {
-            const parent = this.fileRepo.findBy('relativePath', path.dirname(file.relativePath));
+            const parent = this.fileRepo.findBy('relativePath', path.posix.dirname(file.relativePath));
             const { remoteId, remoteRevision } = yield this.backend.createRemote(file, parent);
             file.remoteId = remoteId;
             file.localRevision = remoteRevision;
@@ -91,7 +101,7 @@ class FileAdapter {
     }
     upload(file, option) {
         return __awaiter(this, void 0, void 0, function* () {
-            const stream = fs.createReadStream(path.join(this.rootPath, file.relativePath));
+            const stream = fs.createReadStream(path.posix.join(this.rootPath, file.relativePath).replace(new RegExp(path.posix.sep, 'g'), path.sep));
             const { remoteId, remoteRevision } = yield this.backend.upload(file, stream, option);
             file.remoteId = remoteId;
             file.localRevision = remoteRevision;
@@ -101,7 +111,7 @@ class FileAdapter {
     }
     updateRemote(file) {
         return __awaiter(this, void 0, void 0, function* () {
-            const stream = fs.createReadStream(path.join(this.rootPath, file.relativePath));
+            const stream = fs.createReadStream(path.posix.join(this.rootPath, file.relativePath).replace(new RegExp(path.posix.sep, 'g'), path.sep));
             file.localRevision = yield this.backend.updateRemote(file, stream);
             file.localChange = 'no';
             this.fileRepo.save();
@@ -116,10 +126,10 @@ class FileAdapter {
     }
     deleteLocal(file) {
         return __awaiter(this, void 0, void 0, function* () {
-            const absPath = path.join(this.rootPath, file.relativePath);
+            const absPath = path.posix.join(this.rootPath, file.relativePath);
             if (file.isFolder) {
                 try {
-                    fs.promises.rmdir(absPath);
+                    fs.promises.rmdir(absPath.replace(new RegExp(path.posix.sep, 'g'), path.sep));
                 }
                 catch (err) {
                     // Allow the error that file is already deleted
@@ -132,7 +142,7 @@ class FileAdapter {
             file.watcherSynced = false;
             this.fileRepo.save();
             try {
-                yield fs.promises.unlink(absPath);
+                yield fs.promises.unlink(absPath.replace(new RegExp(path.posix.sep, 'g'), path.sep));
             }
             catch (err) {
                 file.watcherSynced = true;

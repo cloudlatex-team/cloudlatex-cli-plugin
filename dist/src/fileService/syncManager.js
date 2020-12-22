@@ -12,6 +12,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const path = require("path");
 const EventEmitter = require("eventemitter3");
 const _ = require("lodash");
+const logger_1 = require("../util/logger");
 class SyncManager extends EventEmitter {
     constructor(fileRepo, fileAdapter, decideSyncMode, logger) {
         super();
@@ -45,12 +46,12 @@ class SyncManager extends EventEmitter {
             }
             catch (e) {
                 this.syncing = false;
-                this.logger.log('Failed to sync: ' + JSON.stringify(e && e.stack || ''));
+                this.logger.log('Failed to sync: ' + logger_1.getErrorTraceStr(e));
                 this.emitSyncResult({
                     success: false,
                     canceled: false,
                     fileChanged: this.fileChanged,
-                    errors: [JSON.stringify(e && e.stack || '')]
+                    errors: [logger_1.getErrorTraceStr(e)]
                 });
             }
         });
@@ -131,8 +132,7 @@ class SyncManager extends EventEmitter {
             let syncMode = 'download';
             if (this.fileRepo.findBy('changeLocation', 'both')) {
                 try {
-                    syncMode = yield this.decideSyncMode(this.fileRepo.where({ 'changeLocation': 'both' })
-                        .map(file => file.relativePath));
+                    syncMode = yield this.decideSyncMode(this.fileRepo.where({ 'changeLocation': 'both' }));
                 }
                 catch (e) {
                     return {
@@ -167,15 +167,16 @@ class SyncManager extends EventEmitter {
             if (file.changeLocation === 'remote' ||
                 (file.changeLocation === 'both' && remoteSyncMode === 'download')) {
                 tasks.push(this.syncWithRemoteTask(file));
-                this.logger.log('pull: ' + file.relativePath);
+                this.logger.log('Pull: ' + file.relativePath);
                 if (!file.isFolder) {
                     this.fileChanged = true;
                 }
             }
             else if (file.changeLocation === 'local' ||
                 (file.changeLocation === 'both' && remoteSyncMode === 'upload')) {
-                tasks.push(this.syncWithLocalTask(file));
-                this.logger.log('push: ' + file.relativePath);
+                const task = this.syncWithLocalTask(file);
+                tasks.push(task);
+                this.logger.log(`Push: ${file.relativePath} ${task.name}`);
                 if (!file.isFolder) {
                     this.fileChanged = true;
                 }
@@ -193,27 +194,27 @@ class SyncManager extends EventEmitter {
         switch (file.localChange) {
             case 'create':
                 if (file.isFolder) {
-                    return new PriorityTask(this.wrapSyncTask('createRemoteFolder', file), priority);
+                    return this.createPriorityTask('createRemoteFolder', file, priority);
                 }
-                return new PriorityTask(this.wrapSyncTask('upload', file), priority);
+                return this.createPriorityTask('upload', file, priority);
             case 'update':
                 if (file.remoteChange === 'delete') {
                     if (file.isFolder) {
-                        return new PriorityTask(this.wrapSyncTask('createRemoteFolder', file), priority);
+                        return this.createPriorityTask('createRemoteFolder', file, priority);
                     }
-                    return new PriorityTask(this.wrapSyncTask('upload', file), priority);
+                    return this.createPriorityTask('upload', file, priority);
                 }
-                return new PriorityTask(this.wrapSyncTask('updateRemote', file), priority);
+                return this.createPriorityTask('updateRemote', file, priority);
             case 'delete':
                 if (file.remoteChange === 'delete') {
                     // The same file is already deleted both in local and remote.
                     this.fileRepo.delete(file.id);
                     this.fileRepo.save();
-                    return new PriorityTask(() => Promise.resolve({ success: true, message: '' }), priority);
+                    return this.createPriorityTask('no', file, priority);
                 }
-                return new PriorityTask(this.wrapSyncTask('deleteRemote', file), priority);
+                return this.createPriorityTask('deleteRemote', file, priority);
             case 'no':
-                return new PriorityTask(() => Promise.resolve({ success: true, message: '' }), priority);
+                return this.createPriorityTask('no', file, priority);
         }
     }
     /**
@@ -227,20 +228,30 @@ class SyncManager extends EventEmitter {
             case 'create':
             case 'update':
                 if (file.isFolder) {
-                    return new PriorityTask(this.wrapSyncTask('createLocalFolder', file), priority);
+                    return this.createPriorityTask('createLocalFolder', file, priority);
                 }
-                return new PriorityTask(this.wrapSyncTask('download', file), priority);
+                return this.createPriorityTask('download', file, priority);
             case 'delete':
                 if (file.localChange === 'delete') {
                     // The same file is already deleted both in local and remote.
                     this.fileRepo.delete(file.id);
                     this.fileRepo.save();
-                    return new PriorityTask(() => Promise.resolve({ success: true, message: '' }), priority);
+                    return this.createPriorityTask('no', file, priority);
                 }
-                return new PriorityTask(this.wrapSyncTask('deleteLocal', file), priority);
+                return this.createPriorityTask('deleteLocal', file, priority);
             case 'no':
-                return new PriorityTask(() => Promise.resolve({ success: true, message: '' }), priority);
+                return this.createPriorityTask('no', file, priority);
         }
+    }
+    /**
+     * Create priorityTask
+     *
+     * @param task syncTask
+     * @param file file to sync
+     * @param priority priority of the task
+     */
+    createPriorityTask(task, file, priority) {
+        return new PriorityTask(this.wrapSyncTask(task, file), priority, task);
     }
     /**
      * Wrap sync task for exceptions
@@ -248,10 +259,15 @@ class SyncManager extends EventEmitter {
      * @param syncTask
      * @param file FileInfo
      */
-    wrapSyncTask(task, 
-    // syncTask: (file: FileInfo) => Promise<unknown>,
-    file) {
+    wrapSyncTask(task, file) {
         return () => __awaiter(this, void 0, void 0, function* () {
+            // Nothing to do
+            if (task === 'no') {
+                return {
+                    success: true,
+                    message: '',
+                };
+            }
             try {
                 yield this.fileAdapter[task](file);
             }
@@ -289,7 +305,7 @@ class SyncManager extends EventEmitter {
                 *    -1: folder1/folder2/
                 *    -2: folder1/folder2/folder3/
                 */
-                return -(file.relativePath.split(path.sep).length - 1);
+                return -(file.relativePath.split(path.posix.sep).length - 1);
             case 'delete':
                 /*
                 *  Deletion priority is correlated with the depth of the path
@@ -300,7 +316,7 @@ class SyncManager extends EventEmitter {
                 *    1: folder1/folder2/
                 *    0: folder1/
                 */
-                return file.relativePath.split(path.sep).length - 1;
+                return file.relativePath.split(path.posix.sep).length - 1;
         }
         return 0; // Default priority is 0
     }

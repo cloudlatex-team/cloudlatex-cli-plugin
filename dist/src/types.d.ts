@@ -1,4 +1,5 @@
 /// <reference types="node" />
+import { FileInfo } from './model/fileModel';
 export interface ProjectInfo {
     id: number;
     compile_target_file_id: number;
@@ -9,7 +10,7 @@ export interface ProjectInfo {
  */
 export interface Config {
     /** abs path or relative path of the directory to output compilation result */
-    outDir: string;
+    outDir?: string | null;
     /** abs path of the root directory of the tex project */
     rootPath: string;
     /** currently only support cloudlatex */
@@ -19,9 +20,9 @@ export interface Config {
     /** project ID */
     projectId: number;
     /** set true if automatically compile when any file is saved */
-    autoCompile: boolean;
+    autoCompile?: boolean;
     /** full path of the directory to save meta data. */
-    storagePath: string;
+    storagePath?: string | null;
 }
 export declare type Account = {
     /** token */
@@ -40,16 +41,16 @@ export interface AppInfo {
     pdfPath?: string;
     synctexPath?: string;
     loaded: boolean;
-    conflictFiles: string[];
+    conflictFiles: FileInfo[];
 }
 export declare type KeyType = number | string;
 export declare type SyncMode = 'upload' | 'download';
 export declare type ChangeState = 'no' | 'update' | 'create' | 'delete';
 export declare type ChangeLocation = 'no' | 'local' | 'remote' | 'both';
 export interface DecideSyncMode {
-    (conflictFiles: string[]): Promise<SyncMode>;
+    (conflictFiles: FileInfo[]): Promise<SyncMode>;
 }
-export declare type CompileStatus = 'success' | 'compiler-error' | 'no-target-error' | 'saving-file-error' | 'unknown-error';
+export declare type CompileStatus = 'success' | 'compiler-error' | 'no-target-error' | 'unknown-error';
 export interface CompileResult {
     status: CompileStatus;
     logStream?: NodeJS.ReadableStream;

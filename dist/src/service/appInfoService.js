@@ -34,13 +34,13 @@ class AppInfoService {
         this.appInfo.conflictFiles = files;
     }
     _logPath() {
-        return path.join(this.config.outDir, this.appInfo.targetName + '.log');
+        return path.posix.join(this.config.outDir || '', this.appInfo.targetName + '.log');
     }
     _pdfPath() {
-        return path.join(this.config.outDir, this.appInfo.targetName + '.pdf');
+        return path.posix.join(this.config.outDir || '', this.appInfo.targetName + '.pdf');
     }
     _synctexPath() {
-        return path.join(this.config.outDir, this.appInfo.targetName + '.synctex');
+        return path.posix.join(this.config.outDir || '', this.appInfo.targetName + '.synctex');
     }
 }
 exports.default = AppInfoService;

@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.getErrorTraceStr = void 0;
 const Level2Number = {
     log: 1,
     info: 2,
@@ -45,4 +46,8 @@ class Logger {
     }
 }
 exports.default = Logger;
+function getErrorTraceStr(e) {
+    return (e || '').toString() + '\n' + (e && e.trace || '');
+}
+exports.getErrorTraceStr = getErrorTraceStr;
 //# sourceMappingURL=logger.js.map

@@ -2,25 +2,24 @@ import * as EventEmitter from 'eventemitter3';
 import Logger from './util/logger';
 import { Config, DecideSyncMode, Account, CompileResult, AppInfo } from './types';
 import FileAdapter from './fileService/fileAdapter';
+import { SyncResult } from './fileService/syncManager';
 import { Repository } from '@moritanian/type-db';
 import { FileInfoDesc } from './model/fileModel';
 import Backend from './backend/ibackend';
 import AccountService from './service/accountService';
 import AppInfoService from './service/appInfoService';
-declare type NoPayloadEvents = 'start-sync' | 'failed-sync' | 'successfully-synced' | 'start-compile';
+declare type NoPayloadEvents = 'sync-failed' | 'file-changed';
 declare class LAEventEmitter extends EventEmitter<''> {
 }
 interface LAEventEmitter {
     emit(eventName: NoPayloadEvents): boolean;
     on(eventName: NoPayloadEvents, callback: () => unknown): this;
-    emit(eventName: 'successfully-compiled', result: CompileResult): void;
-    on(eventName: 'successfully-compiled', callback: (result: CompileResult) => unknown): void;
-    emit(eventName: 'failed-compile', result: CompileResult): void;
-    on(eventName: 'failed-compile', callback: (result: CompileResult) => unknown): void;
-    emit(eventName: 'updated-network', arg: boolean): void;
-    on(eventName: 'updated-network', callback: (arg: boolean) => unknown): void;
-    emit(eventName: 'loaded-project', arg: AppInfo): void;
-    on(eventName: 'loaded-project', callback: (arg: AppInfo) => unknown): void;
+    emit(eventName: 'network-updated', arg: boolean): void;
+    on(eventName: 'network-updated', callback: (arg: boolean) => unknown): void;
+    emit(eventName: 'project-loaded', arg: AppInfo): void;
+    on(eventName: 'project-loaded', callback: (arg: AppInfo) => unknown): void;
+    emit(eventName: 'successfully-synced', arg: SyncResult): void;
+    on(eventName: 'successfully-synced', callback: (arg: SyncResult) => unknown): void;
 }
 export default class LatexApp extends LAEventEmitter {
     private config;
@@ -33,12 +32,7 @@ export default class LatexApp extends LAEventEmitter {
     private syncManager;
     private fileWatcher;
     /**
-     * Is required to compile initilally after launch app
-     * and validate account
-     */
-    private initialCompile;
-    /**
-     * Do not use this constructor and instantiate LatexApp by createApp()
+     * Do not use this constructor. Be sure to instantiate LatexApp by createApp()
      */
     constructor(config: Config, accountService: AccountService<Account>, appInfoService: AppInfoService, backend: Backend, fileAdapter: FileAdapter, fileRepo: Repository<typeof FileInfoDesc>, decideSyncMode: DecideSyncMode, logger?: Logger);
     get appInfo(): AppInfo;
@@ -55,23 +49,21 @@ export default class LatexApp extends LAEventEmitter {
         logger?: Logger;
         accountService?: AccountService<Account>;
     }): Promise<LatexApp>;
+    private static sanitizeConfig;
     /**
-     * Launch application
+     * Start to watch file system
      */
-    launch(): Promise<void>;
+    startFileWatcher(): Promise<void>;
     /**
-     * Relaunch app to change config
-     *
-     * @param config
+     * Stop watching file system
      */
-    relaunch(config: Config, accountService?: AccountService<Account>): Promise<void>;
+    stopFileWatcher(): void;
     private onOnline;
     private onOffline;
-    private loadProjectInfo;
     /**
      * Compile and save pdf, synctex and log files.
      */
-    compile(): Promise<void>;
+    compile(): Promise<CompileResult>;
     /**
      * Validate account
      *
@@ -91,10 +83,6 @@ export default class LatexApp extends LAEventEmitter {
     /**
      * clear local changes to resolve sync problem
      */
-    resetLocal(): Promise<void>;
-    /**
-     * stop watching file changes.
-     */
-    exit(): void;
+    resetLocal(): void;
 }
 export {};

@@ -1,4 +1,5 @@
 import { AppInfo, Config, KeyType } from '../types';
+import { FileInfo } from './../model/fileModel';
 export default class AppInfoService {
     private config;
     readonly appInfo: AppInfo;
@@ -8,7 +9,7 @@ export default class AppInfoService {
     setProjectName(projectName: string): void;
     setTarget(compileTarget: KeyType, targetName: string): void;
     setLoaded(): void;
-    setConflicts(files: string[]): void;
+    setConflicts(files: FileInfo[]): void;
     private _logPath;
     private _pdfPath;
     private _synctexPath;

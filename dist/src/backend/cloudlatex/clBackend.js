@@ -36,7 +36,7 @@ class ClBackend {
     }
     upload(file, stream, option) {
         return __awaiter(this, void 0, void 0, function* () {
-            let relativeDir = path.dirname(file.relativePath);
+            let relativeDir = path.posix.dirname(file.relativePath);
             if (relativeDir.length > 1 && relativeDir[0] === '/') {
                 relativeDir = relativeDir.slice(1);
             }
@@ -50,7 +50,7 @@ class ClBackend {
     createRemote(file, parent) {
         return __awaiter(this, void 0, void 0, function* () {
             const belongs = parent && Number(parent.remoteId);
-            const result = yield this.api.createFile(path.basename(file.relativePath), belongs, file.isFolder);
+            const result = yield this.api.createFile(path.posix.basename(file.relativePath), belongs, file.isFolder);
             return { remoteId: result.file.id, remoteRevision: result.file.revision };
         });
     }
@@ -83,8 +83,8 @@ class ClBackend {
                     isFolder: !!materialFile.is_folder,
                     relativePath: String(materialFile.full_path),
                     url: String(materialFile.file_url),
-                    remoteRevision: String(materialFile.revision),
-                    localRevision: String(materialFile.revision),
+                    remoteRevision: materialFile.revision,
+                    localRevision: materialFile.revision,
                     localChange: 'no',
                     remoteChange: 'no',
                     changeLocation: 'no',
@@ -106,12 +106,12 @@ class ClBackend {
                     line: err.line || 1,
                     message: err.error_log,
                     type: 'error',
-                    file: path.join(this.config.rootPath, err.filename || '')
+                    file: path.posix.join(this.config.rootPath, err.filename || '')
                 })), ...result.warnings.map(warn => ({
                     line: warn.line || 1,
                     message: warn.warning_log,
                     type: 'warning',
-                    file: path.join(this.config.rootPath, warn.filename || '')
+                    file: path.posix.join(this.config.rootPath, warn.filename || '')
                 }))];
             if (exitCode !== 0) {
                 return {

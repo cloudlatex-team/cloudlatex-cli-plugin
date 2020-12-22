@@ -10,3 +10,4 @@ export default class Logger {
     error(message: any, ...optinalParams: any[]): void;
     _error(message: any, ...optinalParams: any[]): void;
 }
+export declare function getErrorTraceStr(e: any): string;

@@ -1,6 +1,13 @@
 /// <reference types="node" />
 import Backend from '../backend/ibackend';
 import { FileRepository, FileInfo } from '../model/fileModel';
+/**
+ * FileAdapter class
+ *
+ * Provide operations of remote and local files
+ * The file path is expressed with `path.posix.sep` internally
+ * and only convert native path (`path.sep`) when this class operates local file.
+ */
 export default class FileAdapter {
     protected rootPath: string;
     private fileRepo;

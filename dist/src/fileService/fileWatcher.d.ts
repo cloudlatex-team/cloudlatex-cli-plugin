@@ -15,6 +15,6 @@ export default class FileWatcher extends EventEmitter<EventType> {
     private onFileDeleted;
     private onWatchingError;
     private getRelativePath;
-    unwatch(): void;
+    stop(): Promise<void>;
 }
 export {};

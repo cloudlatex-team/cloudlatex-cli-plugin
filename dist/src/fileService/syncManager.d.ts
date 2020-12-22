@@ -36,6 +36,14 @@ export default class SyncManager extends EventEmitter<EventType> {
      */
     private syncWithRemoteTask;
     /**
+     * Create priorityTask
+     *
+     * @param task syncTask
+     * @param file file to sync
+     * @param priority priority of the task
+     */
+    private createPriorityTask;
+    /**
      * Wrap sync task for exceptions
      *
      * @param syncTask

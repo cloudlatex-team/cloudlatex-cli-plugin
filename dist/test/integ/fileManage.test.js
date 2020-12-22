@@ -243,7 +243,7 @@ class TestSituation {
 }
 afterEach(() => {
     fsStub_1.default.restore();
-    fileWatcher.unwatch();
+    fileWatcher.stop();
 });
 describe('Sync file system', () => {
     tool.TestConfigList.forEach(config => {
