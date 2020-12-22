@@ -136,7 +136,7 @@ export default class LatexApp extends LAEventEmitter {
   } = {}): Promise<LatexApp> {
 
     const logger = option.logger || new Logger();
-    logger.log(`latex-cli ${'0.0.8.2'}`);
+    logger.log(`latex-cli ${'0.1.0'}`);
 
     // Config
     config = this.sanitizeConfig(config);
