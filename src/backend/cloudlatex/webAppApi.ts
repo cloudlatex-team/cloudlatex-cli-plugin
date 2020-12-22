@@ -59,7 +59,6 @@ export default class CLWebAppApi {
     try {
       params = this.fetchOption();
     } catch (err) {
-      console.error(err);
       return false; // account is not defined;
     }
     const res = await fetch(`${this.APIRoot}/auth/validate_token`, params);
@@ -144,7 +143,7 @@ export default class CLWebAppApi {
       })
     );
     if (!res.ok) {
-      throw new Error(JSON.stringify(res));
+      throw new Error(await res.text());
     }
     return JSON.parse(await res.text());
   }
