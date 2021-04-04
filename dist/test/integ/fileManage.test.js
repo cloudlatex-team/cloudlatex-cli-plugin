@@ -18,7 +18,7 @@ const type_db_1 = require("@moritanian/type-db");
 const fileModel_1 = require("../../src/model/fileModel");
 const fileWatcher_1 = require("../../src/fileService/fileWatcher");
 const syncManager_1 = require("../../src/fileService/syncManager");
-const FileAdapter_1 = require("../../src/fileService/FileAdapter");
+const fileAdapter_1 = require("../../src/fileService/fileAdapter");
 const backendStub_1 = require("../tool/backendStub");
 const logger_1 = require("../../src/util/logger");
 const tool = require("./../tool/syncTestTool");
@@ -26,15 +26,15 @@ const stream_1 = require("../../src/util/stream");
 const fsStub_1 = require("./../tool/fsStub");
 const workdir = '/workdir';
 const testFileDict = {
-    [path.join(workdir, 'main.tex')]: 'content',
-    [path.join(workdir, 'readme.md')]: 'readme',
-    [path.join(workdir, 'images', 'img1.png')]: '',
-    [path.join(workdir, 'images', 'img2.png')]: '',
-    [path.join(workdir, 'images', 'sub_images', 'sub_img1.png')]: '',
+    [path.posix.join(workdir, 'main.tex')]: 'content',
+    [path.posix.join(workdir, 'readme.md')]: 'readme',
+    [path.posix.join(workdir, 'images', 'img1.png')]: '',
+    [path.posix.join(workdir, 'images', 'img2.png')]: '',
+    [path.posix.join(workdir, 'images', 'sub_images', 'sub_img1.png')]: '',
 };
 const testFileAndFolderDict = Object.assign({}, testFileDict, {
-    [path.join(workdir, 'images')]: null,
-    [path.join(workdir, 'images', 'sub_images')]: null,
+    [path.posix.join(workdir, 'images')]: null,
+    [path.posix.join(workdir, 'images', 'sub_images')]: null,
 });
 let fileWatcher;
 const setupInstances = () => __awaiter(void 0, void 0, void 0, function* () {
@@ -48,7 +48,7 @@ const setupInstances = () => __awaiter(void 0, void 0, void 0, function* () {
     const localFiles = db.getRepository(fileModel_1.FileInfoDesc);
     const backend = new backendStub_1.default();
     Object.keys(testFileAndFolderDict).map(absPath => {
-        const relativePath = path.relative(workdir, absPath);
+        const relativePath = path.posix.relative(workdir, absPath);
         const revision = uuid_1.v4();
         const fileInfo = {
             relativePath,
@@ -66,7 +66,7 @@ const setupInstances = () => __awaiter(void 0, void 0, void 0, function* () {
     });
     fsStub_1.default(testFileDict);
     // File adapter
-    const fileAdapter = new FileAdapter_1.default(workdir, localFiles, backend);
+    const fileAdapter = new fileAdapter_1.default(workdir, localFiles, backend);
     // Sync Manager
     const syncManager = new syncManager_1.default(localFiles, fileAdapter, decideSyncMode, logger);
     // File watcher
@@ -115,13 +115,13 @@ class TestSituation {
             let tasks = [];
             switch (this.config.changeStates.local) {
                 case 'create':
-                    tasks = tasks.concat(this.changeSet.local.create.map(relativePath => fs.promises.writeFile(path.join(workdir, relativePath), this.getChangedContent(relativePath, this.config.changeStates.local, 'local'))));
+                    tasks = tasks.concat(this.changeSet.local.create.map(relativePath => fs.promises.writeFile(path.posix.join(workdir, relativePath), this.getChangedContent(relativePath, this.config.changeStates.local, 'local'))));
                     break;
                 case 'update':
-                    tasks = tasks.concat(this.changeSet.local.update.map(fileInfo => fs.promises.writeFile(path.join(workdir, fileInfo.relativePath), this.getChangedContent(fileInfo.relativePath, this.config.changeStates.local, 'local'))));
+                    tasks = tasks.concat(this.changeSet.local.update.map(fileInfo => fs.promises.writeFile(path.posix.join(workdir, fileInfo.relativePath), this.getChangedContent(fileInfo.relativePath, this.config.changeStates.local, 'local'))));
                     break;
                 case 'delete':
-                    tasks = tasks.concat(this.changeSet.local.delete.map(fileInfo => fs.promises.unlink(path.join(workdir, fileInfo.relativePath))));
+                    tasks = tasks.concat(this.changeSet.local.delete.map(fileInfo => fs.promises.unlink(path.posix.join(workdir, fileInfo.relativePath))));
                     break;
             }
             switch (this.config.changeStates.remote) {
@@ -154,17 +154,17 @@ class TestSituation {
             switch (this.config.changeStates[location]) {
                 case 'create':
                     this.changeSet[location]['create'].forEach(relativePath => {
-                        expectedFileDict[path.join(workdir, relativePath)] = this.getChangedContent(relativePath, 'create', location);
+                        expectedFileDict[path.posix.join(workdir, relativePath)] = this.getChangedContent(relativePath, 'create', location);
                     });
                     break;
                 case 'update':
                     this.changeSet[location]['update'].forEach(fileInfo => {
-                        expectedFileDict[path.join(workdir, fileInfo.relativePath)] = this.getChangedContent(fileInfo.relativePath, 'update', location);
+                        expectedFileDict[path.posix.join(workdir, fileInfo.relativePath)] = this.getChangedContent(fileInfo.relativePath, 'update', location);
                     });
                     break;
                 case 'delete':
                     this.changeSet[location]['update'].forEach(fileInfo => {
-                        delete expectedFileDict[path.join(workdir, fileInfo.relativePath)];
+                        delete expectedFileDict[path.posix.join(workdir, fileInfo.relativePath)];
                     });
                     break;
             }
@@ -188,13 +188,13 @@ class TestSituation {
         if (!this.config.isOffline) {
             return 'no'; // Changed should be resolved
         }
-        if (this.changeSet.local.create.some(relativePath => (absPath === path.join(workdir, relativePath)))) {
+        if (this.changeSet.local.create.some(relativePath => (absPath === path.posix.join(workdir, relativePath)))) {
             return 'create';
         }
-        if (this.changeSet.local.update.some(fileInfo => (absPath === path.join(workdir, fileInfo.relativePath)))) {
+        if (this.changeSet.local.update.some(fileInfo => (absPath === path.posix.join(workdir, fileInfo.relativePath)))) {
             return 'update';
         }
-        if (this.changeSet.local.delete.some(fileInfo => (absPath === path.join(workdir, fileInfo.relativePath)))) {
+        if (this.changeSet.local.delete.some(fileInfo => (absPath === path.posix.join(workdir, fileInfo.relativePath)))) {
             return 'delete';
         }
         return 'no';
@@ -216,7 +216,7 @@ class TestSituation {
             const tasks = [];
             expectedAbsPaths.forEach((absPath) => {
                 let expectedContent = expectedFileDict[absPath];
-                let relativePath = path.relative(workdir, absPath);
+                let relativePath = path.posix.relative(workdir, absPath);
                 // local
                 const localFile = this.instances.localFiles.findBy('relativePath', relativePath);
                 chai.assert.isNotNull(localFile);
@@ -275,8 +275,8 @@ describe('Sync file system', () => {
 describe('Sync folder test', () => {
     it('Create a folder and a file locally', () => __awaiter(void 0, void 0, void 0, function* () {
         const instances = yield setupInstances();
-        const folderAbsPath = path.join(workdir, 'addedFolder');
-        const fileAbsPath = path.join(workdir, 'addedFolder', 'file.txt');
+        const folderAbsPath = path.posix.join(workdir, 'addedFolder');
+        const fileAbsPath = path.posix.join(workdir, 'addedFolder', 'file.txt');
         const fileContent = 'file content';
         yield fs.promises.mkdir(folderAbsPath);
         yield fs.promises.writeFile(fileAbsPath, fileContent);

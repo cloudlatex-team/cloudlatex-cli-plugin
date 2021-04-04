@@ -18,14 +18,15 @@ const type_db_1 = require("@moritanian/type-db");
 const fileModel_1 = require("../../src/model/fileModel");
 const logger_1 = require("../../src/util/logger");
 const tool = require("./../tool/syncTestTool");
-const fixturePath = path.resolve(__dirname, './../fixture');
-const workspacePath = path.resolve(__dirname, './../workspace');
+const fixturePath = path.resolve(__dirname, './../fixture').replace(/\\/g, path.posix.sep);
+const workspacePath = path.resolve(__dirname, './../workspace').replace(/\\/g, path.posix.sep);
 const setupWorkspace = () => __awaiter(void 0, void 0, void 0, function* () {
+    yield cleanupWorkspace();
     yield fs.copy(fixturePath, workspacePath);
     yield tool.sleep(1000);
 });
 const cleanupWorkspace = () => __awaiter(void 0, void 0, void 0, function* () {
-    yield fs.remove(workspacePath);
+    yield fs.emptyDir(workspacePath);
 });
 let watcher;
 const setupInstances = () => __awaiter(void 0, void 0, void 0, function* () {
