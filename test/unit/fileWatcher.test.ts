@@ -8,16 +8,17 @@ import { FileRepository, FileInfoDesc } from '../../src/model/fileModel';
 import Logger from '../../src/util/logger';
 import * as tool from './../tool/syncTestTool';
 
-const fixturePath = path.resolve(__dirname, './../fixture');
-const workspacePath = path.resolve(__dirname, './../workspace');
+const fixturePath = path.resolve(__dirname, './../fixture').replace(/\\/g, path.posix.sep);
+const workspacePath = path.resolve(__dirname, './../workspace').replace(/\\/g, path.posix.sep);
 
 const setupWorkspace = async () => {
+  await cleanupWorkspace();
   await fs.copy(fixturePath, workspacePath);
   await tool.sleep(1000);
 };
 
 const cleanupWorkspace = async () => {
-  await fs.remove(workspacePath);
+  await fs.emptyDir(workspacePath);
 };
 
 let watcher: FileWatcher | null;
