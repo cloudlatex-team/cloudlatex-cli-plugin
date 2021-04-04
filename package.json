@@ -1,6 +1,6 @@
 {
   "name": "cloudlatex-cli-plugin",
-  "version": "0.0.7",
+  "version": "0.1.1",
   "license": "MIT",
   "main": "./dist/src/index.js",
   "bin": {
@@ -60,7 +60,7 @@
     "eventemitter3": "^4.0.0",
     "form-data": "^3.0.0",
     "lodash": "^4.17.20",
-    "node-fetch": "^2.6.0",
+    "node-fetch": "^2.6.1",
     "pako": "^1.0.11",
     "text-encoding": "^0.7.0",
     "uuid": "^8.1.0"
