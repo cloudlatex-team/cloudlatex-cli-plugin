@@ -1,6 +1,6 @@
 {
   "name": "cloudlatex-cli-plugin",
-  "version": "0.1.1",
+  "version": "1.0.0",
   "license": "MIT",
   "main": "./dist/src/index.js",
   "bin": {
