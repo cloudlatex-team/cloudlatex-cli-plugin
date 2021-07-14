@@ -110,7 +110,7 @@ class LatexApp extends LAEventEmitter {
     static createApp(config, option = {}) {
         return __awaiter(this, void 0, void 0, function* () {
             const logger = option.logger || new logger_1.default();
-            logger.log(`latex-cli ${'0.1.1'}`);
+            logger.log(`latex-cli ${'1.0.0'}`);
             // Config
             config = this.sanitizeConfig(config);
             // Account
