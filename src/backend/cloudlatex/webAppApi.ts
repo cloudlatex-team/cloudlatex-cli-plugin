@@ -65,7 +65,7 @@ export default class CLWebAppApi {
     if (!res.ok) {
       return false;
     }
-    const json = await res.json();
+    const json = (await res.json()) as { success: boolean };
     return !!json['success'];
   }
 
@@ -74,7 +74,7 @@ export default class CLWebAppApi {
     if (!res.ok) {
       throw new Error(JSON.stringify(res));
     }
-    return JSON.parse(await res.json());
+    return JSON.parse((await res.json()) as string);
   }
 
   async loadProjectInfo() {
@@ -175,11 +175,17 @@ export default class CLWebAppApi {
     if (!res.ok) {
       throw new Error(JSON.stringify(res));
     }
+    if (!res.body) {
+      throw new Error('res.body is null');
+    }
     return res.body;
   }
 
   async downdloadPreview(url: string): Promise<NodeJS.ReadableStream> {
     const res = await fetch(url, this.fetchOption());
+    if (!res.body) {
+      throw new Error('res.body is null');
+    }
     return res.body;
   }
 
