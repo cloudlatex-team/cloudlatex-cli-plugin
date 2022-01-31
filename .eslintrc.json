@@ -9,7 +9,7 @@
     "@typescript-eslint"
   ],
   "rules": {
-    "@typescript-eslint/class-name-casing": "warn",
+    "@typescript-eslint/naming-convention": "warn",
     "semi": "off",
     "@typescript-eslint/semi": "warn",
     "curly": "warn",
