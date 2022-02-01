@@ -47,7 +47,8 @@ export default class ClBackend implements IBackend {
     if (relativeDir === '.') {
       relativeDir = '';
     }
-    const result = await this.api.uploadFile(stream, relativeDir);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const result: any = await this.api.uploadFile(stream, relativeDir);
     return { remoteId: result.file.id, remoteRevision: result.file.revision };
   }
 
