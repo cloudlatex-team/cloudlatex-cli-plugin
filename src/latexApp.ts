@@ -2,7 +2,7 @@ import * as path from 'path';
 import * as  EventEmitter from 'eventemitter3';
 import Logger, { getErrorTraceStr } from './util/logger';
 import { wildcard2regexp } from './util/pathUtil';
-import { Config, DecideSyncMode, Account, CompileResult, AppInfo } from './types';
+import { Config, DecideSyncMode, Account, CompileResult, AppInfo, LoginStatus } from './types';
 import FileAdapter from './fileService/fileAdapter';
 import SyncManager, { SyncResult } from './fileService/syncManager';
 import FileWatcher from './fileService/fileWatcher';
@@ -20,8 +20,8 @@ class LAEventEmitter extends EventEmitter<''> {
 interface LAEventEmitter {
   emit(eventName: NoPayloadEvents): boolean;
   on(eventName: NoPayloadEvents, callback: () => unknown): this;
-  emit(eventName: 'network-updated', arg: boolean): void;
-  on(eventName: 'network-updated', callback: (arg: boolean) => unknown): void;
+  emit(eventName: 'login-status-updated', arg: LoginStatus): void;
+  on(eventName: 'login-status-updated', callback: (arg: LoginStatus) => unknown): void;
   emit(eventName: 'project-loaded', arg: AppInfo): void;
   on(eventName: 'project-loaded', callback: (arg: AppInfo) => unknown): void;
   emit(eventName: 'successfully-synced', arg: SyncResult): void;
@@ -204,25 +204,33 @@ export default class LatexApp extends LAEventEmitter {
     return this.fileWatcher.stop();
   }
 
-  private onOnline() {
-    if (!this.appInfoService.appInfo.offline) {
+  private onValid() {
+    if (this.appInfoService.appInfo.loginStatus === 'valid') {
       return;
     }
-    this.appInfoService.setOnline();
+    this.appInfoService.setLoginStatus('valid');
     this.logger.info('Your account has been validated!');
-    this.emit('network-updated', this.appInfoService.appInfo.offline);
+    this.emit('login-status-updated', this.appInfoService.appInfo.loginStatus);
+  }
+
+  private onInvalid() {
+    if (this.appInfoService.appInfo.loginStatus === 'invalid') {
+      return;
+    }
+    this.appInfoService.setLoginStatus('invalid');
+    this.emit('login-status-updated', this.appInfoService.appInfo.loginStatus);
   }
 
   private onOffline() {
-    if (this.appInfoService.appInfo.offline) {
+    if (this.appInfoService.appInfo.loginStatus === 'offline') {
       return;
     }
     this.logger.warn(`The network is offline or some trouble occur with the server.
       You can edit your files, but your changes will not be reflected on the server
       until it is enable to communicate with the server.
       `);
-    this.appInfoService.setOffLine();
-    this.emit('network-updated', this.appInfo.offline);
+    this.appInfoService.setLoginStatus('offline');
+    this.emit('login-status-updated', this.appInfoService.appInfo.loginStatus);
   }
 
   /**
@@ -308,13 +316,14 @@ export default class LatexApp extends LAEventEmitter {
     try {
       const result = await this.backend.validateToken();
       if (!result) {
+        this.onInvalid();
         return 'invalid';
       }
-      this.onOnline();
     } catch (err) {
       this.onOffline();
       return 'offline';
     }
+    this.onValid();
     return 'valid';
   }
 

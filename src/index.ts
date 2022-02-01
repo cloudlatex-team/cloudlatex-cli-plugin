@@ -1,4 +1,4 @@
-export { AppInfo, Config, Account, DecideSyncMode, CompileResult } from './types';
+export { AppInfo, Config, Account, DecideSyncMode, CompileResult, LoginStatus } from './types';
 import LatexApp from './latexApp';
 export default LatexApp;
 import Logger from './util/logger';
