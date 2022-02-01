@@ -20,14 +20,14 @@ export default class FileWatcher extends EventEmitter<EventType> {
 
   public init(): Promise<void> {
     const watcherOption: chokidar.WatchOptions = {
-      ignored: /\.git|\.cloudlatex\.json|synctex\.gz|\.vscode(\\|\/|$)|.DS\_Store/, //#TODO
+      ignored: /\.git|\.cloudlatex\.json|synctex\.gz|\.vscode(\\|\/|$)|.DS_Store/, //#TODO
       awaitWriteFinish: {
         stabilityThreshold: 500,
         pollInterval: 100
       }
     };
     const fileWatcher = this.fileWatcher = chokidar.watch(this.rootPath, watcherOption);
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       // TODO detect changes before running
       fileWatcher.on('ready', () => {
         this.logger.log('On chokidar ready event');
@@ -43,7 +43,7 @@ export default class FileWatcher extends EventEmitter<EventType> {
     });
   }
 
-  private onFileCreated(absPath: string, isFolder: boolean = false) {
+  private onFileCreated(absPath: string, isFolder = false) {
     const relativePath = this.getRelativePath(absPath);
     if (!this.watcherFileFilter(relativePath)) {
       return;
@@ -147,6 +147,7 @@ export default class FileWatcher extends EventEmitter<EventType> {
     this.emit('change-detected');
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private onWatchingError(err: any) {
     if (process.platform === 'win32' && err['errno'] === -4048 && err['code'] === 'EPERM') {
       /**
@@ -166,7 +167,7 @@ export default class FileWatcher extends EventEmitter<EventType> {
     return path.posix.relative(this.rootPath, absPath);
   }
 
-  public stop() {
+  public stop(): Promise<void> {
     this.logger.log('Stop watching file system', this.rootPath);
     return this.fileWatcher ? this.fileWatcher.close() : Promise.resolve();
   }

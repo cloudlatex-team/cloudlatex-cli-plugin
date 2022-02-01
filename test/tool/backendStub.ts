@@ -1,7 +1,8 @@
+/* eslint-disable @typescript-eslint/naming-convention */
 import IBackend from '../../src/backend/ibackend';
-import { Config, ProjectInfo, KeyType, Account } from '../../src/types';
+import { ProjectInfo, KeyType } from '../../src/types';
 import { TypeDB, Repository } from '@moritanian/type-db';
-import { FileInfoDesc, FileInfo } from '../../src/model/fileModel';
+import { FILE_INFO_DESC, FileInfo } from '../../src/model/fileModel';
 import { v4 as uuid } from 'uuid';
 import { ReadableString, streamToString } from '../../src/util/stream';
 
@@ -12,15 +13,15 @@ import { ReadableString, streamToString } from '../../src/util/stream';
  *  file.id in remoteFiles is not equal to file.id in local files.
  */
 export default class BackendStub implements IBackend {
-  public isOffline: boolean = false;
+  public isOffline = false;
   public remoteContents: Record<string, string> = {};
-  public remoteFiles: Repository<typeof FileInfoDesc>;
+  public remoteFiles: Repository<typeof FILE_INFO_DESC>;
   constructor() {
     const remotedb = new TypeDB();
-    this.remoteFiles = remotedb.getRepository(FileInfoDesc);
+    this.remoteFiles = remotedb.getRepository(FILE_INFO_DESC);
   }
 
-  validateToken() {
+  validateToken(): Promise<boolean> {
     return Promise.resolve(true);
   }
 
@@ -42,7 +43,11 @@ export default class BackendStub implements IBackend {
     return Promise.resolve(this.remoteFiles.all());
   }
 
-  async upload(file: FileInfo, stream: NodeJS.ReadableStream, option?: any) {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  async upload(file: FileInfo, stream: NodeJS.ReadableStream, option?: unknown): Promise<{
+    remoteId: string;
+    remoteRevision: string;
+  }> {
     if (this.isOffline) {
       return Promise.reject();
     }
@@ -57,7 +62,8 @@ export default class BackendStub implements IBackend {
     };
   }
 
-  async createRemote(file: FileInfo, parent: FileInfo | null): Promise<{remoteId: KeyType, remoteRevision: any}> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars
+  async createRemote(file: FileInfo, parent: FileInfo | null): Promise<{ remoteId: KeyType, remoteRevision: any }> {
     if (this.isOffline) {
       return Promise.reject('offline');
     }
@@ -101,7 +107,7 @@ export default class BackendStub implements IBackend {
     return targetFile.remoteRevision = uuid();
   }
 
-  deleteRemote(file: FileInfo) {
+  deleteRemote(file: FileInfo): Promise<void> {
     if (this.isOffline) {
       return Promise.reject();
     }
@@ -114,7 +120,8 @@ export default class BackendStub implements IBackend {
     return Promise.resolve();
   }
 
-  compileProject(): any {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  compileProject(): Promise<any> {
     if (this.isOffline) {
       return Promise.reject();
     }

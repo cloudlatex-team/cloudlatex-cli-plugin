@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+/* eslint-disable */
+
 import LatexApp from './latexApp';
 import { Config, ProjectInfo, AppInfo, SyncMode, DecideSyncMode } from './types';
 

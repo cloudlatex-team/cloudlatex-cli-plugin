@@ -4,7 +4,7 @@ import * as pako from 'pako';
 import { TextDecoder } from 'text-encoding';
 
 import WebAppApi from './webAppApi';
-import { FileInfo } from '../../model/fileModel';
+import { FileInfo, Revision } from '../../model/fileModel';
 import { ClFile } from './types';
 import IBackend from '../ibackend';
 import { Config, ProjectInfo, KeyType, Account, CompileResult } from './../../types';
@@ -19,11 +19,11 @@ export default class ClBackend implements IBackend {
     this.api = new WebAppApi(config, accountService);
   }
 
-  public validateToken() {
+  public validateToken(): Promise<boolean> {
     return this.api.validateToken();
   }
 
-  public download(file: FileInfo) {
+  public download(file: FileInfo): Promise<NodeJS.ReadableStream> {
     /*
      * url of some files such as pdf begins with '/'
      *    like '/projects/180901/files/1811770/preview'
@@ -36,7 +36,10 @@ export default class ClBackend implements IBackend {
     return this.api.download(file.url);
   }
 
-  public async upload(file: FileInfo, stream: NodeJS.ReadableStream, option?: any): Promise<{ remoteId: KeyType, remoteRevision: any }> {
+  public async upload(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    file: FileInfo, stream: NodeJS.ReadableStream, option?: unknown
+  ): Promise<{ remoteId: KeyType, remoteRevision: Revision }> {
     let relativeDir = path.posix.dirname(file.relativePath);
     if (relativeDir.length > 1 && relativeDir[0] === '/') {
       relativeDir = relativeDir.slice(1);
@@ -48,9 +51,12 @@ export default class ClBackend implements IBackend {
     return { remoteId: result.file.id, remoteRevision: result.file.revision };
   }
 
-  public async createRemote(file: FileInfo, parent: FileInfo | null): Promise<{ remoteId: KeyType, remoteRevision: any }> {
+  public async createRemote(
+    file: FileInfo, parent: FileInfo | null
+  ): Promise<{ remoteId: KeyType, remoteRevision: Revision }> {
     const belongs = parent && Number(parent.remoteId);
-    const result = await this.api.createFile(path.posix.basename(file.relativePath), belongs, file.isFolder);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const result: any = await this.api.createFile(path.posix.basename(file.relativePath), belongs, file.isFolder);
     return { remoteId: result.file.id, remoteRevision: result.file.revision };
   }
 
@@ -64,7 +70,7 @@ export default class ClBackend implements IBackend {
     return result.revision;
   }
 
-  public async deleteRemote(file: FileInfo & { remoteId: number }) {
+  public async deleteRemote(file: FileInfo & { remoteId: number }): Promise<unknown> {
     return this.api.deleteFile(file.remoteId);
   }
 
@@ -73,7 +79,8 @@ export default class ClBackend implements IBackend {
   }
 
   public async loadFileList(): Promise<FileInfo[]> {
-    const res = await this.api?.loadFiles();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const res: any = await this.api.loadFiles();
     const materialFiles: Array<ClFile> = res.material_files;
 
     return materialFiles.map(materialFile => {
@@ -93,7 +100,7 @@ export default class ClBackend implements IBackend {
     });
   }
 
-  public loadSynctexObject(url: string): Promise<any> {
+  public loadSynctexObject(url: string): Promise<ArrayBuffer> {
     return this.api.loadSynctexObject(url);
   }
 

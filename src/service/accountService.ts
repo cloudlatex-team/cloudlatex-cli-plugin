@@ -12,7 +12,7 @@ export default class AccountService<Account> {
    *
    * @param account account to save
    */
-  public save(account: Account) {
+  public save(account: Account): Promise<void> {
     this._account = account;
     if (!this.savePath) {
       return Promise.resolve();
@@ -35,6 +35,7 @@ export default class AccountService<Account> {
           this.savePath.replace(new RegExp(path.posix.sep, 'g'), path.sep), 'utf-8')
       );
     } catch (e) {
+      // No account file
     }
     return this._account;
   }

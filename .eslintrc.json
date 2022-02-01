@@ -8,16 +8,41 @@
   "plugins": [
     "@typescript-eslint"
   ],
+  "extends": [
+    "eslint:recommended",
+    "plugin:@typescript-eslint/recommended"
+  ],
   "rules": {
     "@typescript-eslint/naming-convention": "warn",
     "semi": "off",
     "@typescript-eslint/semi": "warn",
     "curly": "warn",
-    "object-curly-spacing": ["warn", "always"],
+    "object-curly-spacing": [
+      "warn",
+      "always"
+    ],
     "eqeqeq": "warn",
     "no-throw-literal": "warn",
-    "quotes": [2, "single", { "avoidEscape": true }],
+    "quotes": [
+      2,
+      "single",
+      {
+        "avoidEscape": true
+      }
+    ],
     "no-trailing-spaces": "error",
-    "keyword-spacing": ["error", {"before": true, "after": true}]
+    "keyword-spacing": [
+      "error",
+      {
+        "before": true,
+        "after": true
+      }
+    ],
+    "max-len": [
+      "warn",
+      {
+        "code": 120
+      }
+    ]
   }
 }

@@ -2,12 +2,12 @@ import * as path from 'path';
 import * as  EventEmitter from 'eventemitter3';
 import Logger, { getErrorTraceStr } from './util/logger';
 import { wildcard2regexp } from './util/pathUtil';
-import { Config, DecideSyncMode, Account, CompileResult, CompileStatus, AppInfo } from './types';
+import { Config, DecideSyncMode, Account, CompileResult, AppInfo } from './types';
 import FileAdapter from './fileService/fileAdapter';
 import SyncManager, { SyncResult } from './fileService/syncManager';
 import FileWatcher from './fileService/fileWatcher';
 import { TypeDB, Repository } from '@moritanian/type-db';
-import { FileInfoDesc } from './model/fileModel';
+import { FILE_INFO_DESC } from './model/fileModel';
 import Backend from './backend/ibackend';
 import backendSelector from './backend/backendSelector';
 import AccountService from './service/accountService';
@@ -16,6 +16,7 @@ import AppInfoService from './service/appInfoService';
 type NoPayloadEvents = 'sync-failed' | 'file-changed';
 class LAEventEmitter extends EventEmitter<''> {
 }
+/* eslint-disable @typescript-eslint/adjacent-overload-signatures */
 interface LAEventEmitter {
   emit(eventName: NoPayloadEvents): boolean;
   on(eventName: NoPayloadEvents, callback: () => unknown): this;
@@ -25,10 +26,11 @@ interface LAEventEmitter {
   on(eventName: 'project-loaded', callback: (arg: AppInfo) => unknown): void;
   emit(eventName: 'successfully-synced', arg: SyncResult): void;
   on(eventName: 'successfully-synced', callback: (arg: SyncResult) => unknown): void;
-
 }
+/* eslint-enable @typescript-eslint/adjacent-overload-signatures */
 
-const IgnoreFiles = [
+
+const IGNORE_FILES = [
   '*.aux',
   '*.bbl',
   '*.blg',
@@ -68,7 +70,7 @@ export default class LatexApp extends LAEventEmitter {
     private appInfoService: AppInfoService,
     private backend: Backend,
     private fileAdapter: FileAdapter,
-    private fileRepo: Repository<typeof FileInfoDesc>,
+    private fileRepo: Repository<typeof FILE_INFO_DESC>,
     decideSyncMode: DecideSyncMode,
     private logger: Logger = new Logger()) {
     super();
@@ -87,6 +89,7 @@ export default class LatexApp extends LAEventEmitter {
       if (result.success) {
         this.emit('successfully-synced', result);
       } else if (result.canceled) {
+        // canceled
       } else {
         this.logger.error('Error in syncSession: ' + result.errors.join('\n'));
         this.emit('sync-failed');
@@ -106,7 +109,7 @@ export default class LatexApp extends LAEventEmitter {
         ];
 
         return !outFilePaths.includes(relativePath) &&
-          !IgnoreFiles.some(
+          !IGNORE_FILES.some(
             ignoreFile => relativePath.match(wildcard2regexp(ignoreFile))
           );
       },
@@ -117,7 +120,7 @@ export default class LatexApp extends LAEventEmitter {
     });
   }
 
-  get appInfo() {
+  get appInfo(): AppInfo {
     return this.appInfoService.appInfo;
   }
 
@@ -161,7 +164,7 @@ export default class LatexApp extends LAEventEmitter {
     } catch (err) {
       // Not initialized because there is no db file.
     }
-    const fileRepo = db.getRepository(FileInfoDesc);
+    const fileRepo = db.getRepository(FILE_INFO_DESC);
     fileRepo.all().forEach(file => {
       file.watcherSynced = true;
     });
@@ -189,7 +192,7 @@ export default class LatexApp extends LAEventEmitter {
   /**
    * Start to watch file system
    */
-  public startFileWatcher() {
+  public startFileWatcher(): Promise<void> {
     return this.fileWatcher.init();
   }
 
@@ -197,8 +200,8 @@ export default class LatexApp extends LAEventEmitter {
   /**
    * Stop watching file system
    */
-  public stopFileWatcher() {
-    this.fileWatcher.stop();
+  public stopFileWatcher(): Promise<void> {
+    return this.fileWatcher.stop();
   }
 
   private onOnline() {
@@ -242,7 +245,7 @@ export default class LatexApp extends LAEventEmitter {
         this.emit('project-loaded', this.appInfo);
       }
 
-      let result = await this.backend.compileProject();
+      const result = await this.backend.compileProject();
 
       if (result.status !== 'success') {
         return result;
@@ -252,23 +255,37 @@ export default class LatexApp extends LAEventEmitter {
 
       // download log file
       if (result.logStream) {
-        promises.push(this.fileAdapter.saveAs(this.appInfoService.appInfo.logPath!, result.logStream).catch(err => {
-          this.logger.error('Some error occurred with saving a log file. ' + getErrorTraceStr(err));
-        }));
+        if (this.appInfoService.appInfo.logPath) {
+          promises.push(this.fileAdapter.saveAs(this.appInfoService.appInfo.logPath, result.logStream).catch(err => {
+            this.logger.error('Some error occurred with saving a log file. ' + getErrorTraceStr(err));
+          }));
+        } else {
+          this.logger.error('Log file path is not set');
+        }
       }
 
       // download pdf
       if (result.pdfStream) {
-        promises.push(this.fileAdapter.saveAs(this.appInfoService.appInfo.pdfPath!, result.pdfStream).catch(err => {
-          this.logger.error('Some error occurred with downloading the compiled pdf file. ' + getErrorTraceStr(err));
-        }));
+        if (this.appInfoService.appInfo.pdfPath) {
+          promises.push(this.fileAdapter.saveAs(this.appInfoService.appInfo.pdfPath, result.pdfStream).catch(err => {
+            this.logger.error('Some error occurred with downloading the compiled pdf file. ' + getErrorTraceStr(err));
+          }));
+        } else {
+          this.logger.error('PDF file path is not set');
+        }
       }
 
       // download synctex
       if (result.synctexStream) {
-        promises.push(this.fileAdapter.saveAs(this.appInfoService.appInfo.synctexPath!, result.synctexStream).catch(err => {
-          this.logger.error('Some error occurred with saving a synctex file. ' + getErrorTraceStr(err));
-        }));
+        if (this.appInfoService.appInfo.synctexPath) {
+          promises.push(
+            this.fileAdapter.saveAs(this.appInfoService.appInfo.synctexPath, result.synctexStream).catch(err => {
+              this.logger.error('Some error occurred with saving a synctex file. ' + getErrorTraceStr(err));
+            })
+          );
+        } else {
+          this.logger.error('Synctex file path is not set');
+        }
       }
 
       // wait to download all files
@@ -313,14 +330,14 @@ export default class LatexApp extends LAEventEmitter {
   /**
    * Start to synchronize files with the remote server
    */
-  public async startSync() {
+  public async startSync(): Promise<void> {
     await this.syncManager.syncSession();
   }
 
   /**
    * clear local changes to resolve sync problem
    */
-  public resetLocal() {
+  public resetLocal(): void {
     this.fileRepo.all().forEach(f => this.fileRepo.delete(f.id));
   }
 }

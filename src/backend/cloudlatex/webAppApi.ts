@@ -1,22 +1,23 @@
+/* eslint-disable @typescript-eslint/naming-convention */
 import fetch, { RequestInit, Headers } from 'node-fetch';
-import * as https from 'https';
 import { CompileResult } from './types';
 import * as FormData from 'form-data';
 import { Config, ProjectInfo, Account } from '../../types';
 import AccountService from '../../service/accountService';
 
 export default class CLWebAppApi {
-  private APIRoot: string;
-  private APIProjects: string;
+  private apiRoot: string;
+  private apiProjects: string;
   constructor(private config: Config, private accountService: AccountService<Account>) {
-    this.APIRoot = config.endpoint;
-    this.APIProjects = config.endpoint + '/projects';
+    this.apiRoot = config.endpoint;
+    this.apiProjects = config.endpoint + '/projects';
   }
 
   private headers(option: { json?: boolean, form?: boolean } = {}): Headers {
     if (!this.accountService.account) {
       throw new Error('account is not defined');
     }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const headers: any = {
       'uid': this.accountService.account.email,
       'access-token': this.accountService.account.token,
@@ -34,6 +35,7 @@ export default class CLWebAppApi {
 
   private fetchOption(option: {
     method?: 'GET' | 'POST' | 'PUT' | 'DELETE',
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     body?: any,
     headerOption?: { json?: boolean, form?: boolean },
     headers?: Headers | { [key: string]: string; }
@@ -54,14 +56,14 @@ export default class CLWebAppApi {
     return params;
   }
 
-  async validateToken() {
+  async validateToken(): Promise<boolean> {
     let params;
     try {
       params = this.fetchOption();
     } catch (err) {
       return false; // account is not defined;
     }
-    const res = await fetch(`${this.APIRoot}/auth/validate_token`, params);
+    const res = await fetch(`${this.apiRoot}/auth/validate_token`, params);
     if (!res.ok) {
       return false;
     }
@@ -69,16 +71,16 @@ export default class CLWebAppApi {
     return !!json['success'];
   }
 
-  async loadProjects() {
-    const res = await fetch(this.APIProjects, this.fetchOption());
+  async loadProjects(): Promise<ProjectInfo[]> {
+    const res = await fetch(this.apiProjects, this.fetchOption());
     if (!res.ok) {
       throw new Error(JSON.stringify(res));
     }
     return JSON.parse((await res.json()) as string);
   }
 
-  async loadProjectInfo() {
-    const res = await fetch(`${this.APIProjects}/${this.config.projectId}`, this.fetchOption());
+  async loadProjectInfo(): Promise<ProjectInfo> {
+    const res = await fetch(`${this.apiProjects}/${this.config.projectId}`, this.fetchOption());
     if (!res.ok) {
       throw new Error(JSON.stringify(res));
     }
@@ -86,17 +88,18 @@ export default class CLWebAppApi {
     return JSON.parse(text)['project'] as ProjectInfo;
   }
 
-  async loadFiles() {
-    const res = await fetch(`${this.APIProjects}/${this.config.projectId}/files`, this.fetchOption());
+  async loadFiles(): Promise<unknown> {
+    const res = await fetch(`${this.apiProjects}/${this.config.projectId}/files`, this.fetchOption());
     if (!res.ok) {
       throw new Error(JSON.stringify(res));
     }
     return JSON.parse(await res.text());
   }
 
-  async createFile(name: string, belonging_to: number | null, is_folder: boolean) {
+  /* eslint-disable-next-line @typescript-eslint/naming-convention */
+  async createFile(name: string, belonging_to: number | null, is_folder: boolean): Promise<unknown> {
     const res = await fetch(
-      `${this.APIProjects}/${this.config.projectId}/files`,
+      `${this.apiProjects}/${this.config.projectId}/files`,
       this.fetchOption({
         method: 'POST',
         body: JSON.stringify({ name, is_folder, belonging_to }),
@@ -109,9 +112,9 @@ export default class CLWebAppApi {
     return JSON.parse(await res.text());
   }
 
-  async deleteFile(id: number) {
+  async deleteFile(id: number): Promise<unknown> {
     const res = await fetch(
-      `${this.APIProjects}/${this.config.projectId}/files/${id}`,
+      `${this.apiProjects}/${this.config.projectId}/files/${id}`,
       this.fetchOption({ method: 'DELETE' })
     );
     if (!res.ok) {
@@ -120,9 +123,10 @@ export default class CLWebAppApi {
     return JSON.parse(await res.text());
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types, @typescript-eslint/no-explicit-any
   async updateFile(id: number, params: any): Promise<{ revision: string }> {
     const res = await fetch(
-      `${this.APIProjects}/${this.config.projectId}/files/${id}`,
+      `${this.apiProjects}/${this.config.projectId}/files/${id}`,
       this.fetchOption({
         method: 'PUT',
         body: JSON.stringify({ material_file: params }),
@@ -137,7 +141,7 @@ export default class CLWebAppApi {
 
   async compileProject(): Promise<CompileResult> {
     const res = await fetch(
-      `${this.APIProjects}/${this.config.projectId}/compile`,
+      `${this.apiProjects}/${this.config.projectId}/compile`,
       this.fetchOption({
         method: 'POST',
       })
@@ -148,13 +152,13 @@ export default class CLWebAppApi {
     return JSON.parse(await res.text());
   }
 
-  async uploadFile(stream: NodeJS.ReadableStream, relativeDir: string) {
+  async uploadFile(stream: NodeJS.ReadableStream, relativeDir: string): Promise<unknown> {
     const form = new FormData();
     form.append('relative_path', relativeDir);
     form.append('file', stream);
     const headers = form.getHeaders();
     const res = await fetch(
-      `${this.APIProjects}/${this.config.projectId}/files/upload`,
+      `${this.apiProjects}/${this.config.projectId}/files/upload`,
       this.fetchOption({
         method: 'POST',
         body: form,
@@ -189,10 +193,10 @@ export default class CLWebAppApi {
     return res.body;
   }
 
-  async loadSynctexObject(url: string) {
+  async loadSynctexObject(url: string): Promise<ArrayBuffer> {
     const res = await fetch(
       `${url}`
     );
     return await res.arrayBuffer();
   }
-};
+}

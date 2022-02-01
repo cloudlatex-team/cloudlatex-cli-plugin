@@ -1,9 +1,10 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import * as Sinon from 'sinon';
 import * as chokidar from 'chokidar';
 import * as fs from 'fs';
 import * as mockFs from 'mock-fs';
 
-function fsStub(files: Record<string, string>) {
+function fsStub(files: Record<string, string>): void {
   mockFs(files);
   let watcher: chokidar.FSWatcher;
   const originalChokidarWatch = chokidar.watch;
@@ -17,7 +18,7 @@ function fsStub(files: Record<string, string>) {
     const stream = originalCreateWriteStream(path, options);
     const statPromise = fs.promises.stat(path);
     stream.on('finish', () => {
-      statPromise.then(stat => {
+      statPromise.then(() => {
         watcher.emit('change', path);
       }).catch(() => {
         watcher.emit('add', path);
@@ -27,7 +28,7 @@ function fsStub(files: Record<string, string>) {
   });
 
   Sinon.stub(fs.promises, 'writeFile').callsFake((path: any, data: string | Uint8Array, options?: any) => (
-    fs.promises.stat(path).then(stat => (
+    fs.promises.stat(path).then(() => (
       originalWriteFile(path, data, options).then(() => 'change')
     )).catch(() => (
       originalWriteFile(path, data, options).then(() => 'add')
@@ -58,13 +59,14 @@ function fsStub(files: Record<string, string>) {
     })
   ));
 
-  Sinon.stub(chokidar, 'watch').callsFake((path: string | readonly string[], option?: chokidar.WatchOptions): chokidar.FSWatcher => {
-    return watcher = originalChokidarWatch(path, option);
-  });
-
+  Sinon.stub(chokidar, 'watch').callsFake(
+    (path: string | readonly string[], option?: chokidar.WatchOptions): chokidar.FSWatcher => {
+      return watcher = originalChokidarWatch(path, option);
+    }
+  );
 }
 
-fsStub.restore = function() {
+fsStub.restore = function () {
   mockFs.restore();
   Sinon.restore();
 
