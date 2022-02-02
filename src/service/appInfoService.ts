@@ -1,5 +1,5 @@
 import * as path from 'path';
-import { AppInfo, Config, ProjectInfo, KeyType } from '../types';
+import { AppInfo, Config, KeyType } from '../types';
 import { FileInfo } from './../model/fileModel';
 export default class AppInfoService {
   public readonly appInfo: AppInfo;
@@ -11,19 +11,19 @@ export default class AppInfoService {
     };
   }
 
-  setOnline() {
+  setOnline(): void {
     this.appInfo.offline = false;
   }
 
-  setOffLine() {
+  setOffLine(): void {
     this.appInfo.offline = true;
   }
 
-  setProjectName(projectName: string) {
+  setProjectName(projectName: string): void {
     this.appInfo.projectName = projectName;
   }
 
-  setTarget(compileTarget: KeyType, targetName: string) {
+  setTarget(compileTarget: KeyType, targetName: string): void {
     this.appInfo.compileTarget = compileTarget;
     this.appInfo.targetName = targetName;
 
@@ -33,11 +33,11 @@ export default class AppInfoService {
     this.appInfo.synctexPath = this._synctexPath();
   }
 
-  setLoaded() {
+  setLoaded(): void {
     this.appInfo.loaded = true;
   }
 
-  setConflicts(files: FileInfo[]) {
+  setConflicts(files: FileInfo[]): void {
     this.appInfo.conflictFiles = files;
   }
 

@@ -1,8 +1,8 @@
 import * as path from 'path';
 
-export const wildcard2regexp = (wildcardExp: string) => {
+export const wildcard2regexp = (wildcardExp: string): RegExp => {
   return new RegExp(
-    '^' + wildcardExp.replace(/\./g, '\\\.').replace(/\*/g, '.*').replace(/\(/g, '\\(').replace(/\)/g, '\\)') + '$'
+    '^' + wildcardExp.replace(/\./g, '\\.').replace(/\*/g, '.*').replace(/\(/g, '\\(').replace(/\)/g, '\\)') + '$'
   );
 };
 

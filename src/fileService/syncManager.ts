@@ -1,4 +1,4 @@
-import { SyncMode, DecideSyncMode, KeyType, ChangeLocation, ChangeState } from '../types';
+import { SyncMode, DecideSyncMode, KeyType, ChangeState } from '../types';
 import FileAdapter from './fileAdapter';
 import { FileRepository, FileInfo } from '../model/fileModel';
 import * as path from 'path';
@@ -23,8 +23,8 @@ type SyncTask = 'download' | 'createLocalFolder' | 'createRemoteFolder' |
   'upload' | 'updateRemote' | 'deleteRemote' | 'deleteLocal' | 'no';
 
 export default class SyncManager extends EventEmitter<EventType> {
-  private syncing: boolean = false;
-  private fileChanged: boolean = false; // Whether any file (not folder) is changed
+  private syncing = false;
+  private fileChanged = false; // Whether any file (not folder) is changed
   public syncSession: () => void;
   constructor(
     private fileRepo: FileRepository,
@@ -131,7 +131,7 @@ export default class SyncManager extends EventEmitter<EventType> {
 
     // Local to remote
     this.fileRepo.all().forEach(file => {
-      let remoteFile = file.remoteId && remoteFileDict[file.remoteId];
+      const remoteFile = file.remoteId && remoteFileDict[file.remoteId];
       if (!remoteFile) { // remote file does not exist
         if (file.remoteId) { // remote file is deleted
           file.remoteChange = 'delete';
@@ -315,7 +315,7 @@ export default class SyncManager extends EventEmitter<EventType> {
       } catch (e) {
         return {
           success: false,
-          message: `${task} : '${file.relativePath}' : ${file.url} : ${(e && e.stack || '')}`
+          message: `${task} : '${file.relativePath}' : ${file.url} : ${(e && (e as Error).stack || '')}`
         };
       }
       return {
@@ -332,7 +332,7 @@ export default class SyncManager extends EventEmitter<EventType> {
    * @param syncDestination 'local' | 'remote'
    */
   private computePriority(file: FileInfo, syncDestination: 'local' | 'remote'): number {
-    let change: ChangeState = syncDestination === 'local' ?
+    const change: ChangeState = syncDestination === 'local' ?
       file.localChange :
       file.remoteChange;
 
@@ -398,7 +398,7 @@ class TasksExecuter<Result = unknown> {
       taskSeries.push(() => Promise.all(concurrentTasks.map(task => task.run())));
     }
     let task;
-    while (task = taskSeries.pop()) {
+    while ((task = taskSeries.pop())) {
       results.push(...await task());
     }
     return results;
