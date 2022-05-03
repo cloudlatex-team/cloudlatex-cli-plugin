@@ -6,7 +6,7 @@ const level2Number = {
   silent: 5
 };
 
-export default class Logger {
+export class Logger {
   constructor(public logLevel: 'log' | 'info' | 'warn' | 'error' | 'silent' = 'log') {
   }
   log(message: unknown, ...optinalParams: unknown[]): void {

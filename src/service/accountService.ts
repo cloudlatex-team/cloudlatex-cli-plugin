@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
-export default class AccountService<Account> {
+export class AccountService<Account> {
   private _account: Account | null = null;
   constructor(private savePath?: string) {
 

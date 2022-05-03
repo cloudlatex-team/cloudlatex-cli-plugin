@@ -1,10 +1,10 @@
 import { SyncMode, DecideSyncMode, KeyType, ChangeState } from '../types';
-import FileAdapter from './fileAdapter';
+import { FileAdapter } from './fileAdapter';
 import { FileRepository, FileInfo } from '../model/fileModel';
 import * as path from 'path';
 import * as  EventEmitter from 'eventemitter3';
 import * as _ from 'lodash';
-import Logger, { getErrorTraceStr } from '../util/logger';
+import { Logger, getErrorTraceStr } from '../util/logger';
 
 export type SyncResult = {
   success: boolean;
@@ -22,7 +22,7 @@ type EventType = 'sync-finished';
 type SyncTask = 'download' | 'createLocalFolder' | 'createRemoteFolder' |
   'upload' | 'updateRemote' | 'deleteRemote' | 'deleteLocal' | 'no';
 
-export default class SyncManager extends EventEmitter<EventType> {
+export class SyncManager extends EventEmitter<EventType> {
   private syncing = false;
   private fileChanged = false; // Whether any file (not folder) is changed
   public syncSession: () => void;

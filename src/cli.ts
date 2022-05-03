@@ -2,7 +2,7 @@
 
 /* eslint-disable */
 
-import LatexApp from './latexApp';
+import { LatexApp } from './latexApp';
 import { Config, ProjectInfo, AppInfo, SyncMode, DecideSyncMode } from './types';
 
 // TDOO

@@ -6,11 +6,11 @@ import { v4 as uuid } from 'uuid';
 
 import { TypeDB } from '@moritanian/type-db';
 import { FILE_INFO_DESC, FileInfo } from '../../src/model/fileModel';
-import FileWatcher from '../../src/fileService/fileWatcher';
-import SyncManager, { SyncResult } from '../../src/fileService/syncManager';
-import FileAdapter from '../../src/fileService/fileAdapter';
-import Backend from '../tool/backendStub';
-import Logger from '../../src/util/logger';
+import { FileWatcher } from '../../src/fileService/fileWatcher';
+import { SyncManager, SyncResult } from '../../src/fileService/syncManager';
+import { FileAdapter } from '../../src/fileService/fileAdapter';
+import { BackendStub } from '../tool/backendStub';
+import { Logger } from '../../src/util/logger';
 import { DecideSyncMode } from '../../src';
 import { SyncMode, ChangeState, ChangeLocation } from '../../src/types';
 
@@ -45,7 +45,7 @@ const setupInstances = async () => {
   // Files
   const db = new TypeDB();
   const localFiles = db.getRepository(FILE_INFO_DESC);
-  const backend = new Backend();
+  const backend = new BackendStub();
   Object.keys(testFileAndFolderDict).map(absPath => {
     const relativePath = path.posix.relative(workdir, absPath);
     const revision = uuid();

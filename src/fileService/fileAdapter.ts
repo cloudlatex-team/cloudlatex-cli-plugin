@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import Backend from '../backend/ibackend';
+import { IBackend } from '../backend/ibackend';
 import { FileRepository, FileInfo } from '../model/fileModel';
 
 /**
@@ -10,11 +10,11 @@ import { FileRepository, FileInfo } from '../model/fileModel';
  * The file path is expressed with `path.posix.sep` internally
  * and only convert native path (`path.sep`) when this class operates local file.
  */
-export default class FileAdapter {
+export class FileAdapter {
   constructor(
     protected rootPath: string,
     private fileRepo: FileRepository,
-    private backend: Backend,
+    private backend: IBackend,
   ) {
   }
 

@@ -1,7 +1,7 @@
 import * as path from 'path';
 import { AppInfo, Config, LoginStatus, KeyType } from '../types';
 import { FileInfo } from './../model/fileModel';
-export default class AppInfoService {
+export class AppInfoService {
   public readonly appInfo: AppInfo;
   constructor(private config: Config) {
     this.appInfo = {

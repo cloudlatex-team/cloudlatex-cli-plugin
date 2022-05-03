@@ -1,31 +1,42 @@
 import * as path from 'path';
 import * as  EventEmitter from 'eventemitter3';
-import Logger, { getErrorTraceStr } from './util/logger';
+import { Logger, getErrorTraceStr } from './util/logger';
 import { wildcard2regexp } from './util/pathUtil';
 import { Config, DecideSyncMode, Account, CompileResult, AppInfo, LoginStatus } from './types';
-import FileAdapter from './fileService/fileAdapter';
-import SyncManager, { SyncResult } from './fileService/syncManager';
-import FileWatcher from './fileService/fileWatcher';
+import { FileAdapter } from './fileService/fileAdapter';
+import { SyncManager, SyncResult } from './fileService/syncManager';
+import { FileWatcher } from './fileService/fileWatcher';
 import { TypeDB, Repository } from '@moritanian/type-db';
 import { FILE_INFO_DESC } from './model/fileModel';
-import Backend from './backend/ibackend';
-import backendSelector from './backend/backendSelector';
-import AccountService from './service/accountService';
-import AppInfoService from './service/appInfoService';
+import { IBackend } from './backend/ibackend';
+import { backendSelector } from './backend/backendSelector';
+import { AccountService } from './service/accountService';
+import { AppInfoService } from './service/appInfoService';
 
-type NoPayloadEvents = 'sync-failed' | 'file-changed';
+/* eslint-disable @typescript-eslint/naming-convention */
+export const LATEX_APP_EVENTS = {
+  FILE_CHANGED: 'file-changed',
+  FILE_SYNC_SUCCEEDED: 'file-sync-succeeded',
+  FILE_SYNC_FAILED: 'file-sync-failed',
+  LOGIN_STATUS_UPDATED: 'login-status-updated',
+  PROJECT_LOADED: 'project-loaded',
+} as const;
+/* eslint-enable @typescript-eslint/naming-convention */
+
+
+type NoPayloadEvents = typeof LATEX_APP_EVENTS.FILE_SYNC_FAILED | typeof LATEX_APP_EVENTS.FILE_CHANGED;
 class LAEventEmitter extends EventEmitter<''> {
 }
 /* eslint-disable @typescript-eslint/adjacent-overload-signatures */
 interface LAEventEmitter {
   emit(eventName: NoPayloadEvents): boolean;
   on(eventName: NoPayloadEvents, callback: () => unknown): this;
-  emit(eventName: 'login-status-updated', arg: LoginStatus): void;
-  on(eventName: 'login-status-updated', callback: (arg: LoginStatus) => unknown): void;
-  emit(eventName: 'project-loaded', arg: AppInfo): void;
-  on(eventName: 'project-loaded', callback: (arg: AppInfo) => unknown): void;
-  emit(eventName: 'successfully-synced', arg: SyncResult): void;
-  on(eventName: 'successfully-synced', callback: (arg: SyncResult) => unknown): void;
+  emit(eventName: typeof LATEX_APP_EVENTS.LOGIN_STATUS_UPDATED, arg: LoginStatus): void;
+  on(eventName: typeof LATEX_APP_EVENTS.LOGIN_STATUS_UPDATED, callback: (arg: LoginStatus) => unknown): void;
+  emit(eventName: typeof LATEX_APP_EVENTS.PROJECT_LOADED, arg: AppInfo): void;
+  on(eventName: typeof LATEX_APP_EVENTS.PROJECT_LOADED, callback: (arg: AppInfo) => unknown): void;
+  emit(eventName: typeof LATEX_APP_EVENTS.FILE_SYNC_SUCCEEDED, arg: SyncResult): void;
+  on(eventName: typeof LATEX_APP_EVENTS.FILE_SYNC_SUCCEEDED, callback: (arg: SyncResult) => unknown): void;
 }
 /* eslint-enable @typescript-eslint/adjacent-overload-signatures */
 
@@ -57,7 +68,7 @@ const IGNORE_FILES = [
 ];
 
 
-export default class LatexApp extends LAEventEmitter {
+export class LatexApp extends LAEventEmitter {
   private syncManager: SyncManager;
   private fileWatcher: FileWatcher;
 
@@ -68,7 +79,7 @@ export default class LatexApp extends LAEventEmitter {
     private config: Config,
     private accountService: AccountService<Account>,
     private appInfoService: AppInfoService,
-    private backend: Backend,
+    private backend: IBackend,
     private fileAdapter: FileAdapter,
     private fileRepo: Repository<typeof FILE_INFO_DESC>,
     decideSyncMode: DecideSyncMode,
@@ -87,12 +98,12 @@ export default class LatexApp extends LAEventEmitter {
 
     this.syncManager.on('sync-finished', (result) => {
       if (result.success) {
-        this.emit('successfully-synced', result);
+        this.emit(LATEX_APP_EVENTS.FILE_SYNC_SUCCEEDED, result);
       } else if (result.canceled) {
         // canceled
       } else {
         this.logger.error('Error in syncSession: ' + result.errors.join('\n'));
-        this.emit('sync-failed');
+        this.emit(LATEX_APP_EVENTS.FILE_SYNC_FAILED);
       }
     });
 
@@ -210,7 +221,7 @@ export default class LatexApp extends LAEventEmitter {
     }
     this.appInfoService.setLoginStatus('valid');
     this.logger.info('Your account has been validated!');
-    this.emit('login-status-updated', this.appInfoService.appInfo.loginStatus);
+    this.emit(LATEX_APP_EVENTS.LOGIN_STATUS_UPDATED, this.appInfoService.appInfo.loginStatus);
   }
 
   private onInvalid() {
@@ -218,7 +229,7 @@ export default class LatexApp extends LAEventEmitter {
       return;
     }
     this.appInfoService.setLoginStatus('invalid');
-    this.emit('login-status-updated', this.appInfoService.appInfo.loginStatus);
+    this.emit(LATEX_APP_EVENTS.LOGIN_STATUS_UPDATED, this.appInfoService.appInfo.loginStatus);
   }
 
   private onOffline() {
@@ -230,7 +241,7 @@ export default class LatexApp extends LAEventEmitter {
       until it is enable to communicate with the server.
       `);
     this.appInfoService.setLoginStatus('offline');
-    this.emit('login-status-updated', this.appInfoService.appInfo.loginStatus);
+    this.emit(LATEX_APP_EVENTS.LOGIN_STATUS_UPDATED, this.appInfoService.appInfo.loginStatus);
   }
 
   /**
@@ -250,7 +261,7 @@ export default class LatexApp extends LAEventEmitter {
         this.appInfoService.setProjectName(projectInfo.title);
         this.appInfoService.setTarget(projectInfo.compile_target_file_id, targetName);
         this.appInfoService.setLoaded();
-        this.emit('project-loaded', this.appInfo);
+        this.emit(LATEX_APP_EVENTS.PROJECT_LOADED, this.appInfo);
       }
 
       const result = await this.backend.compileProject();

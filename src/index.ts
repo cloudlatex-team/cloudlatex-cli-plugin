@@ -1,6 +1,4 @@
 export { AppInfo, Config, Account, DecideSyncMode, CompileResult, LoginStatus } from './types';
-import LatexApp from './latexApp';
-export default LatexApp;
-import Logger from './util/logger';
-import AccountService from './service/accountService';
-export { Logger, AccountService };
+export { LatexApp, LATEX_APP_EVENTS } from './latexApp';
+export { Logger } from './util/logger';
+export { AccountService } from './service/accountService';

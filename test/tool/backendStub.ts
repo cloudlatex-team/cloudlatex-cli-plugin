@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import IBackend from '../../src/backend/ibackend';
+import { IBackend } from '../../src/backend/ibackend';
 import { ProjectInfo, KeyType } from '../../src/types';
 import { TypeDB, Repository } from '@moritanian/type-db';
 import { FILE_INFO_DESC, FileInfo } from '../../src/model/fileModel';
@@ -12,7 +12,7 @@ import { ReadableString, streamToString } from '../../src/util/stream';
  * [Warn]
  *  file.id in remoteFiles is not equal to file.id in local files.
  */
-export default class BackendStub implements IBackend {
+export class BackendStub implements IBackend {
   public isOffline = false;
   public remoteContents: Record<string, string> = {};
   public remoteFiles: Repository<typeof FILE_INFO_DESC>;
