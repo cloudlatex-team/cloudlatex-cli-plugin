@@ -18,7 +18,7 @@ type SyncTaskResult = {
   message: string;
 };
 
-type EventType = 'sync-finished';
+type EventType = 'sync-finished' | 'error';
 type SyncTask = 'download' | 'createLocalFolder' | 'createRemoteFolder' |
   'upload' | 'updateRemote' | 'deleteRemote' | 'deleteLocal' | 'no';
 
@@ -114,17 +114,21 @@ export class SyncManager extends EventEmitter<EventType> {
           const renamedFile = this.fileRepo.new(remoteFile);
           renamedFile.remoteChange = 'create';
         } else if (file.localChange === 'create') {
-          this.logger.error(
-            `Unexpected situation is detected: remote file is renamed and local file is created: ${file.relativePath}`
-          );
+          const msg = 'Unexpected situation is detected:'
+            + ` remote file is renamed and local file is created: ${file.relativePath}`;
+          this.logger.error(msg);
+          this.emit('error', msg);
         } else if (file.localChange === 'delete') {
-          this.logger.error(
-            `Unsupported situation is detected: remote file is renamed and local file is deleted: ${file.relativePath}`
-          );
+          const msg = 'Unsupported situation is detected:'
+            + ` remote file is renamed and local file is deleted: ${file.relativePath}`;
+          this.logger.error(msg);
+          this.emit('error', msg);
         } else if (file.localChange === 'update') {
-          this.logger.error(
-            `Unsupported situation is detected: remote file is renamed and local file is updated: ${file.relativePath}`
-          );
+          const msg = 'Unsupported situation is detected:'
+            + ` remote file is renamed and local file is updated: ${file.relativePath}`;
+          this.logger.error(msg);
+          this.emit('error', msg);
+
         }
       }
     });

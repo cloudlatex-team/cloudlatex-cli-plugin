@@ -4,7 +4,7 @@ import * as  EventEmitter from 'eventemitter3';
 import { FileRepository } from '../model/fileModel';
 import { Logger } from '../util/logger';
 
-type EventType = 'change-detected';
+type EventType = 'change-detected' | 'error';
 
 export class FileWatcher extends EventEmitter<EventType> {
   private fileWatcher?: chokidar.FSWatcher;
@@ -63,7 +63,11 @@ export class FileWatcher extends EventEmitter<EventType> {
         this.emit('change-detected');
         return;
       }
-      return this.logger.error(`New ${isFolder ? 'folder' : 'file'} detected, but already registered.: ${absPath}`);
+
+      const msg = `New ${isFolder ? 'folder' : 'file'} detected, but already registered.: ${absPath}`;
+      this.logger.error(msg);
+      this.emit('error', msg);
+      return;
     }
     this.logger.log(
       `New ${isFolder ? 'folder' : 'file'} detected: ${absPath}`
@@ -86,9 +90,9 @@ export class FileWatcher extends EventEmitter<EventType> {
     }
     const changedFile = this.fileRepo.findBy('relativePath', relativePath);
     if (!changedFile) {
-      this.logger.error(
-        `Local-changed-error: The fileInfo is not found at onFileChanged: ${absPath}`
-      );
+      const msg = `Local-changed-error: The fileInfo is not found at onFileChanged: ${absPath}`;
+      this.logger.error(msg);
+      this.emit('error', msg);
       return;
     }
 
@@ -118,9 +122,9 @@ export class FileWatcher extends EventEmitter<EventType> {
     }
     const file = this.fileRepo.findBy('relativePath', relativePath);
     if (!file) {
-      this.logger.error(
-        `Local-changed-error: The fileInfo is not found at onFileDeleted: ${absPath}`
-      );
+      const msg = `Local-changed-error: The fileInfo is not found at onFileDeleted: ${absPath}`;
+      this.logger.error(msg);
+      this.emit('error', msg);
       return;
     }
 
@@ -159,8 +163,10 @@ export class FileWatcher extends EventEmitter<EventType> {
       //
       this.logger.log('Ignore permission error', err);
       return;
+    } else {
+      this.logger.error('OnWatchingError', err);
+      this.emit('error', err.toString());
     }
-    { this.logger.error('OnWatchingError', err); }
   }
 
   private getRelativePath(absPath: string): string {

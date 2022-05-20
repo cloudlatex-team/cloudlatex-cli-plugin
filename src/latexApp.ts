@@ -15,28 +15,45 @@ import { AppInfoService } from './service/appInfoService';
 
 /* eslint-disable @typescript-eslint/naming-convention */
 export const LATEX_APP_EVENTS = {
-  FILE_CHANGED: 'file-changed',
-  FILE_SYNC_SUCCEEDED: 'file-sync-succeeded',
-  FILE_SYNC_FAILED: 'file-sync-failed',
-  LOGIN_STATUS_UPDATED: 'login-status-updated',
-  PROJECT_LOADED: 'project-loaded',
+  FILE_CHANGED: 'file-changed', /* LaTeX source files are changed */
+  FILE_SYNC_SUCCEEDED: 'file-sync-succeeded', /* Succeeded to synchonize LaTeX source files between local and cloud */
+  FILE_SYNC_FAILED: 'file-sync-failed', /* Failed to synchonize LaTeX source files */
+  FILE_CHANGE_ERROR: 'file-change-error', /* Invalid LaTeX file chagnes are detected */
+  TARGET_FILE_NOT_FOUND: 'target-file-not-found', /* LaTeX target file is not found */
+  COMPILATION_STARTED: 'compilation-started', /* LaTeX compilation is started */
+  COMPILATION_SUCCEEDED: 'compilation-succeeded', /* Succeeded to compile LaTeX source files */
+  COMPILATION_FAILED: 'compilation-failed', /* Failed to compile LaTeX source files */
+  LOGIN_SUCCEEDED: 'login-succeeded', /* Succeeded to login */
+  LOGIN_FAILED: 'login-failed', /* Failed to login */
+  LOGIN_OFFLINE: 'login-offline', /* Cannot login due to network problem */
+  PROJECT_LOADED: 'project-loaded', /* Project infomantion is loaded */
+  UNEXPECTED_ERROR: 'unexpected-error', /* Unexpected error */
 } as const;
 /* eslint-enable @typescript-eslint/naming-convention */
 
 
-type NoPayloadEvents = typeof LATEX_APP_EVENTS.FILE_SYNC_FAILED | typeof LATEX_APP_EVENTS.FILE_CHANGED;
+type NoPayloadEvents = typeof LATEX_APP_EVENTS.FILE_CHANGED | typeof LATEX_APP_EVENTS.LOGIN_SUCCEEDED
+  | typeof LATEX_APP_EVENTS.LOGIN_FAILED | typeof LATEX_APP_EVENTS.LOGIN_OFFLINE
+  | typeof LATEX_APP_EVENTS.COMPILATION_STARTED;
+type ErrorEvents = typeof LATEX_APP_EVENTS.FILE_SYNC_FAILED
+  | typeof LATEX_APP_EVENTS.FILE_CHANGE_ERROR | typeof LATEX_APP_EVENTS.TARGET_FILE_NOT_FOUND
+  | typeof LATEX_APP_EVENTS.UNEXPECTED_ERROR;
+type CompilationResultEvents = typeof LATEX_APP_EVENTS.COMPILATION_FAILED
+  | typeof LATEX_APP_EVENTS.COMPILATION_SUCCEEDED;
 class LAEventEmitter extends EventEmitter<''> {
 }
 /* eslint-disable @typescript-eslint/adjacent-overload-signatures */
 interface LAEventEmitter {
   emit(eventName: NoPayloadEvents): boolean;
   on(eventName: NoPayloadEvents, callback: () => unknown): this;
-  emit(eventName: typeof LATEX_APP_EVENTS.LOGIN_STATUS_UPDATED, arg: LoginStatus): void;
-  on(eventName: typeof LATEX_APP_EVENTS.LOGIN_STATUS_UPDATED, callback: (arg: LoginStatus) => unknown): void;
-  emit(eventName: typeof LATEX_APP_EVENTS.PROJECT_LOADED, arg: AppInfo): void;
-  on(eventName: typeof LATEX_APP_EVENTS.PROJECT_LOADED, callback: (arg: AppInfo) => unknown): void;
-  emit(eventName: typeof LATEX_APP_EVENTS.FILE_SYNC_SUCCEEDED, arg: SyncResult): void;
-  on(eventName: typeof LATEX_APP_EVENTS.FILE_SYNC_SUCCEEDED, callback: (arg: SyncResult) => unknown): void;
+  emit(eventName: ErrorEvents, detail: string): boolean;
+  on(eventName: ErrorEvents, callback: (detail: string) => unknown): this;
+  emit(eventName: CompilationResultEvents, arg: CompileResult): boolean;
+  on(eventName: CompilationResultEvents, callback: (arg: CompileResult) => unknown): this;
+  emit(eventName: typeof LATEX_APP_EVENTS.PROJECT_LOADED, arg: AppInfo): boolean;
+  on(eventName: typeof LATEX_APP_EVENTS.PROJECT_LOADED, callback: (arg: AppInfo) => unknown): this;
+  emit(eventName: typeof LATEX_APP_EVENTS.FILE_SYNC_SUCCEEDED, arg: SyncResult): boolean;
+  on(eventName: typeof LATEX_APP_EVENTS.FILE_SYNC_SUCCEEDED, callback: (arg: SyncResult) => unknown): this;
 }
 /* eslint-enable @typescript-eslint/adjacent-overload-signatures */
 
@@ -102,9 +119,14 @@ export class LatexApp extends LAEventEmitter {
       } else if (result.canceled) {
         // canceled
       } else {
-        this.logger.error('Error in syncSession: ' + result.errors.join('\n'));
-        this.emit(LATEX_APP_EVENTS.FILE_SYNC_FAILED);
+        const msg = result.errors.join('\n');
+        this.logger.error('Error in synchronizing files: ' + msg);
+        this.emit(LATEX_APP_EVENTS.FILE_SYNC_FAILED, msg);
       }
+    });
+
+    this.syncManager.on('error', (msg) => {
+      this.emit(LATEX_APP_EVENTS.FILE_CHANGE_ERROR, msg);
     });
 
     /**
@@ -127,7 +149,11 @@ export class LatexApp extends LAEventEmitter {
       logger);
 
     this.fileWatcher.on('change-detected', async () => {
-      this.emit('file-changed');
+      this.emit(LATEX_APP_EVENTS.FILE_CHANGED);
+    });
+
+    this.fileWatcher.on('error', (err) => {
+      this.emit(LATEX_APP_EVENTS.FILE_CHANGE_ERROR, err);
     });
   }
 
@@ -219,29 +245,27 @@ export class LatexApp extends LAEventEmitter {
     if (this.appInfoService.appInfo.loginStatus === 'valid') {
       return;
     }
+    this.logger.info('Login Successful');
     this.appInfoService.setLoginStatus('valid');
-    this.logger.info('Your account has been validated!');
-    this.emit(LATEX_APP_EVENTS.LOGIN_STATUS_UPDATED, this.appInfoService.appInfo.loginStatus);
+    this.emit(LATEX_APP_EVENTS.LOGIN_SUCCEEDED);
   }
 
   private onInvalid() {
     if (this.appInfoService.appInfo.loginStatus === 'invalid') {
       return;
     }
+    this.logger.info('Login failed.');
     this.appInfoService.setLoginStatus('invalid');
-    this.emit(LATEX_APP_EVENTS.LOGIN_STATUS_UPDATED, this.appInfoService.appInfo.loginStatus);
+    this.emit(LATEX_APP_EVENTS.LOGIN_FAILED);
   }
 
   private onOffline() {
     if (this.appInfoService.appInfo.loginStatus === 'offline') {
       return;
     }
-    this.logger.warn(`The network is offline or some trouble occur with the server.
-      You can edit your files, but your changes will not be reflected on the server
-      until it is enable to communicate with the server.
-      `);
+    this.logger.warn('Cannot connect to the server');
     this.appInfoService.setLoginStatus('offline');
-    this.emit(LATEX_APP_EVENTS.LOGIN_STATUS_UPDATED, this.appInfoService.appInfo.loginStatus);
+    this.emit(LATEX_APP_EVENTS.LOGIN_OFFLINE);
   }
 
   /**
@@ -249,12 +273,14 @@ export class LatexApp extends LAEventEmitter {
    */
   public async compile(): Promise<CompileResult> {
     this.logger.log('Start compiling');
+    this.emit(LATEX_APP_EVENTS.COMPILATION_STARTED);
     try {
       if (!this.appInfoService.appInfo.loaded) {
         const projectInfo = await this.backend.loadProjectInfo();
         const file = this.fileRepo.findBy('remoteId', projectInfo.compile_target_file_id);
         if (!file) {
           this.logger.error('Target file is not found');
+          this.emit(LATEX_APP_EVENTS.TARGET_FILE_NOT_FOUND, '');
           return { status: 'no-target-error' };
         }
         const targetName = path.posix.basename(file.relativePath, '.tex');
@@ -267,6 +293,7 @@ export class LatexApp extends LAEventEmitter {
       const result = await this.backend.compileProject();
 
       if (result.status !== 'success') {
+        this.emit(LATEX_APP_EVENTS.COMPILATION_FAILED, result);
         return result;
       }
 
@@ -276,10 +303,15 @@ export class LatexApp extends LAEventEmitter {
       if (result.logStream) {
         if (this.appInfoService.appInfo.logPath) {
           promises.push(this.fileAdapter.saveAs(this.appInfoService.appInfo.logPath, result.logStream).catch(err => {
-            this.logger.error('Some error occurred with saving a log file. ' + getErrorTraceStr(err));
+            const msg = 'Some error occurred with saving a log file.';
+            this.logger.error(msg + getErrorTraceStr(err));
+            this.emit(LATEX_APP_EVENTS.UNEXPECTED_ERROR, msg);
           }));
         } else {
-          this.logger.error('Log file path is not set');
+          const msg = 'Log file path is not set';
+          this.logger.error(msg);
+          this.emit(LATEX_APP_EVENTS.UNEXPECTED_ERROR, msg);
+
         }
       }
 
@@ -287,10 +319,14 @@ export class LatexApp extends LAEventEmitter {
       if (result.pdfStream) {
         if (this.appInfoService.appInfo.pdfPath) {
           promises.push(this.fileAdapter.saveAs(this.appInfoService.appInfo.pdfPath, result.pdfStream).catch(err => {
-            this.logger.error('Some error occurred with downloading the compiled pdf file. ' + getErrorTraceStr(err));
+            const msg = 'Some error occurred with downloading the compiled pdf file.';
+            this.logger.error(msg + getErrorTraceStr(err));
+            this.emit(LATEX_APP_EVENTS.UNEXPECTED_ERROR, msg);
           }));
         } else {
-          this.logger.error('PDF file path is not set');
+          const msg = 'PDF file path is not set';
+          this.logger.error(msg);
+          this.emit(LATEX_APP_EVENTS.UNEXPECTED_ERROR, msg);
         }
       }
 
@@ -299,11 +335,16 @@ export class LatexApp extends LAEventEmitter {
         if (this.appInfoService.appInfo.synctexPath) {
           promises.push(
             this.fileAdapter.saveAs(this.appInfoService.appInfo.synctexPath, result.synctexStream).catch(err => {
-              this.logger.error('Some error occurred with saving a synctex file. ' + getErrorTraceStr(err));
+              const msg = 'Some error occurred with saving a synctex file.';
+              this.logger.error(msg + getErrorTraceStr(err));
+              this.emit(LATEX_APP_EVENTS.UNEXPECTED_ERROR, msg);
+
             })
           );
         } else {
-          this.logger.error('Synctex file path is not set');
+          const msg = 'Synctex file path is not set';
+          this.logger.error(msg);
+          this.emit(LATEX_APP_EVENTS.UNEXPECTED_ERROR, msg);
         }
       }
 
@@ -311,9 +352,13 @@ export class LatexApp extends LAEventEmitter {
       await Promise.all(promises);
 
       this.logger.log('Sucessfully compiled');
+      this.emit(LATEX_APP_EVENTS.COMPILATION_SUCCEEDED, result);
+
       return result;
     } catch (err) {
-      this.logger.warn('Some error occured with compilation.' + getErrorTraceStr(err));
+      const msg = 'Some error occurred with compiling.';
+      this.logger.warn(msg + getErrorTraceStr(err));
+      this.emit(LATEX_APP_EVENTS.UNEXPECTED_ERROR, msg);
       return { status: 'unknown-error' };
     }
   }
