@@ -19,7 +19,7 @@ If you use VSCode, you can use [Cloud LaTeX VSCode Extension](https://github.com
 - Offline support
 
 
-## Installation
+## Installation (Not Released yet)
 ```
 npm install -g cloudlatex-cli
 ```
