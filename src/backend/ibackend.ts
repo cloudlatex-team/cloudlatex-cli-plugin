@@ -1,7 +1,7 @@
 import { ProjectInfo, KeyType, CompileResult } from '../types';
 import { FileInfo, Revision } from '../model/fileModel';
 
-export default interface IBackend {
+export interface IBackend {
   validateToken(): Promise<boolean>;
 
   loadProjectInfo(): Promise<ProjectInfo>;

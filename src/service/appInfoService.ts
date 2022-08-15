@@ -1,22 +1,18 @@
 import * as path from 'path';
-import { AppInfo, Config, KeyType } from '../types';
+import { AppInfo, Config, LoginStatus, KeyType } from '../types';
 import { FileInfo } from './../model/fileModel';
-export default class AppInfoService {
+export class AppInfoService {
   public readonly appInfo: AppInfo;
   constructor(private config: Config) {
     this.appInfo = {
-      offline: false,
+      loginStatus: 'offline',
       conflictFiles: [],
       loaded: false
     };
   }
 
-  setOnline(): void {
-    this.appInfo.offline = false;
-  }
-
-  setOffLine(): void {
-    this.appInfo.offline = true;
+  setLoginStatus(loginStatus: LoginStatus): void {
+    this.appInfo.loginStatus = loginStatus;
   }
 
   setProjectName(projectName: string): void {

@@ -3,9 +3,9 @@ import fetch, { RequestInit, Headers } from 'node-fetch';
 import { CompileResult } from './types';
 import * as FormData from 'form-data';
 import { Config, ProjectInfo, Account } from '../../types';
-import AccountService from '../../service/accountService';
+import { AccountService } from '../../service/accountService';
 
-export default class CLWebAppApi {
+export class CLWebAppApi {
   private apiRoot: string;
   private apiProjects: string;
   constructor(private config: Config, private accountService: AccountService<Account>) {

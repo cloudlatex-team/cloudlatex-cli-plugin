@@ -3,20 +3,20 @@ import * as url from 'url';
 import * as pako from 'pako';
 import { TextDecoder } from 'text-encoding';
 
-import WebAppApi from './webAppApi';
+import { CLWebAppApi } from './webAppApi';
 import { FileInfo, Revision } from '../../model/fileModel';
 import { ClFile } from './types';
-import IBackend from '../ibackend';
+import { IBackend } from '../ibackend';
 import { Config, ProjectInfo, KeyType, Account, CompileResult } from './../../types';
 import { streamToString, ReadableString } from '../../util/stream';
-import AccountService from '../../service/accountService';
+import { AccountService } from '../../service/accountService';
 
-export default class ClBackend implements IBackend {
-  private api: WebAppApi;
+export class ClBackend implements IBackend {
+  private api: CLWebAppApi;
   private config: Config;
   constructor(config: Config, accountService: AccountService<Account>) {
     this.config = config;
-    this.api = new WebAppApi(config, accountService);
+    this.api = new CLWebAppApi(config, accountService);
   }
 
   public validateToken(): Promise<boolean> {
