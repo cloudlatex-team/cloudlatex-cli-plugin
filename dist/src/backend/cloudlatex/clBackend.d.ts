@@ -1,31 +1,31 @@
 /// <reference types="node" />
-import { FileInfo } from '../../model/fileModel';
-import IBackend from '../ibackend';
+import { FileInfo, Revision } from '../../model/fileModel';
+import { IBackend } from '../ibackend';
 import { Config, ProjectInfo, KeyType, Account, CompileResult } from './../../types';
-import AccountService from '../../service/accountService';
-export default class ClBackend implements IBackend {
+import { AccountService } from '../../service/accountService';
+export declare class ClBackend implements IBackend {
     private api;
     private config;
     constructor(config: Config, accountService: AccountService<Account>);
     validateToken(): Promise<boolean>;
     download(file: FileInfo): Promise<NodeJS.ReadableStream>;
-    upload(file: FileInfo, stream: NodeJS.ReadableStream, option?: any): Promise<{
+    upload(file: FileInfo, stream: NodeJS.ReadableStream, option?: unknown): Promise<{
         remoteId: KeyType;
-        remoteRevision: any;
+        remoteRevision: Revision;
     }>;
     createRemote(file: FileInfo, parent: FileInfo | null): Promise<{
         remoteId: KeyType;
-        remoteRevision: any;
+        remoteRevision: Revision;
     }>;
     updateRemote(file: FileInfo & {
         remoteId: number;
     }, stream: NodeJS.ReadableStream): Promise<KeyType>;
     deleteRemote(file: FileInfo & {
         remoteId: number;
-    }): Promise<any>;
+    }): Promise<unknown>;
     loadProjectInfo(): Promise<ProjectInfo>;
     loadFileList(): Promise<FileInfo[]>;
-    loadSynctexObject(url: string): Promise<any>;
+    loadSynctexObject(url: string): Promise<ArrayBuffer>;
     compileProject(): Promise<{
         logStream: NodeJS.ReadableStream;
         pdfStream?: NodeJS.ReadableStream;

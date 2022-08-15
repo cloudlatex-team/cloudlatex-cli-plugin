@@ -1,7 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.FileInfoDesc = void 0;
-exports.FileInfoDesc = {
+exports.FILE_INFO_DESC = void 0;
+exports.FILE_INFO_DESC = {
     name: 'FileInfo',
     columns: {
         id: 0,

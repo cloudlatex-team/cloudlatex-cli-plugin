@@ -1,4 +1,4 @@
-export default class AccountService<Account> {
+export declare class AccountService<Account> {
     private savePath?;
     private _account;
     constructor(savePath?: string | undefined);

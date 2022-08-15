@@ -1,7 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getErrorTraceStr = void 0;
-const Level2Number = {
+exports.getErrorTraceStr = exports.Logger = void 0;
+const level2Number = {
     log: 1,
     info: 2,
     warn: 3,
@@ -13,7 +13,7 @@ class Logger {
         this.logLevel = logLevel;
     }
     log(message, ...optinalParams) {
-        if (Level2Number[this.logLevel] <= Level2Number.log) {
+        if (level2Number[this.logLevel] <= level2Number.log) {
             this._log(message, ...optinalParams);
         }
     }
@@ -21,7 +21,7 @@ class Logger {
         console.log(message, ...optinalParams);
     }
     info(message, ...optinalParams) {
-        if (Level2Number[this.logLevel] <= Level2Number.info) {
+        if (level2Number[this.logLevel] <= level2Number.info) {
             this._info(message, ...optinalParams);
         }
     }
@@ -29,7 +29,7 @@ class Logger {
         console.info(message, ...optinalParams);
     }
     warn(message, ...optinalParams) {
-        if (Level2Number[this.logLevel] <= Level2Number.warn) {
+        if (level2Number[this.logLevel] <= level2Number.warn) {
             this._warn(message, ...optinalParams);
         }
     }
@@ -37,7 +37,7 @@ class Logger {
         console.warn(message, ...optinalParams);
     }
     error(message, ...optinalParams) {
-        if (Level2Number[this.logLevel] <= Level2Number.error) {
+        if (level2Number[this.logLevel] <= level2Number.error) {
             this._error(message, ...optinalParams);
         }
     }
@@ -45,9 +45,10 @@ class Logger {
         console.error(message, ...optinalParams);
     }
 }
-exports.default = Logger;
+exports.Logger = Logger;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/explicit-module-boundary-types
 function getErrorTraceStr(e) {
-    return (e || '').toString() + '\n' + (e && e.trace || '');
+    return (e || '').toString() + '\n' + (e && e.stack || '');
 }
 exports.getErrorTraceStr = getErrorTraceStr;
 //# sourceMappingURL=logger.js.map

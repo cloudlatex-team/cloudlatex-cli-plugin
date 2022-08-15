@@ -1,20 +1,18 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.AppInfoService = void 0;
 const path = require("path");
 class AppInfoService {
     constructor(config) {
         this.config = config;
         this.appInfo = {
-            offline: false,
+            loginStatus: 'offline',
             conflictFiles: [],
             loaded: false
         };
     }
-    setOnline() {
-        this.appInfo.offline = false;
-    }
-    setOffLine() {
-        this.appInfo.offline = true;
+    setLoginStatus(loginStatus) {
+        this.appInfo.loginStatus = loginStatus;
     }
     setProjectName(projectName) {
         this.appInfo.projectName = projectName;
@@ -43,5 +41,5 @@ class AppInfoService {
         return path.posix.join(this.config.outDir || '', this.appInfo.targetName + '.synctex');
     }
 }
-exports.default = AppInfoService;
+exports.AppInfoService = AppInfoService;
 //# sourceMappingURL=appInfoService.js.map

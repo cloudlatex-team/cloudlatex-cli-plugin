@@ -32,8 +32,9 @@ export declare type Account = {
     /** client ID */
     client: string;
 };
+export declare type LoginStatus = 'offline' | 'valid' | 'invalid';
 export interface AppInfo {
-    offline: boolean;
+    loginStatus: LoginStatus;
     projectName?: string;
     compileTarget?: KeyType;
     targetName?: string;

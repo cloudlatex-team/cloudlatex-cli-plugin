@@ -1,8 +1,8 @@
 import * as EventEmitter from 'eventemitter3';
 import { FileRepository } from '../model/fileModel';
-import Logger from '../util/logger';
-declare type EventType = 'change-detected';
-export default class FileWatcher extends EventEmitter<EventType> {
+import { Logger } from '../util/logger';
+declare type EventType = 'change-detected' | 'error';
+export declare class FileWatcher extends EventEmitter<EventType> {
     private rootPath;
     private fileRepo;
     readonly watcherFileFilter: (relativePath: string) => boolean;

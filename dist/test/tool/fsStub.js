@@ -9,6 +9,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+/* eslint-disable @typescript-eslint/no-explicit-any */
 const Sinon = require("sinon");
 const chokidar = require("chokidar");
 const fs = require("fs");
@@ -26,7 +27,7 @@ function fsStub(files) {
         const stream = originalCreateWriteStream(path, options);
         const statPromise = fs.promises.stat(path);
         stream.on('finish', () => {
-            statPromise.then(stat => {
+            statPromise.then(() => {
                 watcher.emit('change', path);
             }).catch(() => {
                 watcher.emit('add', path);
@@ -34,7 +35,7 @@ function fsStub(files) {
         });
         return stream;
     });
-    Sinon.stub(fs.promises, 'writeFile').callsFake((path, data, options) => (fs.promises.stat(path).then(stat => (originalWriteFile(path, data, options).then(() => 'change'))).catch(() => (originalWriteFile(path, data, options).then(() => 'add'))).then(eventName => {
+    Sinon.stub(fs.promises, 'writeFile').callsFake((path, data, options) => (fs.promises.stat(path).then(() => (originalWriteFile(path, data, options).then(() => 'change'))).catch(() => (originalWriteFile(path, data, options).then(() => 'add'))).then(eventName => {
         watcher.emit(eventName, path);
     })));
     Sinon.stub(fs.promises, 'mkdir').callsFake((path, options) => (fs.promises.stat(path).then(() => {

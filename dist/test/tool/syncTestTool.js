@@ -1,18 +1,18 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.sleep = exports.TestConfigList = void 0;
-exports.TestConfigList = (() => {
-    let list = [];
+exports.sleep = exports.TEST_CONFIG_LIST = void 0;
+exports.TEST_CONFIG_LIST = (() => {
+    const list = [];
     const changeOptions = ['no', 'create', 'update', 'delete'];
     changeOptions.forEach(local => {
         changeOptions.forEach(remote => {
-            let conflictOptions = [false];
+            const conflictOptions = [false];
             if ((local === 'update' || local === 'delete') &&
                 (remote === 'update' || remote === 'delete')) {
                 conflictOptions.push(true);
             }
             conflictOptions.forEach(conflict => {
-                let syncModeOptions = ['upload'];
+                const syncModeOptions = ['upload'];
                 if (conflict) {
                     syncModeOptions.push('download');
                 }
@@ -52,7 +52,7 @@ exports.TestConfigList = (() => {
     return list;
 })();
 function sleep(ms) {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
         setTimeout(resolve, ms);
     });
 }

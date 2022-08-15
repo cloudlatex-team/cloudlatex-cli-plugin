@@ -1,13 +1,13 @@
 /// <reference types="node" />
 import { ProjectInfo, KeyType, CompileResult } from '../types';
-import { FileInfo } from '../model/fileModel';
-export default interface IBackend {
+import { FileInfo, Revision } from '../model/fileModel';
+export interface IBackend {
     validateToken(): Promise<boolean>;
     loadProjectInfo(): Promise<ProjectInfo>;
     loadFileList(): Promise<FileInfo[]>;
     upload(file: FileInfo, stream: NodeJS.ReadableStream, option?: any): Promise<{
         remoteId: KeyType;
-        remoteRevision: any;
+        remoteRevision: Revision;
     }>;
     createRemote(file: FileInfo, parent: FileInfo | null): Promise<{
         remoteId: KeyType;

@@ -9,5 +9,5 @@ export declare type TestConfig = {
     isOffline: boolean;
     describe: string;
 };
-export declare const TestConfigList: TestConfig[];
-export declare function sleep(ms: number): Promise<unknown>;
+export declare const TEST_CONFIG_LIST: TestConfig[];
+export declare function sleep(ms: number): Promise<void>;

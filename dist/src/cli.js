@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 "use strict";
+/* eslint-disable */
 Object.defineProperty(exports, "__esModule", { value: true });
 const latexApp_1 = require("./latexApp");
 // TDOO
@@ -9,7 +10,7 @@ function main() {
     const args = process.argv.slice(2);
     const currentDir = process.cwd();
     const rootPath = currentDir;
-    latexApp_1.default.createApp({
+    latexApp_1.LatexApp.createApp({
         outDir: '.workspace',
         rootPath,
         backend: 'cloudlatex',

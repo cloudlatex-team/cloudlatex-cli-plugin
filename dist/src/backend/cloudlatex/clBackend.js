@@ -9,6 +9,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.ClBackend = void 0;
 const path = require("path");
 const url = require("url");
 const pako = require("pako");
@@ -18,7 +19,7 @@ const stream_1 = require("../../util/stream");
 class ClBackend {
     constructor(config, accountService) {
         this.config = config;
-        this.api = new webAppApi_1.default(config, accountService);
+        this.api = new webAppApi_1.CLWebAppApi(config, accountService);
     }
     validateToken() {
         return this.api.validateToken();
@@ -34,7 +35,9 @@ class ClBackend {
         }
         return this.api.download(file.url);
     }
-    upload(file, stream, option) {
+    upload(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    file, stream, option) {
         return __awaiter(this, void 0, void 0, function* () {
             let relativeDir = path.posix.dirname(file.relativePath);
             if (relativeDir.length > 1 && relativeDir[0] === '/') {
@@ -43,6 +46,7 @@ class ClBackend {
             if (relativeDir === '.') {
                 relativeDir = '';
             }
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const result = yield this.api.uploadFile(stream, relativeDir);
             return { remoteId: result.file.id, remoteRevision: result.file.revision };
         });
@@ -50,6 +54,7 @@ class ClBackend {
     createRemote(file, parent) {
         return __awaiter(this, void 0, void 0, function* () {
             const belongs = parent && Number(parent.remoteId);
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const result = yield this.api.createFile(path.posix.basename(file.relativePath), belongs, file.isFolder);
             return { remoteId: result.file.id, remoteRevision: result.file.revision };
         });
@@ -73,9 +78,9 @@ class ClBackend {
         return this.api.loadProjectInfo();
     }
     loadFileList() {
-        var _a;
         return __awaiter(this, void 0, void 0, function* () {
-            const res = yield ((_a = this.api) === null || _a === void 0 ? void 0 : _a.loadFiles());
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const res = yield this.api.loadFiles();
             const materialFiles = res.material_files;
             return materialFiles.map(materialFile => {
                 return {
@@ -138,5 +143,5 @@ class ClBackend {
         });
     }
 }
-exports.default = ClBackend;
+exports.ClBackend = ClBackend;
 //# sourceMappingURL=clBackend.js.map

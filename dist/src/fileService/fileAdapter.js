@@ -9,6 +9,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.FileAdapter = void 0;
 const fs = require("fs");
 const path = require("path");
 /**
@@ -46,13 +47,14 @@ class FileAdapter {
     }
     saveAs(filePath, stream) {
         return __awaiter(this, void 0, void 0, function* () {
-            let absPath = path.isAbsolute(filePath) ? filePath : path.posix.join(this.rootPath, filePath);
+            const absPath = path.isAbsolute(filePath) ? filePath : path.posix.join(this.rootPath, filePath);
             const dirname = path.posix.dirname(absPath);
             if (dirname !== this.rootPath) {
                 try {
                     yield fs.promises.mkdir(dirname.replace(new RegExp(path.posix.sep, 'g'), path.sep));
                 }
                 catch (err) {
+                    // Already exists
                 }
             }
             return yield new Promise((resolve, reject) => {
@@ -88,7 +90,6 @@ class FileAdapter {
             return;
         });
     }
-    ;
     createRemoteFolder(file) {
         return __awaiter(this, void 0, void 0, function* () {
             const parent = this.fileRepo.findBy('relativePath', path.posix.dirname(file.relativePath));
@@ -99,6 +100,7 @@ class FileAdapter {
             this.fileRepo.save();
         });
     }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/explicit-module-boundary-types
     upload(file, option) {
         return __awaiter(this, void 0, void 0, function* () {
             const stream = fs.createReadStream(path.posix.join(this.rootPath, file.relativePath).replace(new RegExp(path.posix.sep, 'g'), path.sep));
@@ -155,5 +157,5 @@ class FileAdapter {
         });
     }
 }
-exports.default = FileAdapter;
+exports.FileAdapter = FileAdapter;
 //# sourceMappingURL=fileAdapter.js.map

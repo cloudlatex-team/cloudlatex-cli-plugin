@@ -9,12 +9,13 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.FileWatcher = void 0;
 const chokidar = require("chokidar");
 const path = require("path");
 const EventEmitter = require("eventemitter3");
 const logger_1 = require("../util/logger");
 class FileWatcher extends EventEmitter {
-    constructor(rootPath, fileRepo, watcherFileFilter = (_) => true, logger = new logger_1.default()) {
+    constructor(rootPath, fileRepo, watcherFileFilter = (_) => true, logger = new logger_1.Logger()) {
         super();
         this.rootPath = rootPath;
         this.fileRepo = fileRepo;
@@ -23,14 +24,14 @@ class FileWatcher extends EventEmitter {
     }
     init() {
         const watcherOption = {
-            ignored: /\.git|\.cloudlatex\.json|synctex\.gz|\.vscode(\\|\/|$)|.DS\_Store/,
+            ignored: /\.git|\.cloudlatex\.json|synctex\.gz|\.vscode(\\|\/|$)|.DS_Store/,
             awaitWriteFinish: {
                 stabilityThreshold: 500,
                 pollInterval: 100
             }
         };
         const fileWatcher = this.fileWatcher = chokidar.watch(this.rootPath, watcherOption);
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve) => {
             // TODO detect changes before running
             fileWatcher.on('ready', () => {
                 this.logger.log('On chokidar ready event');
@@ -64,7 +65,10 @@ class FileWatcher extends EventEmitter {
                 this.emit('change-detected');
                 return;
             }
-            return this.logger.error(`New ${isFolder ? 'folder' : 'file'} detected, but already registered.: ${absPath}`);
+            const msg = `New ${isFolder ? 'folder' : 'file'} detected, but already registered.: ${absPath}`;
+            this.logger.error(msg);
+            this.emit('error', msg);
+            return;
         }
         this.logger.log(`New ${isFolder ? 'folder' : 'file'} detected: ${absPath}`);
         file = this.fileRepo.new({
@@ -85,7 +89,9 @@ class FileWatcher extends EventEmitter {
             }
             const changedFile = this.fileRepo.findBy('relativePath', relativePath);
             if (!changedFile) {
-                this.logger.error(`Local-changed-error: The fileInfo is not found at onFileChanged: ${absPath}`);
+                const msg = `Local-changed-error: The fileInfo is not found at onFileChanged: ${absPath}`;
+                this.logger.error(msg);
+                this.emit('error', msg);
                 return;
             }
             // file was changed by downloading
@@ -110,7 +116,9 @@ class FileWatcher extends EventEmitter {
             }
             const file = this.fileRepo.findBy('relativePath', relativePath);
             if (!file) {
-                this.logger.error(`Local-changed-error: The fileInfo is not found at onFileDeleted: ${absPath}`);
+                const msg = `Local-changed-error: The fileInfo is not found at onFileDeleted: ${absPath}`;
+                this.logger.error(msg);
+                this.emit('error', msg);
                 return;
             }
             // The file was deleted by deleteLocal() because remote file is deleted.
@@ -131,6 +139,7 @@ class FileWatcher extends EventEmitter {
             this.emit('change-detected');
         });
     }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onWatchingError(err) {
         if (process.platform === 'win32' && err['errno'] === -4048 && err['code'] === 'EPERM') {
             /**
@@ -143,8 +152,9 @@ class FileWatcher extends EventEmitter {
             this.logger.log('Ignore permission error', err);
             return;
         }
-        {
+        else {
             this.logger.error('OnWatchingError', err);
+            this.emit('error', err.toString());
         }
     }
     getRelativePath(absPath) {
@@ -155,5 +165,5 @@ class FileWatcher extends EventEmitter {
         return this.fileWatcher ? this.fileWatcher.close() : Promise.resolve();
     }
 }
-exports.default = FileWatcher;
+exports.FileWatcher = FileWatcher;
 //# sourceMappingURL=fileWatcher.js.map

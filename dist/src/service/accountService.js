@@ -9,6 +9,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.AccountService = void 0;
 const fs = require("fs");
 const path = require("path");
 class AccountService {
@@ -40,6 +41,7 @@ class AccountService {
                 this._account = JSON.parse(yield fs.promises.readFile(this.savePath.replace(new RegExp(path.posix.sep, 'g'), path.sep), 'utf-8'));
             }
             catch (e) {
+                // No account file
             }
             return this._account;
         });
@@ -48,5 +50,5 @@ class AccountService {
         return this._account;
     }
 }
-exports.default = AccountService;
+exports.AccountService = AccountService;
 //# sourceMappingURL=accountService.js.map

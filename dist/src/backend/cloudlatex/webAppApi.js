@@ -9,19 +9,22 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.CLWebAppApi = void 0;
+/* eslint-disable @typescript-eslint/naming-convention */
 const node_fetch_1 = require("node-fetch");
 const FormData = require("form-data");
 class CLWebAppApi {
     constructor(config, accountService) {
         this.config = config;
         this.accountService = accountService;
-        this.APIRoot = config.endpoint;
-        this.APIProjects = config.endpoint + '/projects';
+        this.apiRoot = config.endpoint;
+        this.apiProjects = config.endpoint + '/projects';
     }
     headers(option = {}) {
         if (!this.accountService.account) {
             throw new Error('account is not defined');
         }
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const headers = {
             'uid': this.accountService.account.email,
             'access-token': this.accountService.account.token,
@@ -56,26 +59,26 @@ class CLWebAppApi {
             catch (err) {
                 return false; // account is not defined;
             }
-            const res = yield node_fetch_1.default(`${this.APIRoot}/auth/validate_token`, params);
+            const res = yield node_fetch_1.default(`${this.apiRoot}/auth/validate_token`, params);
             if (!res.ok) {
                 return false;
             }
-            const json = yield res.json();
+            const json = (yield res.json());
             return !!json['success'];
         });
     }
     loadProjects() {
         return __awaiter(this, void 0, void 0, function* () {
-            const res = yield node_fetch_1.default(this.APIProjects, this.fetchOption());
+            const res = yield node_fetch_1.default(this.apiProjects, this.fetchOption());
             if (!res.ok) {
                 throw new Error(JSON.stringify(res));
             }
-            return JSON.parse(yield res.json());
+            return JSON.parse((yield res.json()));
         });
     }
     loadProjectInfo() {
         return __awaiter(this, void 0, void 0, function* () {
-            const res = yield node_fetch_1.default(`${this.APIProjects}/${this.config.projectId}`, this.fetchOption());
+            const res = yield node_fetch_1.default(`${this.apiProjects}/${this.config.projectId}`, this.fetchOption());
             if (!res.ok) {
                 throw new Error(JSON.stringify(res));
             }
@@ -85,16 +88,17 @@ class CLWebAppApi {
     }
     loadFiles() {
         return __awaiter(this, void 0, void 0, function* () {
-            const res = yield node_fetch_1.default(`${this.APIProjects}/${this.config.projectId}/files`, this.fetchOption());
+            const res = yield node_fetch_1.default(`${this.apiProjects}/${this.config.projectId}/files`, this.fetchOption());
             if (!res.ok) {
                 throw new Error(JSON.stringify(res));
             }
             return JSON.parse(yield res.text());
         });
     }
+    /* eslint-disable-next-line @typescript-eslint/naming-convention */
     createFile(name, belonging_to, is_folder) {
         return __awaiter(this, void 0, void 0, function* () {
-            const res = yield node_fetch_1.default(`${this.APIProjects}/${this.config.projectId}/files`, this.fetchOption({
+            const res = yield node_fetch_1.default(`${this.apiProjects}/${this.config.projectId}/files`, this.fetchOption({
                 method: 'POST',
                 body: JSON.stringify({ name, is_folder, belonging_to }),
                 headerOption: { json: true }
@@ -107,16 +111,17 @@ class CLWebAppApi {
     }
     deleteFile(id) {
         return __awaiter(this, void 0, void 0, function* () {
-            const res = yield node_fetch_1.default(`${this.APIProjects}/${this.config.projectId}/files/${id}`, this.fetchOption({ method: 'DELETE' }));
+            const res = yield node_fetch_1.default(`${this.apiProjects}/${this.config.projectId}/files/${id}`, this.fetchOption({ method: 'DELETE' }));
             if (!res.ok) {
                 throw new Error(JSON.stringify(res));
             }
             return JSON.parse(yield res.text());
         });
     }
+    // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types, @typescript-eslint/no-explicit-any
     updateFile(id, params) {
         return __awaiter(this, void 0, void 0, function* () {
-            const res = yield node_fetch_1.default(`${this.APIProjects}/${this.config.projectId}/files/${id}`, this.fetchOption({
+            const res = yield node_fetch_1.default(`${this.apiProjects}/${this.config.projectId}/files/${id}`, this.fetchOption({
                 method: 'PUT',
                 body: JSON.stringify({ material_file: params }),
                 headerOption: { json: true }
@@ -129,7 +134,7 @@ class CLWebAppApi {
     }
     compileProject() {
         return __awaiter(this, void 0, void 0, function* () {
-            const res = yield node_fetch_1.default(`${this.APIProjects}/${this.config.projectId}/compile`, this.fetchOption({
+            const res = yield node_fetch_1.default(`${this.apiProjects}/${this.config.projectId}/compile`, this.fetchOption({
                 method: 'POST',
             }));
             if (!res.ok) {
@@ -144,7 +149,7 @@ class CLWebAppApi {
             form.append('relative_path', relativeDir);
             form.append('file', stream);
             const headers = form.getHeaders();
-            const res = yield node_fetch_1.default(`${this.APIProjects}/${this.config.projectId}/files/upload`, this.fetchOption({
+            const res = yield node_fetch_1.default(`${this.apiProjects}/${this.config.projectId}/files/upload`, this.fetchOption({
                 method: 'POST',
                 body: form,
                 headers
@@ -161,12 +166,18 @@ class CLWebAppApi {
             if (!res.ok) {
                 throw new Error(JSON.stringify(res));
             }
+            if (!res.body) {
+                throw new Error('res.body is null');
+            }
             return res.body;
         });
     }
     downdloadPreview(url) {
         return __awaiter(this, void 0, void 0, function* () {
             const res = yield node_fetch_1.default(url, this.fetchOption());
+            if (!res.body) {
+                throw new Error('res.body is null');
+            }
             return res.body;
         });
     }
@@ -177,6 +188,5 @@ class CLWebAppApi {
         });
     }
 }
-exports.default = CLWebAppApi;
-;
+exports.CLWebAppApi = CLWebAppApi;
 //# sourceMappingURL=webAppApi.js.map

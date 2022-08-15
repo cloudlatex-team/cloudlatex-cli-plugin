@@ -1,16 +1,16 @@
 import { DecideSyncMode } from '../types';
-import FileAdapter from './fileAdapter';
+import { FileAdapter } from './fileAdapter';
 import { FileRepository } from '../model/fileModel';
 import * as EventEmitter from 'eventemitter3';
-import Logger from '../util/logger';
+import { Logger } from '../util/logger';
 export declare type SyncResult = {
     success: boolean;
     canceled: boolean;
     fileChanged: boolean;
     errors: string[];
 };
-declare type EventType = 'sync-finished';
-export default class SyncManager extends EventEmitter<EventType> {
+declare type EventType = 'sync-finished' | 'error';
+export declare class SyncManager extends EventEmitter<EventType> {
     private fileRepo;
     private fileAdapter;
     decideSyncMode: DecideSyncMode;

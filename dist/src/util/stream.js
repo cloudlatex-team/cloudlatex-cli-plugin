@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.ReadableString = exports.streamToString = void 0;
 const stream_1 = require("stream");
 function streamToString(stream) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const chunks = [];
     return new Promise((resolve, reject) => {
         // stream.on('data', chunk => chunks.push(chunk.toString('utf-8')));

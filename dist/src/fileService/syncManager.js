@@ -9,6 +9,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.SyncManager = void 0;
 const path = require("path");
 const EventEmitter = require("eventemitter3");
 const _ = require("lodash");
@@ -98,19 +99,28 @@ class SyncManager extends EventEmitter {
                         renamedFile.remoteChange = 'create';
                     }
                     else if (file.localChange === 'create') {
-                        this.logger.error(`Unexpected situation is detected: remote file is renamed and local file is created: ${file.relativePath}`);
+                        const msg = 'Unexpected situation is detected:'
+                            + ` remote file is renamed and local file is created: ${file.relativePath}`;
+                        this.logger.error(msg);
+                        this.emit('error', msg);
                     }
                     else if (file.localChange === 'delete') {
-                        this.logger.error(`Unsupported situation is detected: remote file is renamed and local file is deleted: ${file.relativePath}`);
+                        const msg = 'Unsupported situation is detected:'
+                            + ` remote file is renamed and local file is deleted: ${file.relativePath}`;
+                        this.logger.error(msg);
+                        this.emit('error', msg);
                     }
                     else if (file.localChange === 'update') {
-                        this.logger.error(`Unsupported situation is detected: remote file is renamed and local file is updated: ${file.relativePath}`);
+                        const msg = 'Unsupported situation is detected:'
+                            + ` remote file is renamed and local file is updated: ${file.relativePath}`;
+                        this.logger.error(msg);
+                        this.emit('error', msg);
                     }
                 }
             });
             // Local to remote
             this.fileRepo.all().forEach(file => {
-                let remoteFile = file.remoteId && remoteFileDict[file.remoteId];
+                const remoteFile = file.remoteId && remoteFileDict[file.remoteId];
                 if (!remoteFile) { // remote file does not exist
                     if (file.remoteId) { // remote file is deleted
                         file.remoteChange = 'delete';
@@ -290,7 +300,7 @@ class SyncManager extends EventEmitter {
      * @param syncDestination 'local' | 'remote'
      */
     computePriority(file, syncDestination) {
-        let change = syncDestination === 'local' ?
+        const change = syncDestination === 'local' ?
             file.localChange :
             file.remoteChange;
         switch (change) {
@@ -321,7 +331,7 @@ class SyncManager extends EventEmitter {
         return 0; // Default priority is 0
     }
 }
-exports.default = SyncManager;
+exports.SyncManager = SyncManager;
 class PriorityTask {
     constructor(run, priority, name = '') {
         this.run = run;
@@ -354,7 +364,7 @@ class TasksExecuter {
                 taskSeries.push(() => Promise.all(concurrentTasks.map(task => task.run())));
             }
             let task;
-            while (task = taskSeries.pop()) {
+            while ((task = taskSeries.pop())) {
                 results.push(...yield task());
             }
             return results;

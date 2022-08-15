@@ -1,23 +1,24 @@
 import { ChangeState, ChangeLocation } from '../types';
 import { Repository } from '@moritanian/type-db';
-export declare const FileInfoDesc: {
+export declare type Revision = string | number | null;
+export declare const FILE_INFO_DESC: {
     name: string;
     columns: {
         id: number;
         isFolder: boolean;
         relativePath: string;
         url: string;
-        remoteRevision: string | number | null;
-        localRevision: string | number | null;
+        remoteRevision: Revision;
+        localRevision: Revision;
         localChange: ChangeState;
         remoteChange: ChangeState;
         changeLocation: ChangeLocation;
-        remoteId: string | number | null;
+        remoteId: Revision;
         watcherSynced: boolean;
     };
     primaryKey: string;
     indexColumns: string[];
     autoIncrement: boolean;
 };
-export declare type FileRepository = Repository<typeof FileInfoDesc>;
-export declare type FileInfo = typeof FileInfoDesc['columns'];
+export declare type FileRepository = Repository<typeof FILE_INFO_DESC>;
+export declare type FileInfo = typeof FILE_INFO_DESC['columns'];

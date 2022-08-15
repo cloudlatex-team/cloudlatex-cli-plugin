@@ -31,12 +31,12 @@ const cleanupWorkspace = () => __awaiter(void 0, void 0, void 0, function* () {
 let watcher;
 const setupInstances = () => __awaiter(void 0, void 0, void 0, function* () {
     const db = new type_db_1.TypeDB();
-    const files = db.getRepository(fileModel_1.FileInfoDesc);
+    const files = db.getRepository(fileModel_1.FILE_INFO_DESC);
     files.new({ relativePath: 'main.tex', watcherSynced: true });
-    watcher = new fileWatcher_1.default(workspacePath, files, () => true, new logger_1.default('warn'));
+    watcher = new fileWatcher_1.FileWatcher(workspacePath, files, () => true, new logger_1.Logger('warn'));
     const changedSpy = Sinon.spy();
     const awaitChangeDetection = () => {
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve) => {
             watcher === null || watcher === void 0 ? void 0 : watcher.on('change-detected', resolve);
         });
     };
@@ -59,7 +59,7 @@ afterEach(() => {
 });
 describe('Create', () => {
     it('localChange should be "create"', () => __awaiter(void 0, void 0, void 0, function* () {
-        const { watcher, files, awaitChangeDetection } = yield setupInstances();
+        const { files, awaitChangeDetection } = yield setupInstances();
         const relativePath = 'new_file.tex';
         const filePath = path.resolve(workspacePath, relativePath);
         fs.createFile(filePath);
@@ -71,7 +71,7 @@ describe('Create', () => {
 });
 describe('Update', () => {
     it('localChange should be "update"', () => __awaiter(void 0, void 0, void 0, function* () {
-        const { watcher, files, awaitChangeDetection } = yield setupInstances();
+        const { files, awaitChangeDetection } = yield setupInstances();
         const relativePath = 'main.tex';
         const filePath = path.resolve(workspacePath, relativePath);
         fs.writeFile(filePath, 'updated content');
@@ -82,7 +82,7 @@ describe('Update', () => {
 });
 describe('Delete', () => {
     it('localChange should be "delete"', () => __awaiter(void 0, void 0, void 0, function* () {
-        const { watcher, files, awaitChangeDetection } = yield setupInstances();
+        const { files, awaitChangeDetection } = yield setupInstances();
         const relativePath = 'main.tex';
         const filePath = path.resolve(workspacePath, relativePath);
         fs.remove(filePath);
@@ -95,7 +95,7 @@ describe('Delete', () => {
 });
 describe('Create and Update', () => {
     it('localChange should be "create"', () => __awaiter(void 0, void 0, void 0, function* () {
-        const { watcher, files, awaitChangeDetection } = yield setupInstances();
+        const { files, awaitChangeDetection } = yield setupInstances();
         const relativePath = 'new_file.tex';
         const filePath = path.resolve(workspacePath, relativePath);
         fs.createFile(filePath);
@@ -109,7 +109,7 @@ describe('Create and Update', () => {
 });
 describe('Create and Update and Delete', () => {
     it('the file should not exist', () => __awaiter(void 0, void 0, void 0, function* () {
-        const { watcher, files, awaitChangeDetection } = yield setupInstances();
+        const { files, awaitChangeDetection } = yield setupInstances();
         const relativePath = 'new_file.tex';
         const filePath = path.resolve(workspacePath, relativePath);
         fs.createFile(filePath);
@@ -124,7 +124,7 @@ describe('Create and Update and Delete', () => {
 });
 describe('Delete and recreate', () => {
     it('localChange should be "update"', () => __awaiter(void 0, void 0, void 0, function* () {
-        const { watcher, files, awaitChangeDetection } = yield setupInstances();
+        const { files, awaitChangeDetection } = yield setupInstances();
         const relativePath = 'main.tex';
         const filePath = path.resolve(workspacePath, relativePath);
         fs.remove(filePath);
@@ -137,7 +137,7 @@ describe('Delete and recreate', () => {
 });
 describe('Update, delete and recreate', () => {
     it('localChange should be "update"', () => __awaiter(void 0, void 0, void 0, function* () {
-        const { watcher, files, awaitChangeDetection } = yield setupInstances();
+        const { files, awaitChangeDetection } = yield setupInstances();
         const relativePath = 'main.tex';
         const filePath = path.resolve(workspacePath, relativePath);
         fs.writeFile(filePath, 'update content');
@@ -152,7 +152,7 @@ describe('Update, delete and recreate', () => {
 });
 describe('Create, delete and recreate', () => {
     it('localChange should be "create"', () => __awaiter(void 0, void 0, void 0, function* () {
-        const { watcher, files, awaitChangeDetection } = yield setupInstances();
+        const { files, awaitChangeDetection } = yield setupInstances();
         const relativePath = 'new_file.tex';
         const filePath = path.resolve(workspacePath, relativePath);
         fs.createFile(filePath);

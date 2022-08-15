@@ -39,14 +39,14 @@ const testFileAndFolderDict = Object.assign({}, testFileDict, {
 let fileWatcher;
 const setupInstances = () => __awaiter(void 0, void 0, void 0, function* () {
     // Sync Mode Decision
-    let syncModeRef = { instance: 'upload' };
+    const syncModeRef = { instance: 'upload' };
     const decideSyncMode = () => Promise.resolve(syncModeRef.instance);
     const decideSyncModeSpy = Sinon.spy(decideSyncMode);
-    const logger = new logger_1.default('error');
+    const logger = new logger_1.Logger('error');
     // Files
     const db = new type_db_1.TypeDB();
-    const localFiles = db.getRepository(fileModel_1.FileInfoDesc);
-    const backend = new backendStub_1.default();
+    const localFiles = db.getRepository(fileModel_1.FILE_INFO_DESC);
+    const backend = new backendStub_1.BackendStub();
     Object.keys(testFileAndFolderDict).map(absPath => {
         const relativePath = path.posix.relative(workdir, absPath);
         const revision = uuid_1.v4();
@@ -66,11 +66,11 @@ const setupInstances = () => __awaiter(void 0, void 0, void 0, function* () {
     });
     fsStub_1.default(testFileDict);
     // File adapter
-    const fileAdapter = new fileAdapter_1.default(workdir, localFiles, backend);
+    const fileAdapter = new fileAdapter_1.FileAdapter(workdir, localFiles, backend);
     // Sync Manager
-    const syncManager = new syncManager_1.default(localFiles, fileAdapter, decideSyncMode, logger);
+    const syncManager = new syncManager_1.SyncManager(localFiles, fileAdapter, decideSyncMode, logger);
     // File watcher
-    fileWatcher = new fileWatcher_1.default(workdir, localFiles, () => true, logger);
+    fileWatcher = new fileWatcher_1.FileWatcher(workdir, localFiles, () => true, logger);
     yield fileWatcher.init();
     return {
         decideSyncModeSpy,
@@ -100,7 +100,7 @@ class TestSituation {
             // Apply file changes to remote and local filesystems
             yield this.applyFileChanges();
             // Wait unitl the system synchronizes local files and remote files
-            const waitTask = new Promise((resolve, reject) => {
+            const waitTask = new Promise((resolve) => {
                 this.instances.syncManager.on('sync-finished', resolve);
             });
             this.instances.syncManager.syncSession();
@@ -149,7 +149,7 @@ class TestSituation {
         });
     }
     computeExpectedFileDict() {
-        let expectedFileDict = Object.assign({}, this.fileDict);
+        const expectedFileDict = Object.assign({}, this.fileDict);
         const applyChange = (location) => {
             switch (this.config.changeStates[location]) {
                 case 'create':
@@ -215,8 +215,8 @@ class TestSituation {
             // validate content of each file
             const tasks = [];
             expectedAbsPaths.forEach((absPath) => {
-                let expectedContent = expectedFileDict[absPath];
-                let relativePath = path.posix.relative(workdir, absPath);
+                const expectedContent = expectedFileDict[absPath];
+                const relativePath = path.posix.relative(workdir, absPath);
                 // local
                 const localFile = this.instances.localFiles.findBy('relativePath', relativePath);
                 chai.assert.isNotNull(localFile);
@@ -246,7 +246,7 @@ afterEach(() => {
     fileWatcher.stop();
 });
 describe('Sync file system', () => {
-    tool.TestConfigList.forEach(config => {
+    tool.TEST_CONFIG_LIST.forEach(config => {
         it(config.describe, () => __awaiter(void 0, void 0, void 0, function* () {
             const instances = yield setupInstances();
             const localNewFiles = ['new_file.tex', 'images/new_img.png'];
@@ -280,6 +280,7 @@ describe('Sync folder test', () => {
         const fileContent = 'file content';
         yield fs.promises.mkdir(folderAbsPath);
         yield fs.promises.writeFile(fileAbsPath, fileContent);
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const syncResult = yield instances.syncManager.syncSession();
         // TODO check the order of sync tasks
     }));

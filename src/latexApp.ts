@@ -176,7 +176,7 @@ export class LatexApp extends LAEventEmitter {
   } = {}): Promise<LatexApp> {
 
     const logger = option.logger || new Logger();
-    logger.log(`latex-cli ${'1.0.0'}`);
+    logger.log(`latex-cli ${'2.0.0'}`);
 
     // Config
     config = this.sanitizeConfig(config);

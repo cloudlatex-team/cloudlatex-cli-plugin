@@ -1,5 +1,5 @@
 /// <reference types="node" />
-import Backend from '../backend/ibackend';
+import { IBackend } from '../backend/ibackend';
 import { FileRepository, FileInfo } from '../model/fileModel';
 /**
  * FileAdapter class
@@ -8,11 +8,11 @@ import { FileRepository, FileInfo } from '../model/fileModel';
  * The file path is expressed with `path.posix.sep` internally
  * and only convert native path (`path.sep`) when this class operates local file.
  */
-export default class FileAdapter {
+export declare class FileAdapter {
     protected rootPath: string;
     private fileRepo;
     private backend;
-    constructor(rootPath: string, fileRepo: FileRepository, backend: Backend);
+    constructor(rootPath: string, fileRepo: FileRepository, backend: IBackend);
     loadFileList(): Promise<FileInfo[]>;
     download(file: FileInfo): Promise<void>;
     saveAs(filePath: string, stream: NodeJS.ReadableStream): Promise<void>;

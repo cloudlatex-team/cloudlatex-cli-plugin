@@ -9,6 +9,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.BackendStub = void 0;
 const type_db_1 = require("@moritanian/type-db");
 const fileModel_1 = require("../../src/model/fileModel");
 const uuid_1 = require("uuid");
@@ -24,7 +25,7 @@ class BackendStub {
         this.isOffline = false;
         this.remoteContents = {};
         const remotedb = new type_db_1.TypeDB();
-        this.remoteFiles = remotedb.getRepository(fileModel_1.FileInfoDesc);
+        this.remoteFiles = remotedb.getRepository(fileModel_1.FILE_INFO_DESC);
     }
     validateToken() {
         return Promise.resolve(true);
@@ -45,6 +46,7 @@ class BackendStub {
         }
         return Promise.resolve(this.remoteFiles.all());
     }
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     upload(file, stream, option) {
         return __awaiter(this, void 0, void 0, function* () {
             if (this.isOffline) {
@@ -61,6 +63,7 @@ class BackendStub {
             };
         });
     }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars
     createRemote(file, parent) {
         return __awaiter(this, void 0, void 0, function* () {
             if (this.isOffline) {
@@ -119,6 +122,7 @@ class BackendStub {
         delete this.remoteContents[targetFile.id];
         return Promise.resolve();
     }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     compileProject() {
         if (this.isOffline) {
             return Promise.reject();
@@ -160,5 +164,5 @@ class BackendStub {
         return Promise.resolve();
     }
 }
-exports.default = BackendStub;
+exports.BackendStub = BackendStub;
 //# sourceMappingURL=backendStub.js.map
