@@ -1,6 +1,7 @@
 import { FileInfo } from './model/fileModel';
 export interface ProjectInfo {
   id: number;
+  // eslint-disable-next-line @typescript-eslint/naming-convention
   compile_target_file_id: number;
   title: string;
 }
@@ -42,8 +43,10 @@ export type Account = {
   client: string
 };
 
+export type LoginStatus = 'offline' | 'valid' | 'invalid';
+
 export interface AppInfo {
-  offline: boolean;
+  loginStatus: LoginStatus;
   projectName?: string;
   compileTarget?: KeyType,
   targetName?: string,

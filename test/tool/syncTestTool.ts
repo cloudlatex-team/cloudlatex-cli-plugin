@@ -11,18 +11,18 @@ export type TestConfig = {
   describe: string
 };
 
-export const TestConfigList = (() => {
-  let list: TestConfig[] = [];
+export const TEST_CONFIG_LIST = (() => {
+  const list: TestConfig[] = [];
   const changeOptions: ChangeState[] = ['no', 'create', 'update', 'delete'];
   changeOptions.forEach(local => {
     changeOptions.forEach(remote => {
-      let conflictOptions = [false];
+      const conflictOptions = [false];
       if ((local === 'update' || local === 'delete') &&
         (remote === 'update' || remote === 'delete')) {
         conflictOptions.push(true);
       }
       conflictOptions.forEach(conflict => {
-        let syncModeOptions: SyncMode[] = ['upload'];
+        const syncModeOptions: SyncMode[] = ['upload'];
         if (conflict) {
           syncModeOptions.push('download');
         }
@@ -62,8 +62,8 @@ export const TestConfigList = (() => {
   return list;
 })();
 
-export function sleep(ms: number) {
-  return new Promise((resolve, reject) => {
+export function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => {
     setTimeout(resolve, ms);
   });
 }

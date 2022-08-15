@@ -1,10 +1,10 @@
-import { SyncMode, DecideSyncMode, KeyType, ChangeLocation, ChangeState } from '../types';
-import FileAdapter from './fileAdapter';
+import { SyncMode, DecideSyncMode, KeyType, ChangeState } from '../types';
+import { FileAdapter } from './fileAdapter';
 import { FileRepository, FileInfo } from '../model/fileModel';
 import * as path from 'path';
 import * as  EventEmitter from 'eventemitter3';
 import * as _ from 'lodash';
-import Logger, { getErrorTraceStr } from '../util/logger';
+import { Logger, getErrorTraceStr } from '../util/logger';
 
 export type SyncResult = {
   success: boolean;
@@ -18,13 +18,13 @@ type SyncTaskResult = {
   message: string;
 };
 
-type EventType = 'sync-finished';
+type EventType = 'sync-finished' | 'error';
 type SyncTask = 'download' | 'createLocalFolder' | 'createRemoteFolder' |
   'upload' | 'updateRemote' | 'deleteRemote' | 'deleteLocal' | 'no';
 
-export default class SyncManager extends EventEmitter<EventType> {
-  private syncing: boolean = false;
-  private fileChanged: boolean = false; // Whether any file (not folder) is changed
+export class SyncManager extends EventEmitter<EventType> {
+  private syncing = false;
+  private fileChanged = false; // Whether any file (not folder) is changed
   public syncSession: () => void;
   constructor(
     private fileRepo: FileRepository,
@@ -114,24 +114,28 @@ export default class SyncManager extends EventEmitter<EventType> {
           const renamedFile = this.fileRepo.new(remoteFile);
           renamedFile.remoteChange = 'create';
         } else if (file.localChange === 'create') {
-          this.logger.error(
-            `Unexpected situation is detected: remote file is renamed and local file is created: ${file.relativePath}`
-          );
+          const msg = 'Unexpected situation is detected:'
+            + ` remote file is renamed and local file is created: ${file.relativePath}`;
+          this.logger.error(msg);
+          this.emit('error', msg);
         } else if (file.localChange === 'delete') {
-          this.logger.error(
-            `Unsupported situation is detected: remote file is renamed and local file is deleted: ${file.relativePath}`
-          );
+          const msg = 'Unsupported situation is detected:'
+            + ` remote file is renamed and local file is deleted: ${file.relativePath}`;
+          this.logger.error(msg);
+          this.emit('error', msg);
         } else if (file.localChange === 'update') {
-          this.logger.error(
-            `Unsupported situation is detected: remote file is renamed and local file is updated: ${file.relativePath}`
-          );
+          const msg = 'Unsupported situation is detected:'
+            + ` remote file is renamed and local file is updated: ${file.relativePath}`;
+          this.logger.error(msg);
+          this.emit('error', msg);
+
         }
       }
     });
 
     // Local to remote
     this.fileRepo.all().forEach(file => {
-      let remoteFile = file.remoteId && remoteFileDict[file.remoteId];
+      const remoteFile = file.remoteId && remoteFileDict[file.remoteId];
       if (!remoteFile) { // remote file does not exist
         if (file.remoteId) { // remote file is deleted
           file.remoteChange = 'delete';
@@ -315,7 +319,7 @@ export default class SyncManager extends EventEmitter<EventType> {
       } catch (e) {
         return {
           success: false,
-          message: `${task} : '${file.relativePath}' : ${file.url} : ${(e && e.stack || '')}`
+          message: `${task} : '${file.relativePath}' : ${file.url} : ${(e && (e as Error).stack || '')}`
         };
       }
       return {
@@ -332,7 +336,7 @@ export default class SyncManager extends EventEmitter<EventType> {
    * @param syncDestination 'local' | 'remote'
    */
   private computePriority(file: FileInfo, syncDestination: 'local' | 'remote'): number {
-    let change: ChangeState = syncDestination === 'local' ?
+    const change: ChangeState = syncDestination === 'local' ?
       file.localChange :
       file.remoteChange;
 
@@ -398,7 +402,7 @@ class TasksExecuter<Result = unknown> {
       taskSeries.push(() => Promise.all(concurrentTasks.map(task => task.run())));
     }
     let task;
-    while (task = taskSeries.pop()) {
+    while ((task = taskSeries.pop())) {
       results.push(...await task());
     }
     return results;

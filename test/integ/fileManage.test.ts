@@ -1,17 +1,16 @@
 import * as Sinon from 'sinon';
-import * as chokidar from 'chokidar';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as chai from 'chai';
 import { v4 as uuid } from 'uuid';
 
 import { TypeDB } from '@moritanian/type-db';
-import { FileInfoDesc, FileInfo } from '../../src/model/fileModel';
-import FileWatcher from '../../src/fileService/fileWatcher';
-import SyncManager, { SyncResult } from '../../src/fileService/syncManager';
-import FileAdapter from '../../src/fileService/fileAdapter';
-import Backend from '../tool/backendStub';
-import Logger from '../../src/util/logger';
+import { FILE_INFO_DESC, FileInfo } from '../../src/model/fileModel';
+import { FileWatcher } from '../../src/fileService/fileWatcher';
+import { SyncManager, SyncResult } from '../../src/fileService/syncManager';
+import { FileAdapter } from '../../src/fileService/fileAdapter';
+import { BackendStub } from '../tool/backendStub';
+import { Logger } from '../../src/util/logger';
 import { DecideSyncMode } from '../../src';
 import { SyncMode, ChangeState, ChangeLocation } from '../../src/types';
 
@@ -37,7 +36,7 @@ let fileWatcher: FileWatcher;
 const setupInstances = async () => {
 
   // Sync Mode Decision
-  let syncModeRef: { instance: SyncMode } = { instance: 'upload' };
+  const syncModeRef: { instance: SyncMode } = { instance: 'upload' };
   const decideSyncMode: DecideSyncMode = () => Promise.resolve(syncModeRef.instance);
   const decideSyncModeSpy = Sinon.spy(decideSyncMode);
 
@@ -45,8 +44,8 @@ const setupInstances = async () => {
 
   // Files
   const db = new TypeDB();
-  const localFiles = db.getRepository(FileInfoDesc);
-  const backend = new Backend();
+  const localFiles = db.getRepository(FILE_INFO_DESC);
+  const backend = new BackendStub();
   Object.keys(testFileAndFolderDict).map(absPath => {
     const relativePath = path.posix.relative(workdir, absPath);
     const revision = uuid();
@@ -118,7 +117,7 @@ class TestSituation {
     await this.applyFileChanges();
 
     // Wait unitl the system synchronizes local files and remote files
-    const waitTask = new Promise((resolve: (result: SyncResult) => void, reject) => {
+    const waitTask = new Promise((resolve: (result: SyncResult) => void) => {
       this.instances.syncManager.on('sync-finished', resolve);
     });
     this.instances.syncManager.syncSession();
@@ -198,17 +197,21 @@ class TestSituation {
   );
 
   private computeExpectedFileDict(): Record<string, string> {
-    let expectedFileDict: Record<string, string> = Object.assign({}, this.fileDict);
+    const expectedFileDict: Record<string, string> = Object.assign({}, this.fileDict);
     const applyChange = (location: 'local' | 'remote') => {
       switch (this.config.changeStates[location]) {
         case 'create':
           this.changeSet[location]['create'].forEach(relativePath => {
-            expectedFileDict[path.posix.join(workdir, relativePath)] = this.getChangedContent(relativePath, 'create', location);
+            expectedFileDict[
+              path.posix.join(workdir, relativePath)
+            ] = this.getChangedContent(relativePath, 'create', location);
           });
           break;
         case 'update':
           this.changeSet[location]['update'].forEach(fileInfo => {
-            expectedFileDict[path.posix.join(workdir, fileInfo.relativePath)] = this.getChangedContent(fileInfo.relativePath, 'update', location);
+            expectedFileDict[
+              path.posix.join(workdir, fileInfo.relativePath)
+            ] = this.getChangedContent(fileInfo.relativePath, 'update', location);
           });
           break;
         case 'delete':
@@ -271,8 +274,8 @@ class TestSituation {
     // validate content of each file
     const tasks: Promise<unknown>[] = [];
     expectedAbsPaths.forEach((absPath) => {
-      let expectedContent = expectedFileDict[absPath];
-      let relativePath = path.posix.relative(workdir, absPath);
+      const expectedContent = expectedFileDict[absPath];
+      const relativePath = path.posix.relative(workdir, absPath);
 
       // local
       const localFile = this.instances.localFiles.findBy('relativePath', relativePath);
@@ -281,7 +284,11 @@ class TestSituation {
         return;
       }
       chai.assert.isTrue(localFile.watcherSynced, `localFile.watcherSynced of ${localFile.relativePath}`);
-      chai.assert.strictEqual(localFile.localChange, this.computeExpectedChangeState(absPath), `local.localChange of ${localFile.relativePath}`);
+      chai.assert.strictEqual(
+        localFile.localChange,
+        this.computeExpectedChangeState(absPath),
+        `local.localChange of ${localFile.relativePath}`
+      );
       if (!localFile.isFolder) {
         tasks.push(assertStream(fs.createReadStream(absPath), expectedContent));
       }
@@ -308,7 +315,7 @@ afterEach(() => {
 
 
 describe('Sync file system', () => {
-  tool.TestConfigList.forEach(config => {
+  tool.TEST_CONFIG_LIST.forEach(config => {
     it(config.describe, async () => {
       const instances = await setupInstances();
       const localNewFiles = ['new_file.tex', 'images/new_img.png'];
@@ -343,6 +350,7 @@ describe('Sync folder test', () => {
     const fileContent = 'file content';
     await fs.promises.mkdir(folderAbsPath);
     await fs.promises.writeFile(fileAbsPath, fileContent);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const syncResult = await instances.syncManager.syncSession();
     // TODO check the order of sync tasks
   });

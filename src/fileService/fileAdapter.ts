@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import Backend from '../backend/ibackend';
+import { IBackend } from '../backend/ibackend';
 import { FileRepository, FileInfo } from '../model/fileModel';
 
 /**
@@ -10,11 +10,11 @@ import { FileRepository, FileInfo } from '../model/fileModel';
  * The file path is expressed with `path.posix.sep` internally
  * and only convert native path (`path.sep`) when this class operates local file.
  */
-export default class FileAdapter {
+export class FileAdapter {
   constructor(
     protected rootPath: string,
     private fileRepo: FileRepository,
-    private backend: Backend,
+    private backend: IBackend,
   ) {
   }
 
@@ -38,12 +38,13 @@ export default class FileAdapter {
   }
 
   public async saveAs(filePath: string, stream: NodeJS.ReadableStream): Promise<void> {
-    let absPath = path.isAbsolute(filePath) ? filePath : path.posix.join(this.rootPath, filePath);
+    const absPath = path.isAbsolute(filePath) ? filePath : path.posix.join(this.rootPath, filePath);
     const dirname = path.posix.dirname(absPath);
     if (dirname !== this.rootPath) {
       try {
         await fs.promises.mkdir(dirname.replace(new RegExp(path.posix.sep, 'g'), path.sep));
       } catch (err) {
+        // Already exists
       }
     }
 
@@ -71,7 +72,7 @@ export default class FileAdapter {
       await fs.promises.mkdir(absPath.replace(new RegExp(path.posix.sep, 'g'), path.sep));
     } catch (err) {
       // Allow only the error that file is alraady exist.
-      if (err.code !== 'EEXIST') {
+      if ((err as { code: string }).code !== 'EEXIST') {
         throw err;
       }
     }
@@ -79,7 +80,7 @@ export default class FileAdapter {
     file.localRevision = file.remoteRevision;
     this.fileRepo.save();
     return;
-  };
+  }
 
   public async createRemoteFolder(file: FileInfo): Promise<void> {
     const parent = this.fileRepo.findBy('relativePath', path.posix.dirname(file.relativePath));
@@ -90,6 +91,7 @@ export default class FileAdapter {
     this.fileRepo.save();
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/explicit-module-boundary-types
   public async upload(file: FileInfo, option?: any): Promise<void> {
     const stream = fs.createReadStream(
       path.posix.join(this.rootPath, file.relativePath).replace(new RegExp(path.posix.sep, 'g'), path.sep)
@@ -123,7 +125,7 @@ export default class FileAdapter {
         fs.promises.rmdir(absPath.replace(new RegExp(path.posix.sep, 'g'), path.sep));
       } catch (err) {
         // Allow the error that file is already deleted
-        if (err.code !== 'ENOENT') {
+        if ((err as { code: string }).code !== 'ENOENT') {
           throw err;
         }
       }
@@ -137,7 +139,7 @@ export default class FileAdapter {
       file.watcherSynced = true;
       this.fileRepo.save();
       // Allow the error that file is already deleted
-      if (err.code !== 'ENOENT') {
+      if ((err as { code: string }).code !== 'ENOENT') {
         throw err;
       }
     }

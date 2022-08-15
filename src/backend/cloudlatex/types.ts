@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/naming-convention */
 export interface ClFile {
   is_folder: boolean;
   id: number;

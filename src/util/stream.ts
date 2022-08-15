@@ -1,6 +1,7 @@
 import { Readable } from 'stream';
 
 export function streamToString(stream: NodeJS.ReadableStream): Promise<string> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const chunks: any[] = [];
   return new Promise((resolve, reject) => {
     // stream.on('data', chunk => chunks.push(chunk.toString('utf-8')));
@@ -26,7 +27,7 @@ export class ReadableString extends Readable {
     super();
   }
 
-  _read() {
+  _read(): void {
     if (!this.sent) {
       this.push(Buffer.from(this.str));
       this.sent = true;

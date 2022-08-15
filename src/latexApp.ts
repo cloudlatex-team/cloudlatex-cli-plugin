@@ -1,34 +1,64 @@
 import * as path from 'path';
 import * as  EventEmitter from 'eventemitter3';
-import Logger, { getErrorTraceStr } from './util/logger';
+import { Logger, getErrorTraceStr } from './util/logger';
 import { wildcard2regexp } from './util/pathUtil';
-import { Config, DecideSyncMode, Account, CompileResult, CompileStatus, AppInfo } from './types';
-import FileAdapter from './fileService/fileAdapter';
-import SyncManager, { SyncResult } from './fileService/syncManager';
-import FileWatcher from './fileService/fileWatcher';
+import { Config, DecideSyncMode, Account, CompileResult, AppInfo, LoginStatus } from './types';
+import { FileAdapter } from './fileService/fileAdapter';
+import { SyncManager, SyncResult } from './fileService/syncManager';
+import { FileWatcher } from './fileService/fileWatcher';
 import { TypeDB, Repository } from '@moritanian/type-db';
-import { FileInfoDesc } from './model/fileModel';
-import Backend from './backend/ibackend';
-import backendSelector from './backend/backendSelector';
-import AccountService from './service/accountService';
-import AppInfoService from './service/appInfoService';
+import { FILE_INFO_DESC } from './model/fileModel';
+import { IBackend } from './backend/ibackend';
+import { backendSelector } from './backend/backendSelector';
+import { AccountService } from './service/accountService';
+import { AppInfoService } from './service/appInfoService';
 
-type NoPayloadEvents = 'sync-failed' | 'file-changed';
+/* eslint-disable @typescript-eslint/naming-convention */
+export const LATEX_APP_EVENTS = {
+  FILE_CHANGED: 'file-changed', /* LaTeX source files are changed */
+  FILE_SYNC_SUCCEEDED: 'file-sync-succeeded', /* Succeeded to synchonize LaTeX source files between local and cloud */
+  FILE_SYNC_FAILED: 'file-sync-failed', /* Failed to synchonize LaTeX source files */
+  FILE_CHANGE_ERROR: 'file-change-error', /* Invalid LaTeX file chagnes are detected */
+  TARGET_FILE_NOT_FOUND: 'target-file-not-found', /* LaTeX target file is not found */
+  COMPILATION_STARTED: 'compilation-started', /* LaTeX compilation is started */
+  COMPILATION_SUCCEEDED: 'compilation-succeeded', /* Succeeded to compile LaTeX source files */
+  COMPILATION_FAILED: 'compilation-failed', /* Failed to compile LaTeX source files */
+  LOGIN_SUCCEEDED: 'login-succeeded', /* Succeeded to login */
+  LOGIN_FAILED: 'login-failed', /* Failed to login */
+  LOGIN_OFFLINE: 'login-offline', /* Cannot login due to network problem */
+  PROJECT_LOADED: 'project-loaded', /* Project infomantion is loaded */
+  UNEXPECTED_ERROR: 'unexpected-error', /* Unexpected error */
+} as const;
+/* eslint-enable @typescript-eslint/naming-convention */
+
+
+type NoPayloadEvents = typeof LATEX_APP_EVENTS.FILE_CHANGED | typeof LATEX_APP_EVENTS.LOGIN_SUCCEEDED
+  | typeof LATEX_APP_EVENTS.LOGIN_FAILED | typeof LATEX_APP_EVENTS.LOGIN_OFFLINE
+  | typeof LATEX_APP_EVENTS.COMPILATION_STARTED;
+type ErrorEvents = typeof LATEX_APP_EVENTS.FILE_SYNC_FAILED
+  | typeof LATEX_APP_EVENTS.FILE_CHANGE_ERROR | typeof LATEX_APP_EVENTS.TARGET_FILE_NOT_FOUND
+  | typeof LATEX_APP_EVENTS.UNEXPECTED_ERROR;
+type CompilationResultEvents = typeof LATEX_APP_EVENTS.COMPILATION_FAILED
+  | typeof LATEX_APP_EVENTS.COMPILATION_SUCCEEDED;
 class LAEventEmitter extends EventEmitter<''> {
 }
+/* eslint-disable @typescript-eslint/adjacent-overload-signatures */
 interface LAEventEmitter {
   emit(eventName: NoPayloadEvents): boolean;
   on(eventName: NoPayloadEvents, callback: () => unknown): this;
-  emit(eventName: 'network-updated', arg: boolean): void;
-  on(eventName: 'network-updated', callback: (arg: boolean) => unknown): void;
-  emit(eventName: 'project-loaded', arg: AppInfo): void;
-  on(eventName: 'project-loaded', callback: (arg: AppInfo) => unknown): void;
-  emit(eventName: 'successfully-synced', arg: SyncResult): void;
-  on(eventName: 'successfully-synced', callback: (arg: SyncResult) => unknown): void;
-
+  emit(eventName: ErrorEvents, detail: string): boolean;
+  on(eventName: ErrorEvents, callback: (detail: string) => unknown): this;
+  emit(eventName: CompilationResultEvents, arg: CompileResult): boolean;
+  on(eventName: CompilationResultEvents, callback: (arg: CompileResult) => unknown): this;
+  emit(eventName: typeof LATEX_APP_EVENTS.PROJECT_LOADED, arg: AppInfo): boolean;
+  on(eventName: typeof LATEX_APP_EVENTS.PROJECT_LOADED, callback: (arg: AppInfo) => unknown): this;
+  emit(eventName: typeof LATEX_APP_EVENTS.FILE_SYNC_SUCCEEDED, arg: SyncResult): boolean;
+  on(eventName: typeof LATEX_APP_EVENTS.FILE_SYNC_SUCCEEDED, callback: (arg: SyncResult) => unknown): this;
 }
+/* eslint-enable @typescript-eslint/adjacent-overload-signatures */
 
-const IgnoreFiles = [
+
+const IGNORE_FILES = [
   '*.aux',
   '*.bbl',
   '*.blg',
@@ -55,7 +85,7 @@ const IgnoreFiles = [
 ];
 
 
-export default class LatexApp extends LAEventEmitter {
+export class LatexApp extends LAEventEmitter {
   private syncManager: SyncManager;
   private fileWatcher: FileWatcher;
 
@@ -66,9 +96,9 @@ export default class LatexApp extends LAEventEmitter {
     private config: Config,
     private accountService: AccountService<Account>,
     private appInfoService: AppInfoService,
-    private backend: Backend,
+    private backend: IBackend,
     private fileAdapter: FileAdapter,
-    private fileRepo: Repository<typeof FileInfoDesc>,
+    private fileRepo: Repository<typeof FILE_INFO_DESC>,
     decideSyncMode: DecideSyncMode,
     private logger: Logger = new Logger()) {
     super();
@@ -85,12 +115,18 @@ export default class LatexApp extends LAEventEmitter {
 
     this.syncManager.on('sync-finished', (result) => {
       if (result.success) {
-        this.emit('successfully-synced', result);
+        this.emit(LATEX_APP_EVENTS.FILE_SYNC_SUCCEEDED, result);
       } else if (result.canceled) {
+        // canceled
       } else {
-        this.logger.error('Error in syncSession: ' + result.errors.join('\n'));
-        this.emit('sync-failed');
+        const msg = result.errors.join('\n');
+        this.logger.error('Error in synchronizing files: ' + msg);
+        this.emit(LATEX_APP_EVENTS.FILE_SYNC_FAILED, msg);
       }
+    });
+
+    this.syncManager.on('error', (msg) => {
+      this.emit(LATEX_APP_EVENTS.FILE_CHANGE_ERROR, msg);
     });
 
     /**
@@ -106,18 +142,22 @@ export default class LatexApp extends LAEventEmitter {
         ];
 
         return !outFilePaths.includes(relativePath) &&
-          !IgnoreFiles.some(
+          !IGNORE_FILES.some(
             ignoreFile => relativePath.match(wildcard2regexp(ignoreFile))
           );
       },
       logger);
 
     this.fileWatcher.on('change-detected', async () => {
-      this.emit('file-changed');
+      this.emit(LATEX_APP_EVENTS.FILE_CHANGED);
+    });
+
+    this.fileWatcher.on('error', (err) => {
+      this.emit(LATEX_APP_EVENTS.FILE_CHANGE_ERROR, err);
     });
   }
 
-  get appInfo() {
+  get appInfo(): AppInfo {
     return this.appInfoService.appInfo;
   }
 
@@ -161,7 +201,7 @@ export default class LatexApp extends LAEventEmitter {
     } catch (err) {
       // Not initialized because there is no db file.
     }
-    const fileRepo = db.getRepository(FileInfoDesc);
+    const fileRepo = db.getRepository(FILE_INFO_DESC);
     fileRepo.all().forEach(file => {
       file.watcherSynced = true;
     });
@@ -189,7 +229,7 @@ export default class LatexApp extends LAEventEmitter {
   /**
    * Start to watch file system
    */
-  public startFileWatcher() {
+  public startFileWatcher(): Promise<void> {
     return this.fileWatcher.init();
   }
 
@@ -197,29 +237,35 @@ export default class LatexApp extends LAEventEmitter {
   /**
    * Stop watching file system
    */
-  public stopFileWatcher() {
-    this.fileWatcher.stop();
+  public stopFileWatcher(): Promise<void> {
+    return this.fileWatcher.stop();
   }
 
-  private onOnline() {
-    if (!this.appInfoService.appInfo.offline) {
+  private onValid() {
+    if (this.appInfoService.appInfo.loginStatus === 'valid') {
       return;
     }
-    this.appInfoService.setOnline();
-    this.logger.info('Your account has been validated!');
-    this.emit('network-updated', this.appInfoService.appInfo.offline);
+    this.logger.info('Login Successful');
+    this.appInfoService.setLoginStatus('valid');
+    this.emit(LATEX_APP_EVENTS.LOGIN_SUCCEEDED);
+  }
+
+  private onInvalid() {
+    if (this.appInfoService.appInfo.loginStatus === 'invalid') {
+      return;
+    }
+    this.logger.info('Login failed.');
+    this.appInfoService.setLoginStatus('invalid');
+    this.emit(LATEX_APP_EVENTS.LOGIN_FAILED);
   }
 
   private onOffline() {
-    if (this.appInfoService.appInfo.offline) {
+    if (this.appInfoService.appInfo.loginStatus === 'offline') {
       return;
     }
-    this.logger.warn(`The network is offline or some trouble occur with the server.
-      You can edit your files, but your changes will not be reflected on the server
-      until it is enable to communicate with the server.
-      `);
-    this.appInfoService.setOffLine();
-    this.emit('network-updated', this.appInfo.offline);
+    this.logger.warn('Cannot connect to the server');
+    this.appInfoService.setLoginStatus('offline');
+    this.emit(LATEX_APP_EVENTS.LOGIN_OFFLINE);
   }
 
   /**
@@ -227,24 +273,27 @@ export default class LatexApp extends LAEventEmitter {
    */
   public async compile(): Promise<CompileResult> {
     this.logger.log('Start compiling');
+    this.emit(LATEX_APP_EVENTS.COMPILATION_STARTED);
     try {
       if (!this.appInfoService.appInfo.loaded) {
         const projectInfo = await this.backend.loadProjectInfo();
         const file = this.fileRepo.findBy('remoteId', projectInfo.compile_target_file_id);
         if (!file) {
           this.logger.error('Target file is not found');
+          this.emit(LATEX_APP_EVENTS.TARGET_FILE_NOT_FOUND, '');
           return { status: 'no-target-error' };
         }
         const targetName = path.posix.basename(file.relativePath, '.tex');
         this.appInfoService.setProjectName(projectInfo.title);
         this.appInfoService.setTarget(projectInfo.compile_target_file_id, targetName);
         this.appInfoService.setLoaded();
-        this.emit('project-loaded', this.appInfo);
+        this.emit(LATEX_APP_EVENTS.PROJECT_LOADED, this.appInfo);
       }
 
-      let result = await this.backend.compileProject();
+      const result = await this.backend.compileProject();
 
       if (result.status !== 'success') {
+        this.emit(LATEX_APP_EVENTS.COMPILATION_FAILED, result);
         return result;
       }
 
@@ -252,32 +301,64 @@ export default class LatexApp extends LAEventEmitter {
 
       // download log file
       if (result.logStream) {
-        promises.push(this.fileAdapter.saveAs(this.appInfoService.appInfo.logPath!, result.logStream).catch(err => {
-          this.logger.error('Some error occurred with saving a log file. ' + getErrorTraceStr(err));
-        }));
+        if (this.appInfoService.appInfo.logPath) {
+          promises.push(this.fileAdapter.saveAs(this.appInfoService.appInfo.logPath, result.logStream).catch(err => {
+            const msg = 'Some error occurred with saving a log file.';
+            this.logger.error(msg + getErrorTraceStr(err));
+            this.emit(LATEX_APP_EVENTS.UNEXPECTED_ERROR, msg);
+          }));
+        } else {
+          const msg = 'Log file path is not set';
+          this.logger.error(msg);
+          this.emit(LATEX_APP_EVENTS.UNEXPECTED_ERROR, msg);
+
+        }
       }
 
       // download pdf
       if (result.pdfStream) {
-        promises.push(this.fileAdapter.saveAs(this.appInfoService.appInfo.pdfPath!, result.pdfStream).catch(err => {
-          this.logger.error('Some error occurred with downloading the compiled pdf file. ' + getErrorTraceStr(err));
-        }));
+        if (this.appInfoService.appInfo.pdfPath) {
+          promises.push(this.fileAdapter.saveAs(this.appInfoService.appInfo.pdfPath, result.pdfStream).catch(err => {
+            const msg = 'Some error occurred with downloading the compiled pdf file.';
+            this.logger.error(msg + getErrorTraceStr(err));
+            this.emit(LATEX_APP_EVENTS.UNEXPECTED_ERROR, msg);
+          }));
+        } else {
+          const msg = 'PDF file path is not set';
+          this.logger.error(msg);
+          this.emit(LATEX_APP_EVENTS.UNEXPECTED_ERROR, msg);
+        }
       }
 
       // download synctex
       if (result.synctexStream) {
-        promises.push(this.fileAdapter.saveAs(this.appInfoService.appInfo.synctexPath!, result.synctexStream).catch(err => {
-          this.logger.error('Some error occurred with saving a synctex file. ' + getErrorTraceStr(err));
-        }));
+        if (this.appInfoService.appInfo.synctexPath) {
+          promises.push(
+            this.fileAdapter.saveAs(this.appInfoService.appInfo.synctexPath, result.synctexStream).catch(err => {
+              const msg = 'Some error occurred with saving a synctex file.';
+              this.logger.error(msg + getErrorTraceStr(err));
+              this.emit(LATEX_APP_EVENTS.UNEXPECTED_ERROR, msg);
+
+            })
+          );
+        } else {
+          const msg = 'Synctex file path is not set';
+          this.logger.error(msg);
+          this.emit(LATEX_APP_EVENTS.UNEXPECTED_ERROR, msg);
+        }
       }
 
       // wait to download all files
       await Promise.all(promises);
 
       this.logger.log('Sucessfully compiled');
+      this.emit(LATEX_APP_EVENTS.COMPILATION_SUCCEEDED, result);
+
       return result;
     } catch (err) {
-      this.logger.warn('Some error occured with compilation.' + getErrorTraceStr(err));
+      const msg = 'Some error occurred with compiling.';
+      this.logger.warn(msg + getErrorTraceStr(err));
+      this.emit(LATEX_APP_EVENTS.UNEXPECTED_ERROR, msg);
       return { status: 'unknown-error' };
     }
   }
@@ -291,13 +372,14 @@ export default class LatexApp extends LAEventEmitter {
     try {
       const result = await this.backend.validateToken();
       if (!result) {
+        this.onInvalid();
         return 'invalid';
       }
-      this.onOnline();
     } catch (err) {
       this.onOffline();
       return 'offline';
     }
+    this.onValid();
     return 'valid';
   }
 
@@ -313,14 +395,14 @@ export default class LatexApp extends LAEventEmitter {
   /**
    * Start to synchronize files with the remote server
    */
-  public async startSync() {
+  public async startSync(): Promise<void> {
     await this.syncManager.syncSession();
   }
 
   /**
    * clear local changes to resolve sync problem
    */
-  public resetLocal() {
+  public resetLocal(): void {
     this.fileRepo.all().forEach(f => this.fileRepo.delete(f.id));
   }
 }

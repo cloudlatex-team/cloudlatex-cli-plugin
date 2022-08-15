@@ -2,11 +2,11 @@ import * as chokidar from 'chokidar';
 import * as path from 'path';
 import * as  EventEmitter from 'eventemitter3';
 import { FileRepository } from '../model/fileModel';
-import Logger from '../util/logger';
+import { Logger } from '../util/logger';
 
-type EventType = 'change-detected';
+type EventType = 'change-detected' | 'error';
 
-export default class FileWatcher extends EventEmitter<EventType> {
+export class FileWatcher extends EventEmitter<EventType> {
   private fileWatcher?: chokidar.FSWatcher;
 
   constructor(
@@ -20,14 +20,14 @@ export default class FileWatcher extends EventEmitter<EventType> {
 
   public init(): Promise<void> {
     const watcherOption: chokidar.WatchOptions = {
-      ignored: /\.git|\.cloudlatex\.json|synctex\.gz|\.vscode(\\|\/|$)|.DS\_Store/, //#TODO
+      ignored: /\.git|\.cloudlatex\.json|synctex\.gz|\.vscode(\\|\/|$)|.DS_Store/, //#TODO
       awaitWriteFinish: {
         stabilityThreshold: 500,
         pollInterval: 100
       }
     };
     const fileWatcher = this.fileWatcher = chokidar.watch(this.rootPath, watcherOption);
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       // TODO detect changes before running
       fileWatcher.on('ready', () => {
         this.logger.log('On chokidar ready event');
@@ -43,7 +43,7 @@ export default class FileWatcher extends EventEmitter<EventType> {
     });
   }
 
-  private onFileCreated(absPath: string, isFolder: boolean = false) {
+  private onFileCreated(absPath: string, isFolder = false) {
     const relativePath = this.getRelativePath(absPath);
     if (!this.watcherFileFilter(relativePath)) {
       return;
@@ -63,7 +63,11 @@ export default class FileWatcher extends EventEmitter<EventType> {
         this.emit('change-detected');
         return;
       }
-      return this.logger.error(`New ${isFolder ? 'folder' : 'file'} detected, but already registered.: ${absPath}`);
+
+      const msg = `New ${isFolder ? 'folder' : 'file'} detected, but already registered.: ${absPath}`;
+      this.logger.error(msg);
+      this.emit('error', msg);
+      return;
     }
     this.logger.log(
       `New ${isFolder ? 'folder' : 'file'} detected: ${absPath}`
@@ -86,9 +90,9 @@ export default class FileWatcher extends EventEmitter<EventType> {
     }
     const changedFile = this.fileRepo.findBy('relativePath', relativePath);
     if (!changedFile) {
-      this.logger.error(
-        `Local-changed-error: The fileInfo is not found at onFileChanged: ${absPath}`
-      );
+      const msg = `Local-changed-error: The fileInfo is not found at onFileChanged: ${absPath}`;
+      this.logger.error(msg);
+      this.emit('error', msg);
       return;
     }
 
@@ -118,9 +122,9 @@ export default class FileWatcher extends EventEmitter<EventType> {
     }
     const file = this.fileRepo.findBy('relativePath', relativePath);
     if (!file) {
-      this.logger.error(
-        `Local-changed-error: The fileInfo is not found at onFileDeleted: ${absPath}`
-      );
+      const msg = `Local-changed-error: The fileInfo is not found at onFileDeleted: ${absPath}`;
+      this.logger.error(msg);
+      this.emit('error', msg);
       return;
     }
 
@@ -147,6 +151,7 @@ export default class FileWatcher extends EventEmitter<EventType> {
     this.emit('change-detected');
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private onWatchingError(err: any) {
     if (process.platform === 'win32' && err['errno'] === -4048 && err['code'] === 'EPERM') {
       /**
@@ -158,15 +163,17 @@ export default class FileWatcher extends EventEmitter<EventType> {
       //
       this.logger.log('Ignore permission error', err);
       return;
+    } else {
+      this.logger.error('OnWatchingError', err);
+      this.emit('error', err.toString());
     }
-    { this.logger.error('OnWatchingError', err); }
   }
 
   private getRelativePath(absPath: string): string {
     return path.posix.relative(this.rootPath, absPath);
   }
 
-  public stop() {
+  public stop(): Promise<void> {
     this.logger.log('Stop watching file system', this.rootPath);
     return this.fileWatcher ? this.fileWatcher.close() : Promise.resolve();
   }
