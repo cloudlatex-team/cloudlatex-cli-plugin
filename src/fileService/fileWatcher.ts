@@ -3,24 +3,35 @@ import * as path from 'path';
 import * as  EventEmitter from 'eventemitter3';
 import { FileRepository } from '../model/fileModel';
 import { Logger } from '../util/logger';
+import anymatch, { Matcher } from 'anymatch';
+
 
 type EventType = 'change-detected' | 'error';
 
 export class FileWatcher extends EventEmitter<EventType> {
   private fileWatcher?: chokidar.FSWatcher;
-
+  private readonly ignored?: Matcher;
+  private logger: Logger;
   constructor(
     private rootPath: string,
     private fileRepo: FileRepository,
-    public readonly watcherFileFilter: (relativePath: string) => boolean = (_) => true,
-    private logger: Logger = new Logger()
+    options?: {
+      ignored?: Matcher,
+      logger?: Logger
+    },
   ) {
     super();
+
+    if (options?.ignored) {
+      this.ignored = options.ignored;
+    }
+
+    this.logger = options?.logger || new Logger();
   }
 
   public init(): Promise<void> {
     const watcherOption: chokidar.WatchOptions = {
-      ignored: /\.git|\.cloudlatex\.json|synctex\.gz|\.vscode(\\|\/|$)|.DS_Store/, //#TODO
+      ignored: this.ignored,
       awaitWriteFinish: {
         stabilityThreshold: 500,
         pollInterval: 100
@@ -44,10 +55,11 @@ export class FileWatcher extends EventEmitter<EventType> {
   }
 
   private onFileCreated(absPath: string, isFolder = false) {
-    const relativePath = this.getRelativePath(absPath);
-    if (!this.watcherFileFilter(relativePath)) {
+    if (this.ignored && anymatch(this.ignored, absPath)) {
       return;
     }
+
+    const relativePath = this.getRelativePath(absPath);
     let file = this.fileRepo.findBy('relativePath', relativePath);
     if (file) {
       if (!file.watcherSynced) {
@@ -84,10 +96,11 @@ export class FileWatcher extends EventEmitter<EventType> {
   }
 
   private async onFileChanged(absPath: string) {
-    const relativePath = this.getRelativePath(absPath);
-    if (!this.watcherFileFilter(relativePath)) {
+    if (this.ignored && anymatch(this.ignored, absPath)) {
       return;
     }
+
+    const relativePath = this.getRelativePath(absPath);
     const changedFile = this.fileRepo.findBy('relativePath', relativePath);
     if (!changedFile) {
       const msg = `Local-changed-error: The fileInfo is not found at onFileChanged: ${absPath}`;
@@ -116,10 +129,11 @@ export class FileWatcher extends EventEmitter<EventType> {
   }
 
   private async onFileDeleted(absPath: string) {
-    const relativePath = this.getRelativePath(absPath);
-    if (!this.watcherFileFilter(relativePath)) {
+    if (this.ignored && anymatch(this.ignored, absPath)) {
       return;
     }
+
+    const relativePath = this.getRelativePath(absPath);
     const file = this.fileRepo.findBy('relativePath', relativePath);
     if (!file) {
       const msg = `Local-changed-error: The fileInfo is not found at onFileDeleted: ${absPath}`;

@@ -1,4 +1,6 @@
 import { FileInfo } from './model/fileModel';
+import { Matcher } from 'anymatch';
+
 export interface ProjectInfo {
   id: number;
   // eslint-disable-next-line @typescript-eslint/naming-convention
@@ -30,6 +32,9 @@ export interface Config {
 
   /** full path of the directory to save meta data. */
   storagePath?: string | null;
+
+  /** ignore files to watch and upload  */
+  ignoreFiles?: Matcher;
 }
 
 export type Account = {

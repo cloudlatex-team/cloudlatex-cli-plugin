@@ -1,8 +1,8 @@
 import * as path from 'path';
+import { Matcher } from 'anymatch';
 import * as  EventEmitter from 'eventemitter3';
 import { Logger, getErrorTraceStr } from './util/logger';
-import { wildcard2regexp } from './util/pathUtil';
-import { Config, DecideSyncMode, Account, CompileResult, AppInfo, LoginStatus } from './types';
+import { Config, DecideSyncMode, Account, CompileResult, AppInfo } from './types';
 import { FileAdapter } from './fileService/fileAdapter';
 import { SyncManager, SyncResult } from './fileService/syncManager';
 import { FileWatcher } from './fileService/fileWatcher';
@@ -57,33 +57,43 @@ interface LAEventEmitter {
 }
 /* eslint-enable @typescript-eslint/adjacent-overload-signatures */
 
+// TODO relative/absolute url
+// chokidar can accept both relative and absolute pattern
+// how about filter function??
+// TODO: add file in out dir
 
-const IGNORE_FILES = [
-  '*.aux',
-  '*.bbl',
-  '*.blg',
-  '*.idx',
-  '*.ind',
-  '*.lof',
-  '*.lot',
-  '*.out',
-  '*.toc',
-  '*.acn',
-  '*.acr',
-  '*.alg',
-  '*.glg',
-  '*.glo',
-  '*.gls',
-  '*.fls',
-  '*.log',
-  '*.fdb_latexmk',
-  '*.snm',
-  '*.synctex',
-  '*.synctex(busy)',
-  '*.synctex.gz(busy)',
-  '*.nav'
+const SYSTEM_IGNORED_FILES = [
+  '**/.git/**',
+  '**/node_modules/**',
+  '**/.DS_Store',
 ];
 
+const DEFAULT_USER_IGNORED_FILES = [
+  '**/*.aux',
+  '**/*.bbl',
+  '**/*.bcf',
+  '**/*.blg',
+  '**/*.idx',
+  '**/*.ind',
+  '**/*.lof',
+  '**/*.lot',
+  '**/*.out',
+  '**/*.toc',
+  '**/*.acn',
+  '**/*.acr',
+  '**/*.alg',
+  '**/*.glg',
+  '**/*.glo',
+  '**/*.gls',
+  '**/*.ist',
+  '**/*.fls',
+  '**/*.log',
+  '**/*.nav',
+  '**/*.snm',
+  '**/*.fdb_latexmk',
+  '**/*.synctex.gz',
+  '**/*.run.xml',
+];
 
 export class LatexApp extends LAEventEmitter {
   private syncManager: SyncManager;
@@ -132,21 +142,38 @@ export class LatexApp extends LAEventEmitter {
     /**
      * File watcher
      */
-    this.fileWatcher = new FileWatcher(this.config.rootPath, fileRepo,
-      relativePath => {
-        const outFilePaths = [
-          this.config.outDir,
-          appInfoService.appInfo.logPath,
-          appInfoService.appInfo.pdfPath,
-          appInfoService.appInfo.synctexPath
-        ];
+    const isGeneratedFiles = (absPath: string) => {
+      const relativePath = path.posix.relative(this.config.rootPath, absPath);
+      return [
+        appInfoService.appInfo.logPath,
+        appInfoService.appInfo.pdfPath,
+        appInfoService.appInfo.synctexPath
+      ].includes(relativePath);
+    };
 
-        return !outFilePaths.includes(relativePath) &&
-          !IGNORE_FILES.some(
-            ignoreFile => relativePath.match(wildcard2regexp(ignoreFile))
-          );
-      },
-      logger);
+    const ignoreFiles: Matcher = [
+      ...SYSTEM_IGNORED_FILES,
+      isGeneratedFiles,
+    ];
+
+    if (config.ignoreFiles) {
+      if (Array.isArray(config.ignoreFiles)) {
+        ignoreFiles.push(...config.ignoreFiles);
+      } else {
+        ignoreFiles.push(config.ignoreFiles);
+      }
+    } else {
+      ignoreFiles.push(...DEFAULT_USER_IGNORED_FILES);
+    }
+
+    this.logger.log(`ignoreFiles: ${JSON.stringify(ignoreFiles)}`);
+
+
+    this.fileWatcher = new FileWatcher(this.config.rootPath, fileRepo,
+      {
+        ignored: ignoreFiles,
+        logger
+      });
 
     this.fileWatcher.on('change-detected', async () => {
       this.emit(LATEX_APP_EVENTS.FILE_CHANGED);
