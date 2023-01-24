@@ -313,45 +313,47 @@ afterEach(() => {
   fileWatcher.stop();
 });
 
+describe('FileManager', () => {
+  describe('Sync file system', () => {
+    tool.TEST_CONFIG_LIST.forEach(config => {
+      it(config.describe, async () => {
+        const instances = await setupInstances();
+        const localNewFiles = ['new_file.tex', 'images/new_img.png'];
+        const remoteNewFiles = config.conflict ?
+          localNewFiles : ['remote_new_file.tex', 'images/remote_new_img.png'];
+        const localChangeFiles = [instances.localFiles.all()[1], instances.localFiles.all()[4]];
+        const remoteChangeFiles = config.conflict ?
+          localChangeFiles : [instances.localFiles.all()[2], instances.localFiles.all()[3]];
+        const changeSet: ChangeSet = {
+          'local': {
+            'create': localNewFiles,
+            'update': localChangeFiles,
+            'delete': localChangeFiles
+          },
+          'remote': {
+            'create': remoteNewFiles,
+            'update': remoteChangeFiles,
+            'delete': remoteChangeFiles
+          },
+        };
+        const test = new TestSituation(testFileAndFolderDict, changeSet, config, instances);
+        await test.executeTest();
+      });
+    });
+  });
 
-describe('Sync file system', () => {
-  tool.TEST_CONFIG_LIST.forEach(config => {
-    it(config.describe, async () => {
+  describe('Sync folder test', () => {
+    it('Create a folder and a file locally', async () => {
       const instances = await setupInstances();
-      const localNewFiles = ['new_file.tex', 'images/new_img.png'];
-      const remoteNewFiles = config.conflict ?
-        localNewFiles : ['remote_new_file.tex', 'images/remote_new_img.png'];
-      const localChangeFiles = [instances.localFiles.all()[1], instances.localFiles.all()[4]];
-      const remoteChangeFiles = config.conflict ?
-        localChangeFiles : [instances.localFiles.all()[2], instances.localFiles.all()[3]];
-      const changeSet: ChangeSet = {
-        'local': {
-          'create': localNewFiles,
-          'update': localChangeFiles,
-          'delete': localChangeFiles
-        },
-        'remote': {
-          'create': remoteNewFiles,
-          'update': remoteChangeFiles,
-          'delete': remoteChangeFiles
-        },
-      };
-      const test = new TestSituation(testFileAndFolderDict, changeSet, config, instances);
-      await test.executeTest();
+      const folderAbsPath = path.posix.join(workdir, 'addedFolder');
+      const fileAbsPath = path.posix.join(workdir, 'addedFolder', 'file.txt');
+      const fileContent = 'file content';
+      await fs.promises.mkdir(folderAbsPath);
+      await fs.promises.writeFile(fileAbsPath, fileContent);
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const syncResult = await instances.syncManager.syncSession();
+      // TODO check the order of sync tasks
     });
   });
 });
 
-describe('Sync folder test', () => {
-  it('Create a folder and a file locally', async () => {
-    const instances = await setupInstances();
-    const folderAbsPath = path.posix.join(workdir, 'addedFolder');
-    const fileAbsPath = path.posix.join(workdir, 'addedFolder', 'file.txt');
-    const fileContent = 'file content';
-    await fs.promises.mkdir(folderAbsPath);
-    await fs.promises.writeFile(fileAbsPath, fileContent);
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const syncResult = await instances.syncManager.syncSession();
-    // TODO check the order of sync tasks
-  });
-});

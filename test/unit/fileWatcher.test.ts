@@ -42,6 +42,7 @@ const setupInstances = async () => {
     });
   };
   watcher.on('change-detected', changedSpy);
+
   await watcher.init();
   return {
     files,
@@ -61,120 +62,146 @@ afterEach(() => {
   }
 });
 
-describe('Create', () => {
-  it('localChange should be "create"', async () => {
-    const { files, awaitChangeDetection } = await setupInstances();
-    const relativePath = 'new_file.tex';
-    const filePath = path.resolve(workspacePath, relativePath);
-    fs.createFile(filePath);
-    await awaitChangeDetection();
-    const file = files.findBy('relativePath', relativePath);
-    chai.assert.strictEqual(file && file.localChange, 'create');
-    await fs.remove(filePath);
+describe('FileWatcher', () => {
+  describe('Create', () => {
+    it('localChange should be "create"', async () => {
+      const { files, awaitChangeDetection } = await setupInstances();
+      const relativePath = 'new_file.tex';
+      const filePath = path.resolve(workspacePath, relativePath);
+      fs.createFile(filePath);
+      await awaitChangeDetection();
+      const file = files.findBy('relativePath', relativePath);
+      chai.assert.strictEqual(file && file.localChange, 'create');
+      await fs.remove(filePath);
+    });
+
+    it('file that matches the ignore pattern with wildcard should be ignored', async () => {
+      const { changedSpy } = await setupInstances();
+      const relativePath = '.env';
+      const filePath = path.resolve(workspacePath, relativePath);
+      fs.createFile(filePath);
+
+      await tool.sleep(1000);
+      chai.assert.isTrue(changedSpy.notCalled);
+
+      await fs.remove(filePath);
+    });
+
+    it('file that matches the ignore pattern without wildcard should be ignored', async () => {
+      const { changedSpy } = await setupInstances();
+      const relativePath = 'ignore_file';
+      const filePath = path.resolve(workspacePath, relativePath);
+      fs.createFile(filePath);
+
+      await tool.sleep(1000);
+      chai.assert.isTrue(changedSpy.notCalled);
+
+      await fs.remove(filePath);
+    });
   });
-});
 
-describe('Update', () => {
-  it('localChange should be "update"', async () => {
-    const { files, awaitChangeDetection } = await setupInstances();
-    const relativePath = 'main.tex';
-    const filePath = path.resolve(workspacePath, relativePath);
-    fs.writeFile(filePath, 'updated content');
-    await awaitChangeDetection();
-    const file = files.findBy('relativePath', relativePath);
-    chai.assert.strictEqual(file && file.localChange, 'update');
+  describe('Update', () => {
+    it('localChange should be "update"', async () => {
+      const { files, awaitChangeDetection } = await setupInstances();
+      const relativePath = 'main.tex';
+      const filePath = path.resolve(workspacePath, relativePath);
+      fs.writeFile(filePath, 'updated content');
+      await awaitChangeDetection();
+      const file = files.findBy('relativePath', relativePath);
+      chai.assert.strictEqual(file && file.localChange, 'update');
+    });
   });
-});
 
-describe('Delete', () => {
-  it('localChange should be "delete"', async () => {
-    const { files, awaitChangeDetection } = await setupInstances();
-    const relativePath = 'main.tex';
-    const filePath = path.resolve(workspacePath, relativePath);
-    fs.remove(filePath);
-    await awaitChangeDetection();
-    const file = files.findBy('relativePath', relativePath);
-    chai.assert.strictEqual(file && file.localChange, 'delete');
-    fs.createFile(filePath);
-    // await awaitChangeDetection();
+  describe('Delete', () => {
+    it('localChange should be "delete"', async () => {
+      const { files, awaitChangeDetection } = await setupInstances();
+      const relativePath = 'main.tex';
+      const filePath = path.resolve(workspacePath, relativePath);
+      fs.remove(filePath);
+      await awaitChangeDetection();
+      const file = files.findBy('relativePath', relativePath);
+      chai.assert.strictEqual(file && file.localChange, 'delete');
+      fs.createFile(filePath);
+      // await awaitChangeDetection();
+    });
   });
-});
 
 
-describe('Create and Update', () => {
-  it('localChange should be "create"', async () => {
-    const { files, awaitChangeDetection } = await setupInstances();
-    const relativePath = 'new_file.tex';
-    const filePath = path.resolve(workspacePath, relativePath);
-    fs.createFile(filePath);
-    await awaitChangeDetection();
-    fs.writeFile(filePath, 'updated content');
-    await awaitChangeDetection();
-    const file = files.findBy('relativePath', relativePath);
-    chai.assert.strictEqual(file && file.localChange, 'create');
-    await fs.remove(filePath);
+  describe('Create and Update', () => {
+    it('localChange should be "create"', async () => {
+      const { files, awaitChangeDetection } = await setupInstances();
+      const relativePath = 'new_file.tex';
+      const filePath = path.resolve(workspacePath, relativePath);
+      fs.createFile(filePath);
+      await awaitChangeDetection();
+      fs.writeFile(filePath, 'updated content');
+      await awaitChangeDetection();
+      const file = files.findBy('relativePath', relativePath);
+      chai.assert.strictEqual(file && file.localChange, 'create');
+      await fs.remove(filePath);
+    });
   });
-});
 
-describe('Create and Update and Delete', () => {
-  it('the file should not exist', async () => {
-    const { files, awaitChangeDetection } = await setupInstances();
-    const relativePath = 'new_file.tex';
-    const filePath = path.resolve(workspacePath, relativePath);
-    fs.createFile(filePath);
-    await awaitChangeDetection();
-    fs.writeFile(filePath, 'updated content');
-    await awaitChangeDetection();
-    fs.remove(filePath);
-    await awaitChangeDetection();
-    const file = files.findBy('relativePath', relativePath);
-    chai.assert.isNull(file);
+  describe('Create and Update and Delete', () => {
+    it('the file should not exist', async () => {
+      const { files, awaitChangeDetection } = await setupInstances();
+      const relativePath = 'new_file.tex';
+      const filePath = path.resolve(workspacePath, relativePath);
+      fs.createFile(filePath);
+      await awaitChangeDetection();
+      fs.writeFile(filePath, 'updated content');
+      await awaitChangeDetection();
+      fs.remove(filePath);
+      await awaitChangeDetection();
+      const file = files.findBy('relativePath', relativePath);
+      chai.assert.isNull(file);
+    });
   });
-});
 
-describe('Delete and recreate', () => {
-  it('localChange should be "update"', async () => {
-    const { files, awaitChangeDetection } = await setupInstances();
-    const relativePath = 'main.tex';
-    const filePath = path.resolve(workspacePath, relativePath);
-    fs.remove(filePath);
-    await awaitChangeDetection();
-    fs.createFile(filePath);
-    await awaitChangeDetection();
-    const file = files.findBy('relativePath', relativePath);
-    chai.assert.strictEqual(file && file.localChange, 'update');
+  describe('Delete and recreate', () => {
+    it('localChange should be "update"', async () => {
+      const { files, awaitChangeDetection } = await setupInstances();
+      const relativePath = 'main.tex';
+      const filePath = path.resolve(workspacePath, relativePath);
+      fs.remove(filePath);
+      await awaitChangeDetection();
+      fs.createFile(filePath);
+      await awaitChangeDetection();
+      const file = files.findBy('relativePath', relativePath);
+      chai.assert.strictEqual(file && file.localChange, 'update');
+    });
   });
-});
 
 
-describe('Update, delete and recreate', () => {
-  it('localChange should be "update"', async () => {
-    const { files, awaitChangeDetection } = await setupInstances();
-    const relativePath = 'main.tex';
-    const filePath = path.resolve(workspacePath, relativePath);
-    fs.writeFile(filePath, 'update content');
-    await awaitChangeDetection();
-    fs.remove(filePath);
-    await awaitChangeDetection();
-    fs.createFile(filePath);
-    await awaitChangeDetection();
-    const file = files.findBy('relativePath', relativePath);
-    chai.assert.strictEqual(file && file.localChange, 'update');
+  describe('Update, delete and recreate', () => {
+    it('localChange should be "update"', async () => {
+      const { files, awaitChangeDetection } = await setupInstances();
+      const relativePath = 'main.tex';
+      const filePath = path.resolve(workspacePath, relativePath);
+      fs.writeFile(filePath, 'update content');
+      await awaitChangeDetection();
+      fs.remove(filePath);
+      await awaitChangeDetection();
+      fs.createFile(filePath);
+      await awaitChangeDetection();
+      const file = files.findBy('relativePath', relativePath);
+      chai.assert.strictEqual(file && file.localChange, 'update');
+    });
   });
-});
 
-describe('Create, delete and recreate', () => {
-  it('localChange should be "create"', async () => {
-    const { files, awaitChangeDetection } = await setupInstances();
-    const relativePath = 'new_file.tex';
-    const filePath = path.resolve(workspacePath, relativePath);
-    fs.createFile(filePath);
-    await awaitChangeDetection();
-    fs.remove(filePath);
-    await awaitChangeDetection();
-    fs.createFile(filePath);
-    await awaitChangeDetection();
-    const file = files.findBy('relativePath', relativePath);
-    chai.assert.strictEqual(file && file.localChange, 'create');
+  describe('Create, delete and recreate', () => {
+    it('localChange should be "create"', async () => {
+      const { files, awaitChangeDetection } = await setupInstances();
+      const relativePath = 'new_file.tex';
+      const filePath = path.resolve(workspacePath, relativePath);
+      fs.createFile(filePath);
+      await awaitChangeDetection();
+      fs.remove(filePath);
+      await awaitChangeDetection();
+      fs.createFile(filePath);
+      await awaitChangeDetection();
+      const file = files.findBy('relativePath', relativePath);
+      chai.assert.strictEqual(file && file.localChange, 'create');
+    });
   });
 });
