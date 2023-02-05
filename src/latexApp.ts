@@ -1,5 +1,5 @@
 import * as path from 'path';
-import { Matcher } from 'anymatch';
+import anymatch, { Matcher } from 'anymatch';
 import * as  EventEmitter from 'eventemitter3';
 import { Logger, getErrorTraceStr } from './util/logger';
 import { Config, DecideSyncMode, Account, CompileResult, AppInfo } from './types';
@@ -7,7 +7,7 @@ import { FileAdapter } from './fileService/fileAdapter';
 import { SyncManager, SyncResult } from './fileService/syncManager';
 import { FileWatcher } from './fileService/fileWatcher';
 import { TypeDB, Repository } from '@moritanian/type-db';
-import { FILE_INFO_DESC } from './model/fileModel';
+import { FileInfo, FILE_INFO_DESC } from './model/fileModel';
 import { IBackend } from './backend/ibackend';
 import { backendSelector } from './backend/backendSelector';
 import { AccountService } from './service/accountService';
@@ -114,33 +114,7 @@ export class LatexApp extends LAEventEmitter {
     super();
 
     /**
-     * Sync Manager
-     */
-    this.syncManager = new SyncManager(fileRepo, fileAdapter,
-      async (conflictFiles) => {
-        appInfoService.setConflicts(conflictFiles);
-        return decideSyncMode(conflictFiles);
-      }
-      , logger);
-
-    this.syncManager.on('sync-finished', (result) => {
-      if (result.success) {
-        this.emit(LATEX_APP_EVENTS.FILE_SYNC_SUCCEEDED, result);
-      } else if (result.canceled) {
-        // canceled
-      } else {
-        const msg = result.errors.join('\n');
-        this.logger.error('Error in synchronizing files: ' + msg);
-        this.emit(LATEX_APP_EVENTS.FILE_SYNC_FAILED, msg);
-      }
-    });
-
-    this.syncManager.on('error', (msg) => {
-      this.emit(LATEX_APP_EVENTS.FILE_CHANGE_ERROR, msg);
-    });
-
-    /**
-     * File watcher
+     * Ignore file setting
      */
     const isGeneratedFiles = (absPath: string) => {
       const relativePath = path.posix.relative(this.config.rootPath, absPath);
@@ -166,9 +140,50 @@ export class LatexApp extends LAEventEmitter {
       ignoreFiles.push(...DEFAULT_USER_IGNORED_FILES);
     }
 
+    const checkIgnored = (file: FileInfo) => {
+      const absPath = path.posix.join(this.config.rootPath, file.relativePath);
+      return anymatch(ignoreFiles, absPath);
+    };
+
     this.logger.log(`ignoreFiles: ${JSON.stringify(ignoreFiles)}`);
 
 
+    // Remove entries of ignore files from file db
+    fileRepo.all().filter(checkIgnored).forEach(file => {
+      logger.info(`Remove entry [${file.relativePath}] from file db`);
+      fileRepo.delete(file.id);
+    });
+
+
+    /**
+     * Sync Manager
+     */
+    this.syncManager = new SyncManager(fileRepo, fileAdapter,
+      async (conflictFiles) => {
+        appInfoService.setConflicts(conflictFiles);
+        return decideSyncMode(conflictFiles);
+      }
+      , logger, checkIgnored);
+
+    this.syncManager.on('sync-finished', (result) => {
+      if (result.success) {
+        this.emit(LATEX_APP_EVENTS.FILE_SYNC_SUCCEEDED, result);
+      } else if (result.canceled) {
+        // canceled
+      } else {
+        const msg = result.errors.join('\n');
+        this.logger.error('Error in synchronizing files: ' + msg);
+        this.emit(LATEX_APP_EVENTS.FILE_SYNC_FAILED, msg);
+      }
+    });
+
+    this.syncManager.on('error', (msg) => {
+      this.emit(LATEX_APP_EVENTS.FILE_CHANGE_ERROR, msg);
+    });
+
+    /**
+     * File watcher
+     */
     this.fileWatcher = new FileWatcher(this.config.rootPath, fileRepo,
       {
         ignored: ignoreFiles,
@@ -430,6 +445,8 @@ export class LatexApp extends LAEventEmitter {
    * clear local changes to resolve sync problem
    */
   public resetLocal(): void {
+    this.logger.info('resetLocal()');
     this.fileRepo.all().forEach(f => this.fileRepo.delete(f.id));
+    this.fileRepo.save();
   }
 }

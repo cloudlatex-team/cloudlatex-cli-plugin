@@ -30,7 +30,8 @@ export class SyncManager extends EventEmitter<EventType> {
     private fileRepo: FileRepository,
     private fileAdapter: FileAdapter,
     public decideSyncMode: DecideSyncMode,
-    private logger: Logger
+    private logger: Logger,
+    private checkIgnored: (file: FileInfo) => boolean = () => false,
   ) {
     super();
     this.syncSession = _.debounce(
@@ -77,7 +78,12 @@ export class SyncManager extends EventEmitter<EventType> {
   }
 
   private async sync(): Promise<SyncResult> {
-    const remoteFileList = await this.fileAdapter.loadFileList();
+    const remoteFileList = (await this.fileAdapter.loadFileList())
+      .filter(remoteFile => {
+        // Filter by ignore file settings
+        return !this.checkIgnored(remoteFile);
+      });
+
     const remoteFileDict = remoteFileList.reduce((dict, file) => {
       if (file.remoteId === null) {
         throw new Error('remoteId is null');
