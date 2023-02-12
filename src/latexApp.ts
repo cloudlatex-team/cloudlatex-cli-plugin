@@ -1,5 +1,4 @@
 import * as path from 'path';
-import anymatch from 'anymatch';
 import * as  EventEmitter from 'eventemitter3';
 import { Logger, getErrorTraceStr } from './util/logger';
 import { Config, DecideSyncMode, Account, CompileResult, ILatexApp, LoginResult, SyncResult } from './types';
@@ -13,7 +12,7 @@ import { backendSelector } from './backend/backendSelector';
 import { AccountService } from './service/accountService';
 import { AppInfoService } from './service/appInfoService';
 import {
-  calcIgnoredFiles, calcRelativeOutDir, getDBFilePath, toPosixPath, toAbsolutePath
+  calcIgnoredFiles, calcRelativeOutDir, getDBFilePath, toPosixPath, checkIgnoredByFileInfo
 } from './fileService/filePath';
 
 /* eslint-disable @typescript-eslint/naming-convention */
@@ -67,18 +66,10 @@ export class LatexApp extends LAEventEmitter implements ILatexApp {
     const ignoredFiles = calcIgnoredFiles(this.appInfoService);
 
     const checkIgnored = (file: FileInfo) => {
-      const absPath = toAbsolutePath(this.config, file.relativePath);
-      return anymatch(ignoredFiles, absPath);
+      return checkIgnoredByFileInfo(this.config, file, ignoredFiles);
     };
 
     this.logger.log(`ignoredFiles: ${JSON.stringify(ignoredFiles)}`);
-
-
-    // Remove entries of ignore files from file db
-    fileRepo.all().filter(checkIgnored).forEach(file => {
-      logger.info(`Remove entry [${file.relativePath}] from file db`);
-      fileRepo.delete(file.id);
-    });
 
 
     /**
@@ -95,7 +86,7 @@ export class LatexApp extends LAEventEmitter implements ILatexApp {
     /**
      * File watcher
      */
-    this.fileWatcher = new FileWatcher(this.config.rootPath, fileRepo,
+    this.fileWatcher = new FileWatcher(this.config, fileRepo,
       {
         ignored: ignoredFiles,
         logger
@@ -150,10 +141,6 @@ export class LatexApp extends LAEventEmitter implements ILatexApp {
       // Not initialized because there is no db file.
     }
     const fileRepo = db.getRepository(FILE_INFO_DESC);
-    fileRepo.all().forEach(file => {
-      file.watcherSynced = true;
-    });
-    fileRepo.save();
 
     const fileAdapter = new FileAdapter(config.rootPath, fileRepo, backend);
     const defaultDecideSyncMode: DecideSyncMode = () => Promise.resolve('upload');

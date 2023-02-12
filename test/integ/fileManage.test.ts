@@ -72,7 +72,7 @@ const setupInstances = async () => {
   const syncManager = new SyncManager(localFiles, fileAdapter, decideSyncMode, logger);
 
   // File watcher
-  fileWatcher = new FileWatcher(workdir, localFiles, { logger });
+  fileWatcher = new FileWatcher({ rootPath: workdir, backend: '', endpoint: '', projectId: 0 }, localFiles, { logger });
   await fileWatcher.init();
 
   return {

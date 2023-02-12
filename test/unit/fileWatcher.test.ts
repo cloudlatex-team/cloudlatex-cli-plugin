@@ -41,7 +41,11 @@ const setupInstances = async (options?: { noDBEntry?: boolean, deletedFileDBEntr
     '**/ignore_file', // specific file
   ];
 
-  watcher = new FileWatcher(workspacePath, files, { ignored: ignoredFiles, logger: new Logger('warn') });
+  watcher = new FileWatcher(
+    { rootPath: workspacePath, backend: '', endpoint: '', projectId: 0 },
+    files,
+    { ignored: ignoredFiles, logger: new Logger('warn') }
+  );
 
   const changedSpy = Sinon.spy();
   const awaitChangeDetection = () => {

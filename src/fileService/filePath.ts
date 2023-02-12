@@ -1,5 +1,7 @@
 import { Matcher } from 'anymatch';
+import anymatch from 'anymatch';
 import * as path from 'path';
+import { FileInfo } from '../model/fileModel';
 import { AppInfoService } from '../service/appInfoService';
 import { Config } from '../types';
 const SYSTEM_IGNORED_FILES = [
@@ -82,6 +84,10 @@ export function calcIgnoredFiles(appInfoService: AppInfoService): Matcher {
   );
 }
 
+export function checkIgnoredByFileInfo(config: Config, file: FileInfo, ignoredFiles: Matcher): boolean {
+  const absPath = toAbsolutePath(config, file.relativePath);
+  return anymatch(ignoredFiles, absPath);
+}
 
 export function getDBFilePath(config: Config): string | undefined {
   return config.storagePath ? path.join(

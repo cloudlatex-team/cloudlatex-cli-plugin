@@ -1,10 +1,10 @@
 import * as chokidar from 'chokidar';
-import * as path from 'path';
 import * as  EventEmitter from 'eventemitter3';
 import { FileRepository } from '../model/fileModel';
 import { Logger } from '../util/logger';
 import anymatch, { Matcher } from 'anymatch';
-import { toPosixPath } from './filePath';
+import { checkIgnoredByFileInfo, toPosixPath, toRelativePath } from './filePath';
+import { Config } from '../types';
 
 
 type EventType = 'change-detected' | 'error';
@@ -13,8 +13,9 @@ export class FileWatcher extends EventEmitter<EventType> {
   private fileWatcher?: chokidar.FSWatcher;
   private readonly ignored?: Matcher;
   private logger: Logger;
+  private initialized = false;
   constructor(
-    private rootPath: string,
+    private config: Config,
     private fileRepo: FileRepository,
     options?: {
       ignored?: Matcher,
@@ -31,6 +32,27 @@ export class FileWatcher extends EventEmitter<EventType> {
   }
 
   public init(): Promise<void> {
+
+    this.initialized = false;
+
+    /**
+     * Set watcherSynced false
+     */
+    this.fileRepo.all().forEach(file => {
+      file.watcherSynced = false;
+    });
+
+    /**
+     * Remove entries of ignore files from file db
+     */
+    this.fileRepo.all().filter(
+      (file) => checkIgnoredByFileInfo(this.config, file, this.ignored || [])
+    ).forEach(file => {
+      this.logger.info(`Remove entry [${file.relativePath}] from file db`);
+      this.fileRepo.delete(file.id);
+    });
+    this.fileRepo.save();
+
     const watcherOption: chokidar.WatchOptions = {
       ignored: this.ignored,
       awaitWriteFinish: {
@@ -38,19 +60,39 @@ export class FileWatcher extends EventEmitter<EventType> {
         pollInterval: 100
       }
     };
-    const fileWatcher = this.fileWatcher = chokidar.watch(this.rootPath, watcherOption);
+    const fileWatcher = this.fileWatcher = chokidar.watch(this.config.rootPath, watcherOption);
+
+    fileWatcher.on('add', (absPath) => this.onFileCreated(toPosixPath(absPath), false));
+    fileWatcher.on('addDir', (absPath) => this.onFileCreated(toPosixPath(absPath), true));
+    fileWatcher.on('change', (absPath) => this.onFileChanged(toPosixPath(absPath)));
+    fileWatcher.on('unlink', (absPath) => this.onFileDeleted(toPosixPath(absPath)));
+    fileWatcher.on('unlinkDir', (absPath) => this.onFileDeleted(toPosixPath(absPath)));
+    fileWatcher.on('error', (err) => this.onWatchingError(err));
+
     return new Promise((resolve) => {
-      // TODO detect changes before running
       fileWatcher.on('ready', () => {
         this.logger.log('On chokidar ready event');
 
-        fileWatcher.on('add', (absPath) => this.onFileCreated(toPosixPath(absPath), false));
-        fileWatcher.on('addDir', (absPath) => this.onFileCreated(toPosixPath(absPath), true));
-        fileWatcher.on('change', (absPath) => this.onFileChanged(toPosixPath(absPath)));
-        fileWatcher.on('unlink', (absPath) => this.onFileDeleted(toPosixPath(absPath)));
-        fileWatcher.on('unlinkDir', (absPath) => this.onFileDeleted(toPosixPath(absPath)));
-        fileWatcher.on('error', (err) => this.onWatchingError(err));
+        // Handle the entry which watcherSynced is false as deleted file
+        const notFoundFiles = this.fileRepo.where({ watcherSynced: false });
+        notFoundFiles.forEach(notFound => {
+          notFound.watcherSynced = true;
+          notFound.localChange = 'delete';
+        });
+
+        this.initialized = true;
         resolve();
+
+        // Emit change if needed
+        const changedFiles = this.fileRepo.all().filter(
+          file => file.localChange !== 'no' || file.remoteChange !== 'no'
+        );
+        if (changedFiles.length) {
+          this.logger.info(
+            `Found changed files after initialization: ${JSON.stringify(changedFiles.map(file => file.relativePath))}`
+          );
+          this.emitChange();
+        }
       });
     });
   }
@@ -61,19 +103,27 @@ export class FileWatcher extends EventEmitter<EventType> {
     }
 
     const relativePath = this.getRelativePath(absPath);
+
+    if (relativePath === '') { // Ignore root entry
+      return;
+    }
+
     let file = this.fileRepo.findBy('relativePath', relativePath);
+
+
     if (file) {
       if (!file.watcherSynced) {
-        // this file is downloaded from remote
+        // this file is downloaded from remote or detected on initialization
         file.watcherSynced = true;
         this.fileRepo.save();
         return;
       }
+
       if (file.localChange === 'delete') {
         // The same named file is deleted and recreated.
         file.localChange = 'update';
         this.fileRepo.save();
-        this.emit('change-detected');
+        this.emitChange();
         return;
       }
 
@@ -82,6 +132,7 @@ export class FileWatcher extends EventEmitter<EventType> {
       this.emit('error', msg);
       return;
     }
+
     this.logger.log(
       `New ${isFolder ? 'folder' : 'file'} detected: ${absPath}`
     );
@@ -93,7 +144,8 @@ export class FileWatcher extends EventEmitter<EventType> {
       isFolder
     });
     this.fileRepo.save();
-    this.emit('change-detected');
+
+    this.emitChange();
   }
 
   private async onFileChanged(absPath: string) {
@@ -126,7 +178,7 @@ export class FileWatcher extends EventEmitter<EventType> {
     );
 
     this.fileRepo.save();
-    this.emit('change-detected');
+    this.emitChange();
   }
 
   private async onFileDeleted(absPath: string) {
@@ -163,7 +215,7 @@ export class FileWatcher extends EventEmitter<EventType> {
 
     file.localChange = 'delete';
     this.fileRepo.save();
-    this.emit('change-detected');
+    this.emitChange();
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -184,12 +236,18 @@ export class FileWatcher extends EventEmitter<EventType> {
     }
   }
 
+  private emitChange() {
+    if (this.initialized) {
+      this.emit('change-detected');
+    }
+  }
+
   private getRelativePath(absPath: string): string {
-    return path.posix.relative(this.rootPath, absPath);
+    return toRelativePath(this.config, absPath);
   }
 
   public stop(): Promise<void> {
-    this.logger.log('Stop watching file system', this.rootPath);
+    this.logger.log('Stop watching file system', this.config.rootPath);
     return this.fileWatcher ? this.fileWatcher.close() : Promise.resolve();
   }
 }
