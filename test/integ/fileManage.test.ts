@@ -304,7 +304,7 @@ class TestSituation {
 
 afterEach(() => {
   fsStub.restore();
-  fileWatcher.stop();
+  fileWatcher?.stop();
 });
 
 describe('FileManager', () => {

@@ -24,10 +24,17 @@ const cleanupWorkspace = async () => {
 
 let watcher: FileWatcher | null;
 
-const setupInstances = async () => {
+const setupInstances = async (options?: { noDBEntry?: boolean, deletedFileDBEntry?: boolean }) => {
   const db = new TypeDB();
   const files = db.getRepository(FILE_INFO_DESC);
-  files.new({ relativePath: 'main.tex', watcherSynced: true });
+
+  if (!options?.noDBEntry) {
+    files.new({ relativePath: 'main.tex' });
+  }
+
+  if (options?.deletedFileDBEntry) {
+    files.new({ relativePath: 'deleted.tex' });
+  }
 
   const ignoredFiles = [
     '**/.*', // dot file
@@ -64,6 +71,36 @@ afterEach(() => {
 });
 
 describe('FileWatcher', () => {
+  describe('Initialization', () => {
+    it('db entry should exist', async () => {
+      const { files } = await setupInstances();
+      const entry = files.find(1);
+      chai.assert.exists(entry);
+      chai.assert.isTrue(entry?.watcherSynced);
+      chai.assert.equal(entry?.localChange, 'no');
+      chai.assert.equal(entry?.remoteChange, 'no');
+
+    });
+
+    it('db entry should be created if not exists', async () => {
+      const { files } = await setupInstances({ noDBEntry: true });
+      const entry = files.find(1);
+      chai.assert.exists(entry);
+      chai.assert.isTrue(entry?.watcherSynced);
+      chai.assert.equal(entry?.localChange, 'create');
+      chai.assert.equal(entry?.remoteChange, 'no');
+    });
+
+    it('db entry should be checked as deleted if the file does not exist', async () => {
+      const { files } = await setupInstances({ deletedFileDBEntry: true });
+      const entry = files.find(2);
+      chai.assert.exists(entry);
+      chai.assert.isTrue(entry?.watcherSynced);
+      chai.assert.equal(entry?.localChange, 'delete');
+      chai.assert.equal(entry?.remoteChange, 'no');
+    });
+  });
+
   describe('Create', () => {
     it('localChange should be "create"', async () => {
       const { files, awaitChangeDetection } = await setupInstances();
