@@ -27,9 +27,6 @@ export interface Config {
   /** project ID */
   projectId: number;
 
-  /** set true if automatically compile when any file is saved */
-  autoCompile?: boolean;
-
   /** full path of the directory to save meta data. */
   storagePath?: string | null;
 
@@ -73,16 +70,39 @@ export interface DecideSyncMode {
   ): Promise<SyncMode>
 }
 
-export type CompileStatus = 'success' | 'compiler-error' | 'no-target-error' | 'unknown-error';
-export interface CompileResult {
+export type BaseResultStatus = 'success' | 'invalid-account' | 'offline' | 'no-target-error' | 'unknown-error';
+
+export type LoginResult = {
+  status: BaseResultStatus;
+  appInfo: AppInfo;
+  errors?: string[]
+};
+
+export type SyncStatus = BaseResultStatus | 'canceled';
+export type SyncResult = {
+  status: SyncStatus;
+  appInfo: AppInfo;
+  errors?: string[]
+};
+
+export type CompileStatus = BaseResultStatus | 'compiler-error';
+export type CompileResult = {
   status: CompileStatus,
-  logStream?: NodeJS.ReadableStream,
-  pdfStream?: NodeJS.ReadableStream,
-  synctexStream?: NodeJS.ReadableStream,
   logs?: {
     type: 'warning' | 'error',
     file: string,
     line: number,
     message: string
-  }[]
+  }[],
+  errors?: string[]
+  appInfo: AppInfo;
+};
+
+export interface ILatexApp {
+  start(): Promise<LoginResult>;
+  login(): Promise<LoginResult>;
+  sync(): Promise<SyncResult>;
+  compile(): Promise<CompileResult>;
+  stop(): void;
+  resetLocal(): void;
 }

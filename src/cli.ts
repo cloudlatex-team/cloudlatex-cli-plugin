@@ -18,14 +18,9 @@ function main() {
     backend: 'cloudlatex',
     projectId: 0,
     endpoint: 'http://localhost:3000/api',
-    autoCompile: true,
     storagePath: rootPath
   }).then(latexApp => {
-    latexApp.setAccount({
-      email: '',
-      token: '',
-      client: ''
-    });
+
   });
 
 }

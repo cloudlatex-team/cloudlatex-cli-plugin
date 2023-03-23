@@ -4,6 +4,7 @@ import * as  EventEmitter from 'eventemitter3';
 import { FileRepository } from '../model/fileModel';
 import { Logger } from '../util/logger';
 import anymatch, { Matcher } from 'anymatch';
+import { toPosixPath } from './filePath';
 
 
 type EventType = 'change-detected' | 'error';
@@ -43,11 +44,11 @@ export class FileWatcher extends EventEmitter<EventType> {
       fileWatcher.on('ready', () => {
         this.logger.log('On chokidar ready event');
 
-        fileWatcher.on('add', (absPath) => this.onFileCreated(absPath.replace(/\\/g, path.posix.sep), false));
-        fileWatcher.on('addDir', (absPath) => this.onFileCreated(absPath.replace(/\\/g, path.posix.sep), true));
-        fileWatcher.on('change', (absPath) => this.onFileChanged(absPath.replace(/\\/g, path.posix.sep)));
-        fileWatcher.on('unlink', (absPath) => this.onFileDeleted(absPath.replace(/\\/g, path.posix.sep)));
-        fileWatcher.on('unlinkDir', (absPath) => this.onFileDeleted(absPath.replace(/\\/g, path.posix.sep)));
+        fileWatcher.on('add', (absPath) => this.onFileCreated(toPosixPath(absPath), false));
+        fileWatcher.on('addDir', (absPath) => this.onFileCreated(toPosixPath(absPath), true));
+        fileWatcher.on('change', (absPath) => this.onFileChanged(toPosixPath(absPath)));
+        fileWatcher.on('unlink', (absPath) => this.onFileDeleted(toPosixPath(absPath)));
+        fileWatcher.on('unlinkDir', (absPath) => this.onFileDeleted(toPosixPath(absPath)));
         fileWatcher.on('error', (err) => this.onWatchingError(err));
         resolve();
       });

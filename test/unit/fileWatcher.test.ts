@@ -7,9 +7,10 @@ import { TypeDB } from '@moritanian/type-db';
 import { FILE_INFO_DESC } from '../../src/model/fileModel';
 import { Logger } from '../../src/util/logger';
 import * as tool from './../tool/syncTestTool';
+import { toPosixPath } from '../../src/fileService/filePath';
 
-const fixturePath = path.resolve(__dirname, './../fixture').replace(/\\/g, path.posix.sep);
-const workspacePath = path.resolve(__dirname, './../workspace').replace(/\\/g, path.posix.sep);
+const fixturePath = toPosixPath(path.resolve(__dirname, './../fixture'));
+const workspacePath = toPosixPath(path.resolve(__dirname, './../workspace'));
 
 const setupWorkspace = async () => {
   await cleanupWorkspace();

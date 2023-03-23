@@ -2,14 +2,11 @@ import { SyncMode, DecideSyncMode, KeyType, ChangeState } from '../types';
 import { FileAdapter } from './fileAdapter';
 import { FileRepository, FileInfo } from '../model/fileModel';
 import * as path from 'path';
-import * as  EventEmitter from 'eventemitter3';
-import * as _ from 'lodash';
-import { Logger, getErrorTraceStr } from '../util/logger';
+import { getErrorTraceStr, Logger } from '../util/logger';
 
 export type SyncResult = {
   success: boolean;
   canceled: boolean;
-  fileChanged: boolean; // show if any file (not folder) is changed
   errors: string[]
 };
 
@@ -18,14 +15,11 @@ type SyncTaskResult = {
   message: string;
 };
 
-type EventType = 'sync-finished' | 'error';
 type SyncTask = 'download' | 'createLocalFolder' | 'createRemoteFolder' |
   'upload' | 'updateRemote' | 'deleteRemote' | 'deleteLocal' | 'no';
 
-export class SyncManager extends EventEmitter<EventType> {
-  private syncing = false;
-  private fileChanged = false; // Whether any file (not folder) is changed
-  public syncSession: () => void;
+export class SyncManager {
+  private runner: AsyncRunner<SyncResult>;
   constructor(
     private fileRepo: FileRepository,
     private fileAdapter: FileAdapter,
@@ -33,67 +27,52 @@ export class SyncManager extends EventEmitter<EventType> {
     private logger: Logger,
     private checkIgnored: (file: FileInfo) => boolean = () => false,
   ) {
-    super();
-    this.syncSession = _.debounce(
-      this._syncSession.bind(this),
-      5000,
-      { trailing: true, leading: true }
-    );
+    this.runner = new AsyncRunner<SyncResult>(() => {
+      return this.execSync();
+    });
   }
 
-  async _syncSession(): Promise<void> {
-    this.fileChanged = false;
-    if (this.syncing) {
-      this.syncSession();
-      return;
-    }
+  public async sync(): Promise<SyncResult> {
+    return this.runner.run();
+  }
 
-    this.logger.log('Synchronizing files with server ...');
+  private async execSync(): Promise<SyncResult> {
+    this.logger.info('File synchronization is started');
 
-    this.syncing = true;
-
+    let remoteFileList: FileInfo[];
+    let remoteFileDict: Record<KeyType, FileInfo> = {};
     try {
-      const result = await this.sync();
-      if (result.success) {
-        this.logger.log('Successfully synchronized!');
-      } else if (result.canceled) {
-        this.logger.log('Synchronizing is canceled');
-      }
-      this.syncing = false;
-      this.emitSyncResult(result);
-    } catch (e) {
-      this.syncing = false;
-      this.logger.log('Failed to sync: ' + getErrorTraceStr(e));
-      this.emitSyncResult({
+      remoteFileList = (await this.fileAdapter.loadFileList())
+        .filter(remoteFile => {
+          // Filter by ignore file settings
+          return !this.checkIgnored(remoteFile);
+        });
+
+      remoteFileDict = remoteFileList.reduce((dict, file) => {
+        if (file.remoteId === null) {
+          // TODO: recover
+          throw new Error('remoteId is null');
+        }
+        dict[file.remoteId] = file;
+        return dict;
+      }, {} as Record<KeyType, FileInfo>);
+    } catch (err) {
+      return {
         success: false,
         canceled: false,
-        fileChanged: this.fileChanged,
-        errors: [getErrorTraceStr(e)]
-      });
+        errors: [getErrorTraceStr(err)]
+      };
     }
-  }
 
-  private emitSyncResult(result: SyncResult) {
-    this.emit('sync-finished', result);
-  }
 
-  private async sync(): Promise<SyncResult> {
-    const remoteFileList = (await this.fileAdapter.loadFileList())
-      .filter(remoteFile => {
-        // Filter by ignore file settings
-        return !this.checkIgnored(remoteFile);
-      });
-
-    const remoteFileDict = remoteFileList.reduce((dict, file) => {
-      if (file.remoteId === null) {
-        throw new Error('remoteId is null');
-      }
-      dict[file.remoteId] = file;
-      return dict;
-    }, {} as Record<KeyType, FileInfo>);
-
-    // Reset remote change state and change location
     this.fileRepo.all().forEach(file => {
+      // Remove ignored file entry
+      if (this.checkIgnored(file)) {
+        this.fileRepo.delete(file.id);
+        return;
+      }
+
+      // Reset remote change state and change location
       file.remoteChange = 'no';
       file.changeLocation = 'no';
     });
@@ -123,17 +102,17 @@ export class SyncManager extends EventEmitter<EventType> {
           const msg = 'Unexpected situation is detected:'
             + ` remote file is renamed and local file is created: ${file.relativePath}`;
           this.logger.error(msg);
-          this.emit('error', msg);
+          // TODO: recover
         } else if (file.localChange === 'delete') {
           const msg = 'Unsupported situation is detected:'
             + ` remote file is renamed and local file is deleted: ${file.relativePath}`;
           this.logger.error(msg);
-          this.emit('error', msg);
+          // TODO: recover
         } else if (file.localChange === 'update') {
           const msg = 'Unsupported situation is detected:'
             + ` remote file is renamed and local file is updated: ${file.relativePath}`;
           this.logger.error(msg);
-          this.emit('error', msg);
+          // TODO: recover
 
         }
       }
@@ -163,18 +142,23 @@ export class SyncManager extends EventEmitter<EventType> {
 
     let syncMode: SyncMode = 'download';
     if (this.fileRepo.findBy('changeLocation', 'both')) {
+      this.logger.info('File conflict is detected');
+
       try {
         syncMode = await this.decideSyncMode(
           this.fileRepo.where({ 'changeLocation': 'both' }),
         );
       } catch (e) {
+        this.logger.info('File synchronization is canceled');
+
         return {
           success: false,
           canceled: true,
-          fileChanged: this.fileChanged,
           errors: []
         };
       }
+
+      this.logger.info(`SyncMode ${syncMode} is selected`);
     }
 
     const results = await new TasksExecuter<SyncTaskResult>(
@@ -183,19 +167,21 @@ export class SyncManager extends EventEmitter<EventType> {
 
     const fails = results.filter(result => !result.success);
     if (fails.length > 0) {
+      this.logger.info('File synchronization is failed');
+
       return {
         success: false,
         canceled: false,
-        fileChanged: this.fileChanged,
         errors: fails.map(result => result.message)
       };
     }
 
+    this.logger.info('File synchronization is finished');
+
     return {
       success: true,
       canceled: false,
-      fileChanged: this.fileChanged,
-      errors: fails.map(result => result.message)
+      errors: [],
     };
   }
 
@@ -206,9 +192,6 @@ export class SyncManager extends EventEmitter<EventType> {
         (file.changeLocation === 'both' && remoteSyncMode === 'download')) {
         tasks.push(this.syncWithRemoteTask(file));
         this.logger.log('Pull: ' + file.relativePath);
-        if (!file.isFolder) {
-          this.fileChanged = true;
-        }
       } else if (
         file.changeLocation === 'local' ||
         (file.changeLocation === 'both' && remoteSyncMode === 'upload')
@@ -216,10 +199,6 @@ export class SyncManager extends EventEmitter<EventType> {
         const task = this.syncWithLocalTask(file);
         tasks.push(task);
         this.logger.log(`Push: ${file.relativePath} ${task.name}`);
-
-        if (!file.isFolder) {
-          this.fileChanged = true;
-        }
       }
     });
     return tasks;
@@ -323,9 +302,11 @@ export class SyncManager extends EventEmitter<EventType> {
       try {
         await this.fileAdapter[task](file);
       } catch (e) {
+        const message = `${task} : '${file.relativePath}' : ${file.url} : ${(e && (e as Error).stack || '')}`;
+        this.logger.error(message);
         return {
           success: false,
-          message: `${task} : '${file.relativePath}' : ${file.url} : ${(e && (e as Error).stack || '')}`
+          message,
         };
       }
       return {
@@ -412,5 +393,38 @@ class TasksExecuter<Result = unknown> {
       results.push(...await task());
     }
     return results;
+  }
+}
+
+
+export class AsyncRunner<Result> {
+  private runningTask: Promise<Result> | undefined;
+  private waitingTask: Promise<Result> | undefined;
+
+  constructor(private func: () => Promise<Result>) {
+  }
+
+  public async run(): Promise<Result> {
+    if (!this.runningTask) {
+      this.runningTask = this.func();
+      this.runningTask.finally(() => {
+        this.runningTask = undefined;
+      });
+      return this.runningTask;
+    } else if (!this.waitingTask) {
+      this.waitingTask = new Promise<Result>((resolve, reject) => {
+        if (!this.runningTask) {
+          return this.run();
+        }
+        this.runningTask.finally(() => {
+          this.waitingTask = undefined;
+          this.runningTask = undefined;
+          this.run().then(resolve).catch(reject);
+        });
+      });
+      return this.waitingTask;
+    } else {
+      return this.waitingTask;
+    }
   }
 }

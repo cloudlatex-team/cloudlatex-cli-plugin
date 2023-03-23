@@ -6,8 +6,8 @@ import { TextDecoder } from 'text-encoding';
 import { CLWebAppApi } from './webAppApi';
 import { FileInfo, Revision } from '../../model/fileModel';
 import { ClFile } from './types';
-import { IBackend } from '../ibackend';
-import { Config, ProjectInfo, KeyType, Account, CompileResult } from './../../types';
+import { IBackend, CompileResult } from '../ibackend';
+import { Config, ProjectInfo, KeyType, Account } from './../../types';
 import { streamToString, ReadableString } from '../../util/stream';
 import { AccountService } from '../../service/accountService';
 

@@ -7,7 +7,7 @@ import { v4 as uuid } from 'uuid';
 import { TypeDB } from '@moritanian/type-db';
 import { FILE_INFO_DESC, FileInfo } from '../../src/model/fileModel';
 import { FileWatcher } from '../../src/fileService/fileWatcher';
-import { SyncManager, SyncResult } from '../../src/fileService/syncManager';
+import { SyncManager } from '../../src/fileService/syncManager';
 import { FileAdapter } from '../../src/fileService/fileAdapter';
 import { BackendStub } from '../tool/backendStub';
 import { Logger } from '../../src/util/logger';
@@ -116,13 +116,7 @@ class TestSituation {
     // Apply file changes to remote and local filesystems
     await this.applyFileChanges();
 
-    // Wait unitl the system synchronizes local files and remote files
-    const waitTask = new Promise((resolve: (result: SyncResult) => void) => {
-      this.instances.syncManager.on('sync-finished', resolve);
-    });
-    this.instances.syncManager.syncSession();
-    const syncResult = await waitTask;
-    // await tool.sleep(0);
+    const syncResult = await this.instances.syncManager.sync();
 
     // Verify syncronization result
     await this.verify(syncResult.success);
@@ -351,7 +345,7 @@ describe('FileManager', () => {
       await fs.promises.mkdir(folderAbsPath);
       await fs.promises.writeFile(fileAbsPath, fileContent);
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const syncResult = await instances.syncManager.syncSession();
+      const syncResult = await instances.syncManager.sync();
       // TODO check the order of sync tasks
     });
   });
