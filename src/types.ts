@@ -31,7 +31,7 @@ export interface Config {
   storagePath?: string | null;
 
   /** ignore files to watch and upload  */
-  ignoreFiles?: Matcher;
+  ignoredFiles?: Matcher;
 }
 
 export type Account = {

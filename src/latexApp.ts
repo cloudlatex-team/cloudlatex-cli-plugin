@@ -71,7 +71,7 @@ export class LatexApp extends LAEventEmitter implements ILatexApp {
       return anymatch(ignoredFiles, absPath);
     };
 
-    this.logger.log(`ignoreFiles: ${JSON.stringify(ignoredFiles)}`);
+    this.logger.log(`ignoredFiles: ${JSON.stringify(ignoredFiles)}`);
 
 
     // Remove entries of ignore files from file db

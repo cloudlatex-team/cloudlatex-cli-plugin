@@ -77,7 +77,7 @@ function calcIgnoredFilesByArtifacts(appInfoService: AppInfoService): Matcher {
 // Absoulte path pattern
 export function calcIgnoredFiles(appInfoService: AppInfoService): Matcher {
   return mergeMatcher(
-    calcIgnoredFilesByConfig(appInfoService.config.ignoreFiles),
+    calcIgnoredFilesByConfig(appInfoService.config.ignoredFiles),
     calcIgnoredFilesByArtifacts(appInfoService)
   );
 }
