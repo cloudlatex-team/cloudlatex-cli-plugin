@@ -1,7 +1,7 @@
 import * as chai from 'chai';
+import { AsyncRunner } from '../../src/util/asyncRunner';
 
 import { sleep } from '../tool/syncTestTool';
-import { AsyncRunner } from './../../src/fileService/syncManager';
 
 
 describe('100ms sleep task', () => {

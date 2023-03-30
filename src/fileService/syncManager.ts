@@ -3,6 +3,7 @@ import { FileAdapter } from './fileAdapter';
 import { FileRepository, FileInfo } from '../model/fileModel';
 import * as path from 'path';
 import { getErrorTraceStr, Logger } from '../util/logger';
+import { AsyncRunner } from '../util/asyncRunner';
 
 export type SyncResult = {
   success: boolean;
@@ -393,38 +394,5 @@ class TasksExecuter<Result = unknown> {
       results.push(...await task());
     }
     return results;
-  }
-}
-
-
-export class AsyncRunner<Result> {
-  private runningTask: Promise<Result> | undefined;
-  private waitingTask: Promise<Result> | undefined;
-
-  constructor(private func: () => Promise<Result>) {
-  }
-
-  public async run(): Promise<Result> {
-    if (!this.runningTask) {
-      this.runningTask = this.func();
-      this.runningTask.finally(() => {
-        this.runningTask = undefined;
-      });
-      return this.runningTask;
-    } else if (!this.waitingTask) {
-      this.waitingTask = new Promise<Result>((resolve, reject) => {
-        if (!this.runningTask) {
-          return this.run();
-        }
-        this.runningTask.finally(() => {
-          this.waitingTask = undefined;
-          this.runningTask = undefined;
-          this.run().then(resolve).catch(reject);
-        });
-      });
-      return this.waitingTask;
-    } else {
-      return this.waitingTask;
-    }
   }
 }
