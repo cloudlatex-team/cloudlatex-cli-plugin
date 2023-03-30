@@ -163,11 +163,13 @@ export class LatexApp extends LAEventEmitter implements ILatexApp {
    * Start to watch file system
    */
   public async start(): Promise<LoginResult> {
+    // Login
+    const loginResult = await this.login();
+
     // Start file watcher
     await this.fileWatcher.init();
 
-    // Login
-    return await this.login();
+    return loginResult;
   }
 
   /**
