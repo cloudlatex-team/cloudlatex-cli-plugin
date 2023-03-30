@@ -14,6 +14,7 @@ import { AppInfoService } from './service/appInfoService';
 import {
   calcIgnoredFiles, calcRelativeOutDir, getDBFilePath, toPosixPath, checkIgnoredByFileInfo
 } from './fileService/filePath';
+import { AsyncRunner } from './util/asyncRunner';
 
 /* eslint-disable @typescript-eslint/naming-convention */
 export const LATEX_APP_EVENTS = {
@@ -45,6 +46,7 @@ interface LAEventEmitter {
 export class LatexApp extends LAEventEmitter implements ILatexApp {
   private syncManager: SyncManager;
   private fileWatcher: FileWatcher;
+  private compilationRunner: AsyncRunner<CompileResult>;
 
   /**
    * Do not use this constructor. Be sure to instantiate LatexApp by createApp()
@@ -57,8 +59,11 @@ export class LatexApp extends LAEventEmitter implements ILatexApp {
     private fileAdapter: FileAdapter,
     private fileRepo: Repository<typeof FILE_INFO_DESC>,
     decideSyncMode: DecideSyncMode,
-    private logger: Logger = new Logger()) {
+    private logger: Logger = new Logger(),
+  ) {
     super();
+
+    this.compilationRunner = new AsyncRunner(() => this.execCompile());
 
     /**
      * Ignore file setting
@@ -261,6 +266,10 @@ export class LatexApp extends LAEventEmitter implements ILatexApp {
    * Compile and save pdf, synctex and log files.
    */
   public async compile(): Promise<CompileResult> {
+    return this.compilationRunner.run();
+  }
+
+  private async execCompile(): Promise<CompileResult> {
     this.logger.log('Compilation is started');
 
     const errors: string[] = [];
