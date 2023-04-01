@@ -101,33 +101,44 @@ export class SyncManager {
         file.remoteChange = 'create';
         return;
       }
+
       file.remoteRevision = remoteFile.remoteRevision;
       file.url = remoteFile.url;
-      if (file.localRevision !== file.remoteRevision) { // updated in remote
-        file.remoteChange = 'update';
-      } else if (file.relativePath !== remoteFile.relativePath) { // renamed in remote
+
+      if (file.relativePath !== remoteFile.relativePath) { // renamed in remote
         if (file.localChange === 'no') {
+          this.logger.log(`Remote file is renamed: ${file.relativePath} -> ${remoteFile.relativePath}`);
           // express rename as deleting original file and creating renamed file
           file.remoteChange = 'delete';
+
           const renamedFile = this.fileRepo.new(remoteFile);
           renamedFile.remoteChange = 'create';
         } else if (file.localChange === 'create') {
           const msg = 'Unexpected situation is detected:'
             + ` remote file is renamed and local file is created: ${file.relativePath}`;
           this.logger.error(msg);
-          // TODO: recover
         } else if (file.localChange === 'delete') {
-          const msg = 'Unsupported situation is detected:'
-            + ` remote file is renamed and local file is deleted: ${file.relativePath}`;
-          this.logger.error(msg);
-          // TODO: recover
-        } else if (file.localChange === 'update') {
-          const msg = 'Unsupported situation is detected:'
-            + ` remote file is renamed and local file is updated: ${file.relativePath}`;
-          this.logger.error(msg);
-          // TODO: recover
+          this.logger.log(`Remote file is renamed: ${file.relativePath} -> ${remoteFile.relativePath} 
+            and local file is deleted`);
 
+          this.fileRepo.delete(file.id);
+
+          const renamedFile = this.fileRepo.new(remoteFile);
+          renamedFile.remoteChange = 'create';
+        } else if (file.localChange === 'update') {
+          this.logger.log(`Remote file is renamed: ${file.relativePath} -> ${remoteFile.relativePath} 
+          and local file is updated`);
+
+          file.localChange = 'create';
+          file.remoteId = null;
+          file.remoteRevision = null;
+          file.url = '';
+
+          const renamedFile = this.fileRepo.new(remoteFile);
+          renamedFile.remoteChange = 'create';
         }
+      } else if (file.localRevision !== file.remoteRevision) { // updated in remote
+        file.remoteChange = 'update';
       }
     });
 
@@ -203,8 +214,9 @@ export class SyncManager {
     this.fileRepo.all().forEach(file => {
       if (file.changeLocation === 'remote' ||
         (file.changeLocation === 'both' && remoteSyncMode === 'download')) {
-        tasks.push(this.syncWithRemoteTask(file));
-        this.logger.log('Pull: ' + file.relativePath);
+        const task = this.syncWithRemoteTask(file);
+        tasks.push(task);
+        this.logger.log(`Pull:  ${file.relativePath} ${task.name}`);
       } else if (
         file.changeLocation === 'local' ||
         (file.changeLocation === 'both' && remoteSyncMode === 'upload')
