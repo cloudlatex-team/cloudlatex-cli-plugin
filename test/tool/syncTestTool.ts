@@ -17,8 +17,9 @@ export const TEST_CONFIG_LIST = (() => {
   changeOptions.forEach(local => {
     changeOptions.forEach(remote => {
       const conflictOptions = [false];
-      if ((local === 'update' || local === 'delete') &&
-        (remote === 'update' || remote === 'delete')) {
+      if (((local === 'update' || local === 'delete') &&
+        (remote === 'update' || remote === 'delete')) ||
+        (local === 'create' && remote === 'create')) {
         conflictOptions.push(true);
       }
       conflictOptions.forEach(conflict => {

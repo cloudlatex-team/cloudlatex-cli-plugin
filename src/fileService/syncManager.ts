@@ -85,6 +85,18 @@ export class SyncManager {
     remoteFileList.forEach(remoteFile => {
       let file = this.fileRepo.findBy('remoteId', remoteFile.remoteId);
       if (!file) { // created in remote
+
+        file = this.fileRepo.findBy('relativePath', remoteFile.relativePath);
+        if (file) {
+          // Files with the same name have been created in local and remote
+          file.remoteChange = 'create';
+          file.localChange = 'create';
+          file.url = remoteFile.url;
+          file.remoteId = remoteFile.remoteId;
+          file.remoteRevision = remoteFile.remoteRevision;
+          return;
+        }
+
         file = this.fileRepo.new(remoteFile);
         file.remoteChange = 'create';
         return;
@@ -215,8 +227,16 @@ export class SyncManager {
     switch (file.localChange) {
       case 'create':
         if (file.isFolder) {
+          if (file.remoteChange === 'create') {
+            return this.createPriorityTask('no', file, priority);
+          }
           return this.createPriorityTask('createRemoteFolder', file, priority);
         }
+
+        if (file.remoteChange === 'create') {
+          return this.createPriorityTask('updateRemote', file, priority);
+        }
+
         return this.createPriorityTask('upload', file, priority);
       case 'update':
         if (file.remoteChange === 'delete') {
@@ -248,6 +268,10 @@ export class SyncManager {
     const priority = this.computePriority(file, 'remote');
     switch (file.remoteChange) {
       case 'create':
+        if (file.localChange === 'create' && file.isFolder) {
+          return this.createPriorityTask('no', file, priority);
+        }
+        return this.createPriorityTask('download', file, priority);
       case 'update':
         if (file.isFolder) {
           return this.createPriorityTask('createLocalFolder', file, priority);
