@@ -74,7 +74,7 @@ export class LatexApp extends LAEventEmitter implements ILatexApp {
       return checkIgnoredByFileInfo(this.config, file, ignoredFiles);
     };
 
-    this.logger.log(`ignoredFiles: ${JSON.stringify(ignoredFiles)}`);
+    this.logger.log(`IgnoredFiles: ${JSON.stringify(ignoredFiles)}`);
 
 
     /**
@@ -233,18 +233,18 @@ export class LatexApp extends LAEventEmitter implements ILatexApp {
   }
 
   private onInvalid() {
+    this.logger.info('Login failed.');
     if (this.appInfoService.appInfo.loginStatus === 'invalid') {
       return;
     }
-    this.logger.info('Login failed.');
     this.appInfoService.setLoginStatus('invalid');
   }
 
   private onOffline() {
+    this.logger.warn('Cannot connect to the server');
     if (this.appInfoService.appInfo.loginStatus === 'offline') {
       return;
     }
-    this.logger.warn('Cannot connect to the server');
     this.appInfoService.setLoginStatus('offline');
   }
 

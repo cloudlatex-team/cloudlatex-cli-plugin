@@ -89,7 +89,13 @@ export class FileWatcher extends EventEmitter<EventType> {
         );
         if (changedFiles.length) {
           this.logger.info(
-            `Found changed files after initialization: ${JSON.stringify(changedFiles.map(file => file.relativePath))}`
+            `Found changed files after initialization: ${JSON.stringify(
+              changedFiles.map(file => ({
+                path: file.relativePath,
+                localChange: file.localChange,
+                remoteChange: file.remoteChange
+              }))
+            )}`
           );
           this.emitChange();
         }
