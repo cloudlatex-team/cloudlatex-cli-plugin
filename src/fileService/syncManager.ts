@@ -150,7 +150,8 @@ export class SyncManager {
       if (!remoteFile) { // remote file does not exist
         if (file.remoteId) { // remote file is deleted
           file.remoteChange = 'delete';
-          file.remoteId = null;
+        } else { // local file is created
+          file.localChange = 'create';
         }
       }
 

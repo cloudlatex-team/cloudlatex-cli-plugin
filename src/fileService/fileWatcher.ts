@@ -36,20 +36,23 @@ export class FileWatcher extends EventEmitter<EventType> {
     this.initialized = false;
 
     /**
-     * Set watcherSynced false
+     * Initialize file entries
      */
     this.fileRepo.all().forEach(file => {
-      file.watcherSynced = false;
-    });
+      /**
+      * Remove entries of ignore files from file db
+      */
+      if (checkIgnoredByFileInfo(this.config, file, this.ignored || [])) {
+        this.logger.info(`Remove entry [${file.relativePath}] from file db`);
+        this.fileRepo.delete(file.id);
+        return;
+      }
 
-    /**
-     * Remove entries of ignore files from file db
-     */
-    this.fileRepo.all().filter(
-      (file) => checkIgnoredByFileInfo(this.config, file, this.ignored || [])
-    ).forEach(file => {
-      this.logger.info(`Remove entry [${file.relativePath}] from file db`);
-      this.fileRepo.delete(file.id);
+      /**
+       * Initialize file entry property
+       */
+      file.watcherSynced = false;
+      file.remoteChange = 'no';
     });
     this.fileRepo.save();
 
