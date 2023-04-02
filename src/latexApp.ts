@@ -38,10 +38,6 @@ interface LAEventEmitter {
 
 /* eslint-enable @typescript-eslint/adjacent-overload-signatures */
 
-// chokidar can accept both relative and absolute pattern
-// how about filter function??
-// TODO: add file in out dir
-
 
 export class LatexApp extends LAEventEmitter implements ILatexApp {
   private syncManager: SyncManager;

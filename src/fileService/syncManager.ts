@@ -84,11 +84,12 @@ export class SyncManager {
     // Remote to local
     remoteFileList.forEach(remoteFile => {
       let file = this.fileRepo.findBy('remoteId', remoteFile.remoteId);
-      if (!file) { // created in remote
+      if (!file) {
 
         file = this.fileRepo.findBy('relativePath', remoteFile.relativePath);
         if (file) {
           // Files with the same name have been created in local and remote
+          this.logger.log(`${file.relativePath} have been created in both local and remote`);
           file.remoteChange = 'create';
           file.localChange = 'create';
           file.url = remoteFile.url;
@@ -97,6 +98,7 @@ export class SyncManager {
           return;
         }
 
+        // created in remote
         file = this.fileRepo.new(remoteFile);
         file.remoteChange = 'create';
         return;
@@ -339,7 +341,7 @@ export class SyncManager {
       try {
         await this.fileAdapter[task](file);
       } catch (e) {
-        const message = `${task} : '${file.relativePath}' : ${file.url} : ${(e && (e as Error).stack || '')}`;
+        const message = `${task} : '${file.relativePath}' :  ${(e && (e as Error).stack || '')}`;
         this.logger.error(message);
         return {
           success: false,
