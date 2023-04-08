@@ -119,10 +119,13 @@ export class FileAdapter {
   }
 
   public async deleteLocal(file: FileInfo): Promise<void> {
+    file.watcherSynced = false;
+    this.fileRepo.save();
+
     const absPath = path.posix.join(this.rootPath, file.relativePath);
     if (file.isFolder) {
       try {
-        fs.promises.rmdir(absPath.replace(new RegExp(path.posix.sep, 'g'), path.sep));
+        await fs.promises.rmdir(absPath.replace(new RegExp(path.posix.sep, 'g'), path.sep));
       } catch (err) {
         // Allow the error that file is already deleted
         if ((err as { code: string }).code !== 'ENOENT') {
@@ -131,8 +134,7 @@ export class FileAdapter {
       }
       return;
     }
-    file.watcherSynced = false;
-    this.fileRepo.save();
+
     try {
       await fs.promises.unlink(absPath.replace(new RegExp(path.posix.sep, 'g'), path.sep));
     } catch (err) {

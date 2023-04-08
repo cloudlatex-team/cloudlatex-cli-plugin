@@ -87,7 +87,12 @@ export class SyncManager {
       if (!file) {
 
         file = this.fileRepo.findBy('relativePath', remoteFile.relativePath);
-        if (file) {
+        if (file && file.isFolder) {
+          // Folders with the same name have been created in local and remote
+          file.remoteId = remoteFile.remoteId;
+          file.localChange = 'no';
+          return;
+        } else if (file) {
           // Files with the same name have been created in local and remote
           this.logger.log(`${file.relativePath} have been created in both local and remote`);
           file.remoteChange = 'create';
@@ -188,9 +193,9 @@ export class SyncManager {
       this.logger.info(`SyncMode ${syncMode} is selected`);
     }
 
-    const results = await new TasksExecuter<SyncTaskResult>(
+    const results = await (new TasksExecuter<SyncTaskResult>(
       this.generateSyncTasks(syncMode)
-    ).execute();
+    )).execute();
 
     const fails = results.filter(result => !result.success);
     if (fails.length > 0) {
@@ -242,9 +247,6 @@ export class SyncManager {
     switch (file.localChange) {
       case 'create':
         if (file.isFolder) {
-          if (file.remoteChange === 'create') {
-            return this.createPriorityTask('no', file, priority);
-          }
           return this.createPriorityTask('createRemoteFolder', file, priority);
         }
 
@@ -283,8 +285,8 @@ export class SyncManager {
     const priority = this.computePriority(file, 'remote');
     switch (file.remoteChange) {
       case 'create':
-        if (file.localChange === 'create' && file.isFolder) {
-          return this.createPriorityTask('no', file, priority);
+        if (file.isFolder) {
+          return this.createPriorityTask('createLocalFolder', file, priority);
         }
         return this.createPriorityTask('download', file, priority);
       case 'update':
@@ -417,7 +419,7 @@ class TasksExecuter<Result = unknown> {
 
   async execute(): Promise<Result[]> {
     const results: Result[] = [];
-    const taskSeries = [];
+    const taskSeries: Array<() => Promise<Result[]>> = [];
     const sortedTaskList = this.taskList.sort((task1, task2) => task1.priority - task2.priority);
     // sortedTaskList[0] has lowest priority and sortedTaskList[-1] has highest priority.
     while (sortedTaskList.length > 0) {
