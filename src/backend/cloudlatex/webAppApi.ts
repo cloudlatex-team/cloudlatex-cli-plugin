@@ -74,7 +74,7 @@ export class CLWebAppApi {
   async loadProjects(): Promise<ProjectInfo[]> {
     const res = await fetch(this.apiProjects, this.fetchOption());
     if (!res.ok) {
-      throw new Error(JSON.stringify(res));
+      throw new Error(await res.text());
     }
     return JSON.parse((await res.json()) as string);
   }
@@ -82,7 +82,7 @@ export class CLWebAppApi {
   async loadProjectInfo(): Promise<ProjectInfo> {
     const res = await fetch(`${this.apiProjects}/${this.config.projectId}`, this.fetchOption());
     if (!res.ok) {
-      throw new Error(JSON.stringify(res));
+      throw new Error(await res.text());
     }
     const text = await res.text();
     return JSON.parse(text)['project'] as ProjectInfo;
@@ -91,7 +91,7 @@ export class CLWebAppApi {
   async loadFiles(): Promise<unknown> {
     const res = await fetch(`${this.apiProjects}/${this.config.projectId}/files`, this.fetchOption());
     if (!res.ok) {
-      throw new Error(JSON.stringify(res));
+      throw new Error(await res.text());
     }
     return JSON.parse(await res.text());
   }
@@ -107,7 +107,7 @@ export class CLWebAppApi {
       })
     );
     if (!res.ok) {
-      throw new Error(JSON.stringify(res));
+      throw new Error(await res.text());
     }
     return JSON.parse(await res.text());
   }
@@ -118,7 +118,7 @@ export class CLWebAppApi {
       this.fetchOption({ method: 'DELETE' })
     );
     if (!res.ok) {
-      throw new Error(JSON.stringify(res));
+      throw new Error(await res.text());
     }
     return JSON.parse(await res.text());
   }
@@ -167,7 +167,7 @@ export class CLWebAppApi {
 
     );
     if (!res.ok) {
-      throw new Error(JSON.stringify(res));
+      throw new Error(await res.text());
     }
     return JSON.parse(await res.text());
   }
@@ -177,7 +177,7 @@ export class CLWebAppApi {
       `${url}`
     );
     if (!res.ok) {
-      throw new Error(JSON.stringify(res));
+      throw new Error(await res.text());
     }
     if (!res.body) {
       throw new Error('res.body is null');

@@ -96,7 +96,6 @@ export class FileWatcher extends EventEmitter<EventType> {
               changedFiles.map(file => ({
                 path: file.relativePath,
                 localChange: file.localChange,
-                remoteChange: file.remoteChange
               }))
             )}`
           );
