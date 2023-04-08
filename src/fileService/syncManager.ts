@@ -170,6 +170,7 @@ export class SyncManager {
       }
     });
 
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     this.fileRepo.save();
 
     let syncMode: SyncMode = 'download';
@@ -267,6 +268,7 @@ export class SyncManager {
         if (file.remoteChange === 'delete') {
           // The same file is already deleted both in local and remote.
           this.fileRepo.delete(file.id);
+          // eslint-disable-next-line @typescript-eslint/no-floating-promises
           this.fileRepo.save();
           return this.createPriorityTask('no', file, priority);
         }
@@ -298,6 +300,7 @@ export class SyncManager {
         if (file.localChange === 'delete') {
           // The same file is already deleted both in local and remote.
           this.fileRepo.delete(file.id);
+          // eslint-disable-next-line @typescript-eslint/no-floating-promises
           this.fileRepo.save();
           return this.createPriorityTask('no', file, priority);
         }

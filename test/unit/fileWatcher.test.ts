@@ -67,9 +67,9 @@ const setupInstances = async (options?: { noDBEntry?: boolean, deletedFileDBEntr
 before(setupWorkspace);
 after(cleanupWorkspace);
 
-afterEach(() => {
+afterEach(async () => {
   if (watcher) {
-    watcher.stop();
+    await watcher.stop();
     watcher = null;
   }
 });
@@ -110,6 +110,7 @@ describe('FileWatcher', () => {
       const { files, awaitChangeDetection } = await setupInstances();
       const relativePath = 'new_file.tex';
       const filePath = path.resolve(workspacePath, relativePath);
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
       fs.createFile(filePath);
       await awaitChangeDetection();
       const file = files.findBy('relativePath', relativePath);
@@ -121,6 +122,7 @@ describe('FileWatcher', () => {
       const { changedSpy } = await setupInstances();
       const relativePath = '.env';
       const filePath = path.resolve(workspacePath, relativePath);
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
       fs.createFile(filePath);
 
       await tool.sleep(1000);
@@ -133,6 +135,7 @@ describe('FileWatcher', () => {
       const { changedSpy } = await setupInstances();
       const relativePath = 'ignore_file';
       const filePath = path.resolve(workspacePath, relativePath);
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
       fs.createFile(filePath);
 
       await tool.sleep(1000);
@@ -147,6 +150,7 @@ describe('FileWatcher', () => {
       const { files, awaitChangeDetection } = await setupInstances();
       const relativePath = 'main.tex';
       const filePath = path.resolve(workspacePath, relativePath);
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
       fs.writeFile(filePath, 'updated content');
       await awaitChangeDetection();
       const file = files.findBy('relativePath', relativePath);
@@ -159,11 +163,12 @@ describe('FileWatcher', () => {
       const { files, awaitChangeDetection } = await setupInstances();
       const relativePath = 'main.tex';
       const filePath = path.resolve(workspacePath, relativePath);
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
       fs.remove(filePath);
       await awaitChangeDetection();
       const file = files.findBy('relativePath', relativePath);
       chai.assert.strictEqual(file && file.localChange, 'delete');
-      fs.createFile(filePath);
+      await fs.createFile(filePath);
       // await awaitChangeDetection();
     });
   });
@@ -174,8 +179,10 @@ describe('FileWatcher', () => {
       const { files, awaitChangeDetection } = await setupInstances();
       const relativePath = 'new_file.tex';
       const filePath = path.resolve(workspacePath, relativePath);
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
       fs.createFile(filePath);
       await awaitChangeDetection();
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
       fs.writeFile(filePath, 'updated content');
       await awaitChangeDetection();
       const file = files.findBy('relativePath', relativePath);
@@ -189,10 +196,13 @@ describe('FileWatcher', () => {
       const { files, awaitChangeDetection } = await setupInstances();
       const relativePath = 'new_file.tex';
       const filePath = path.resolve(workspacePath, relativePath);
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
       fs.createFile(filePath);
       await awaitChangeDetection();
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
       fs.writeFile(filePath, 'updated content');
       await awaitChangeDetection();
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
       fs.remove(filePath);
       await awaitChangeDetection();
       const file = files.findBy('relativePath', relativePath);
@@ -205,8 +215,10 @@ describe('FileWatcher', () => {
       const { files, awaitChangeDetection } = await setupInstances();
       const relativePath = 'main.tex';
       const filePath = path.resolve(workspacePath, relativePath);
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
       fs.remove(filePath);
       await awaitChangeDetection();
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
       fs.createFile(filePath);
       await awaitChangeDetection();
       const file = files.findBy('relativePath', relativePath);
@@ -220,10 +232,13 @@ describe('FileWatcher', () => {
       const { files, awaitChangeDetection } = await setupInstances();
       const relativePath = 'main.tex';
       const filePath = path.resolve(workspacePath, relativePath);
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
       fs.writeFile(filePath, 'update content');
       await awaitChangeDetection();
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
       fs.remove(filePath);
       await awaitChangeDetection();
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
       fs.createFile(filePath);
       await awaitChangeDetection();
       const file = files.findBy('relativePath', relativePath);
@@ -236,10 +251,13 @@ describe('FileWatcher', () => {
       const { files, awaitChangeDetection } = await setupInstances();
       const relativePath = 'new_file.tex';
       const filePath = path.resolve(workspacePath, relativePath);
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
       fs.createFile(filePath);
       await awaitChangeDetection();
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
       fs.remove(filePath);
       await awaitChangeDetection();
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
       fs.createFile(filePath);
       await awaitChangeDetection();
       const file = files.findBy('relativePath', relativePath);

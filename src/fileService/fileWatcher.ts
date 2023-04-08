@@ -54,6 +54,7 @@ export class FileWatcher extends EventEmitter<EventType> {
       file.watcherSynced = false;
       file.remoteChange = 'no';
     });
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     this.fileRepo.save();
 
     const watcherOption: chokidar.WatchOptions = {
@@ -123,6 +124,7 @@ export class FileWatcher extends EventEmitter<EventType> {
       if (!file.watcherSynced) {
         // this file is downloaded from remote or detected on initialization
         file.watcherSynced = true;
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises
         this.fileRepo.save();
         return;
       }
@@ -130,6 +132,7 @@ export class FileWatcher extends EventEmitter<EventType> {
       if (file.localChange === 'delete') {
         // The same named file is deleted and recreated.
         file.localChange = 'update';
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises
         this.fileRepo.save();
         this.emitChange();
         return;
@@ -151,6 +154,7 @@ export class FileWatcher extends EventEmitter<EventType> {
       watcherSynced: true,
       isFolder
     });
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     this.fileRepo.save();
 
     this.emitChange();
@@ -173,6 +177,7 @@ export class FileWatcher extends EventEmitter<EventType> {
     // file was changed by downloading
     if (!changedFile.watcherSynced) {
       changedFile.watcherSynced = true;
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
       this.fileRepo.save();
       return;
     }
@@ -185,6 +190,7 @@ export class FileWatcher extends EventEmitter<EventType> {
       `Update of ${changedFile.isFolder ? 'folder' : 'file'} detected: ${absPath}`
     );
 
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     this.fileRepo.save();
     this.emitChange();
   }
@@ -206,6 +212,7 @@ export class FileWatcher extends EventEmitter<EventType> {
     // The file was deleted by deleteLocal() because remote file is deleted.
     if (!file.watcherSynced) {
       this.fileRepo.delete(file.id);
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
       this.fileRepo.save();
       return;
     }
@@ -216,12 +223,14 @@ export class FileWatcher extends EventEmitter<EventType> {
 
     if (file.localChange === 'create') {
       this.fileRepo.delete(file.id);
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
       this.fileRepo.save();
       this.emit('change-detected');
       return;
     }
 
     file.localChange = 'delete';
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     this.fileRepo.save();
     this.emitChange();
   }

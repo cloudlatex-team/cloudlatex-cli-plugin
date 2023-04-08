@@ -20,6 +20,7 @@ describe('100ms sleep task', () => {
   it('Single execution', async () => {
     let resolved = false;
     const p = runner.run();
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     p.then(() => {
       resolved = true;
     });

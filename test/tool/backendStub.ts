@@ -164,7 +164,7 @@ export class BackendStub implements IBackend {
     this.isOffline = isOffline;
   }
 
-  _deleteInRemote(fileInfo: Partial<FileInfo>): Promise<void> {
+  async _deleteInRemote(fileInfo: Partial<FileInfo>): Promise<void> {
     const isOffline = this.isOffline;
 
     this.isOffline = false;
@@ -172,7 +172,7 @@ export class BackendStub implements IBackend {
     if (!remoteFiles || remoteFiles.length !== 1) {
       throw new Error('Remote file is not found');
     }
-    this.deleteRemote(remoteFiles[0]);
+    await this.deleteRemote(remoteFiles[0]);
 
     this.isOffline = isOffline;
     return Promise.resolve();

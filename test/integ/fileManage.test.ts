@@ -419,7 +419,7 @@ describe('FileManager', () => {
   });
 });
 
-afterEach(() => {
+afterEach(async () => {
   fsStub.restore();
-  fileWatcher?.stop();
+  await fileWatcher?.stop();
 });

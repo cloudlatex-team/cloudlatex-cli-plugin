@@ -418,6 +418,7 @@ export class LatexApp extends LAEventEmitter implements ILatexApp {
   public resetLocal(): void {
     this.logger.info('resetLocal()');
     this.fileRepo.all().forEach(f => this.fileRepo.delete(f.id));
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     this.fileRepo.save();
   }
 }
