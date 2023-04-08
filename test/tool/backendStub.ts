@@ -51,6 +51,11 @@ export class BackendStub implements IBackend {
     if (this.isOffline) {
       return Promise.reject();
     }
+
+    if (file.isFolder) {
+      throw new Error('Folder cannot be uploaded');
+    }
+
     const newFile = this.remoteFiles.new({ ...file });
     newFile.id = -1; // reset local id
     const remoteId = newFile.remoteId = uuid();
@@ -91,6 +96,9 @@ export class BackendStub implements IBackend {
     }
     if (!(remoteFile.remoteId in this.remoteContents)) {
       throw new Error('remote content is not found');
+    }
+    if (file.isFolder) {
+      throw new Error('Folder cannot be downloaded');
     }
     return new ReadableString(this.remoteContents[remoteFile.remoteId]);
   }
@@ -134,7 +142,12 @@ export class BackendStub implements IBackend {
   async _createInRemote(fileInfo: Partial<FileInfo>, content: string): Promise<void> {
     const isOffline = this.isOffline;
     this.isOffline = false;
-    await this.upload(fileInfo as FileInfo, new ReadableString(content));
+    if (fileInfo.isFolder) {
+      await this.createRemote(fileInfo as FileInfo, null);
+    } else {
+      await this.upload(fileInfo as FileInfo, new ReadableString(content));
+
+    }
     this.isOffline = isOffline;
   }
 
