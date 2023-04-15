@@ -1,5 +1,18 @@
-import { ProjectInfo, KeyType, CompileResult } from '../types';
+import { ProjectInfo, KeyType } from '../types';
 import { FileInfo, Revision } from '../model/fileModel';
+
+export type CompileResult = {
+  status: 'success' | 'no-target-error' | 'compiler-error' | 'unknown-error';
+  logStream?: NodeJS.ReadableStream,
+  pdfStream?: NodeJS.ReadableStream,
+  synctexStream?: NodeJS.ReadableStream,
+  logs?: {
+    type: 'warning' | 'error',
+    file: string,
+    line: number,
+    message: string
+  }[],
+};
 
 export interface IBackend {
   validateToken(): Promise<boolean>;

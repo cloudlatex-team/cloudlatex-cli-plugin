@@ -1,45 +1,31 @@
 import * as path from 'path';
 import * as  EventEmitter from 'eventemitter3';
 import { Logger, getErrorTraceStr } from './util/logger';
-import { wildcard2regexp } from './util/pathUtil';
-import { Config, DecideSyncMode, Account, CompileResult, AppInfo, LoginStatus } from './types';
+import { Config, DecideSyncMode, Account, CompileResult, ILatexApp, LoginResult, SyncResult } from './types';
 import { FileAdapter } from './fileService/fileAdapter';
-import { SyncManager, SyncResult } from './fileService/syncManager';
+import { SyncManager } from './fileService/syncManager';
 import { FileWatcher } from './fileService/fileWatcher';
 import { TypeDB, Repository } from '@moritanian/type-db';
-import { FILE_INFO_DESC } from './model/fileModel';
-import { IBackend } from './backend/ibackend';
+import { FileInfo, FILE_INFO_DESC } from './model/fileModel';
+import { IBackend, CompileResult as BackendCompileResult } from './backend/ibackend';
 import { backendSelector } from './backend/backendSelector';
 import { AccountService } from './service/accountService';
 import { AppInfoService } from './service/appInfoService';
+import {
+  calcIgnoredFiles, calcRelativeOutDir, getDBFilePath, toPosixPath, checkIgnoredByFileInfo
+} from './fileService/filePath';
+import { AsyncRunner } from './util/asyncRunner';
 
 /* eslint-disable @typescript-eslint/naming-convention */
 export const LATEX_APP_EVENTS = {
   FILE_CHANGED: 'file-changed', /* LaTeX source files are changed */
-  FILE_SYNC_SUCCEEDED: 'file-sync-succeeded', /* Succeeded to synchonize LaTeX source files between local and cloud */
-  FILE_SYNC_FAILED: 'file-sync-failed', /* Failed to synchonize LaTeX source files */
   FILE_CHANGE_ERROR: 'file-change-error', /* Invalid LaTeX file chagnes are detected */
-  TARGET_FILE_NOT_FOUND: 'target-file-not-found', /* LaTeX target file is not found */
-  COMPILATION_STARTED: 'compilation-started', /* LaTeX compilation is started */
-  COMPILATION_SUCCEEDED: 'compilation-succeeded', /* Succeeded to compile LaTeX source files */
-  COMPILATION_FAILED: 'compilation-failed', /* Failed to compile LaTeX source files */
-  LOGIN_SUCCEEDED: 'login-succeeded', /* Succeeded to login */
-  LOGIN_FAILED: 'login-failed', /* Failed to login */
-  LOGIN_OFFLINE: 'login-offline', /* Cannot login due to network problem */
-  PROJECT_LOADED: 'project-loaded', /* Project infomantion is loaded */
-  UNEXPECTED_ERROR: 'unexpected-error', /* Unexpected error */
 } as const;
 /* eslint-enable @typescript-eslint/naming-convention */
 
 
-type NoPayloadEvents = typeof LATEX_APP_EVENTS.FILE_CHANGED | typeof LATEX_APP_EVENTS.LOGIN_SUCCEEDED
-  | typeof LATEX_APP_EVENTS.LOGIN_FAILED | typeof LATEX_APP_EVENTS.LOGIN_OFFLINE
-  | typeof LATEX_APP_EVENTS.COMPILATION_STARTED;
-type ErrorEvents = typeof LATEX_APP_EVENTS.FILE_SYNC_FAILED
-  | typeof LATEX_APP_EVENTS.FILE_CHANGE_ERROR | typeof LATEX_APP_EVENTS.TARGET_FILE_NOT_FOUND
-  | typeof LATEX_APP_EVENTS.UNEXPECTED_ERROR;
-type CompilationResultEvents = typeof LATEX_APP_EVENTS.COMPILATION_FAILED
-  | typeof LATEX_APP_EVENTS.COMPILATION_SUCCEEDED;
+type NoPayloadEvents = typeof LATEX_APP_EVENTS.FILE_CHANGED;
+type ErrorEvents = typeof LATEX_APP_EVENTS.FILE_CHANGE_ERROR;
 class LAEventEmitter extends EventEmitter<''> {
 }
 /* eslint-disable @typescript-eslint/adjacent-overload-signatures */
@@ -48,46 +34,15 @@ interface LAEventEmitter {
   on(eventName: NoPayloadEvents, callback: () => unknown): this;
   emit(eventName: ErrorEvents, detail: string): boolean;
   on(eventName: ErrorEvents, callback: (detail: string) => unknown): this;
-  emit(eventName: CompilationResultEvents, arg: CompileResult): boolean;
-  on(eventName: CompilationResultEvents, callback: (arg: CompileResult) => unknown): this;
-  emit(eventName: typeof LATEX_APP_EVENTS.PROJECT_LOADED, arg: AppInfo): boolean;
-  on(eventName: typeof LATEX_APP_EVENTS.PROJECT_LOADED, callback: (arg: AppInfo) => unknown): this;
-  emit(eventName: typeof LATEX_APP_EVENTS.FILE_SYNC_SUCCEEDED, arg: SyncResult): boolean;
-  on(eventName: typeof LATEX_APP_EVENTS.FILE_SYNC_SUCCEEDED, callback: (arg: SyncResult) => unknown): this;
 }
+
 /* eslint-enable @typescript-eslint/adjacent-overload-signatures */
 
 
-const IGNORE_FILES = [
-  '*.aux',
-  '*.bbl',
-  '*.blg',
-  '*.idx',
-  '*.ind',
-  '*.lof',
-  '*.lot',
-  '*.out',
-  '*.toc',
-  '*.acn',
-  '*.acr',
-  '*.alg',
-  '*.glg',
-  '*.glo',
-  '*.gls',
-  '*.fls',
-  '*.log',
-  '*.fdb_latexmk',
-  '*.snm',
-  '*.synctex',
-  '*.synctex(busy)',
-  '*.synctex.gz(busy)',
-  '*.nav'
-];
-
-
-export class LatexApp extends LAEventEmitter {
+export class LatexApp extends LAEventEmitter implements ILatexApp {
   private syncManager: SyncManager;
   private fileWatcher: FileWatcher;
+  private compilationRunner: AsyncRunner<CompileResult>;
 
   /**
    * Do not use this constructor. Be sure to instantiate LatexApp by createApp()
@@ -100,8 +55,23 @@ export class LatexApp extends LAEventEmitter {
     private fileAdapter: FileAdapter,
     private fileRepo: Repository<typeof FILE_INFO_DESC>,
     decideSyncMode: DecideSyncMode,
-    private logger: Logger = new Logger()) {
+    private logger: Logger = new Logger(),
+  ) {
     super();
+
+    this.compilationRunner = new AsyncRunner(() => this.execCompile());
+
+    /**
+     * Ignore file setting
+     */
+    const ignoredFiles = calcIgnoredFiles(this.appInfoService);
+
+    const checkIgnored = (file: FileInfo) => {
+      return checkIgnoredByFileInfo(this.config, file, ignoredFiles);
+    };
+
+    this.logger.log(`IgnoredFiles: ${JSON.stringify(ignoredFiles)}`);
+
 
     /**
      * Sync Manager
@@ -111,42 +81,17 @@ export class LatexApp extends LAEventEmitter {
         appInfoService.setConflicts(conflictFiles);
         return decideSyncMode(conflictFiles);
       }
-      , logger);
+      , logger, checkIgnored);
 
-    this.syncManager.on('sync-finished', (result) => {
-      if (result.success) {
-        this.emit(LATEX_APP_EVENTS.FILE_SYNC_SUCCEEDED, result);
-      } else if (result.canceled) {
-        // canceled
-      } else {
-        const msg = result.errors.join('\n');
-        this.logger.error('Error in synchronizing files: ' + msg);
-        this.emit(LATEX_APP_EVENTS.FILE_SYNC_FAILED, msg);
-      }
-    });
-
-    this.syncManager.on('error', (msg) => {
-      this.emit(LATEX_APP_EVENTS.FILE_CHANGE_ERROR, msg);
-    });
 
     /**
      * File watcher
      */
-    this.fileWatcher = new FileWatcher(this.config.rootPath, fileRepo,
-      relativePath => {
-        const outFilePaths = [
-          this.config.outDir,
-          appInfoService.appInfo.logPath,
-          appInfoService.appInfo.pdfPath,
-          appInfoService.appInfo.synctexPath
-        ];
-
-        return !outFilePaths.includes(relativePath) &&
-          !IGNORE_FILES.some(
-            ignoreFile => relativePath.match(wildcard2regexp(ignoreFile))
-          );
-      },
-      logger);
+    this.fileWatcher = new FileWatcher(this.config, fileRepo,
+      {
+        ignored: ignoredFiles,
+        logger
+      });
 
     this.fileWatcher.on('change-detected', async () => {
       this.emit(LATEX_APP_EVENTS.FILE_CHANGED);
@@ -157,9 +102,6 @@ export class LatexApp extends LAEventEmitter {
     });
   }
 
-  get appInfo(): AppInfo {
-    return this.appInfoService.appInfo;
-  }
 
   /**
    * setup file management classes
@@ -192,9 +134,7 @@ export class LatexApp extends LAEventEmitter {
     const backend = backendSelector(config, accountService);
 
     // DB
-    const dbFilePath = config.storagePath ? path.join(
-      config.storagePath, `.${config.projectId}-${config.backend}.json`
-    ) : undefined;
+    const dbFilePath = getDBFilePath(config);
     const db = new TypeDB(dbFilePath);
     try {
       await db.load();
@@ -202,10 +142,6 @@ export class LatexApp extends LAEventEmitter {
       // Not initialized because there is no db file.
     }
     const fileRepo = db.getRepository(FILE_INFO_DESC);
-    fileRepo.all().forEach(file => {
-      file.watcherSynced = true;
-    });
-    fileRepo.save();
 
     const fileAdapter = new FileAdapter(config.rootPath, fileRepo, backend);
     const defaultDecideSyncMode: DecideSyncMode = () => Promise.resolve('upload');
@@ -214,31 +150,74 @@ export class LatexApp extends LAEventEmitter {
   }
 
   private static sanitizeConfig(config: Config): Config {
-    const outDir = config.outDir || config.rootPath;
-    let relativeOutDir = path.isAbsolute(outDir) ?
-      path.relative(config.rootPath, outDir) :
-      path.join(outDir);
-    relativeOutDir = relativeOutDir.replace(/\\/g, path.posix.sep); // for windows
-    const rootPath = config.rootPath.replace(/\\/g, path.posix.sep); // for windows
-    if (relativeOutDir === path.posix.sep || relativeOutDir === `.${path.posix.sep}`) {
-      relativeOutDir = '';
-    }
-    return { ...config, outDir: relativeOutDir, rootPath };
+    const outDir = calcRelativeOutDir(config);
+    const rootPath = toPosixPath(config.rootPath);
+    return { ...config, outDir, rootPath };
   }
 
   /**
    * Start to watch file system
    */
-  public startFileWatcher(): Promise<void> {
-    return this.fileWatcher.init();
+  public async start(): Promise<LoginResult> {
+    // Login
+    const loginResult = await this.login();
+
+    // Start file watcher
+    await this.fileWatcher.init();
+
+    return loginResult;
   }
 
+  /**
+   * Login
+   */
+  public async login(): Promise<LoginResult> {
+    // Validate account
+    const accountValidation = await this.validateAccount();
+    if (accountValidation === 'offline') {
+      return {
+        status: 'offline',
+        appInfo: this.appInfoService.appInfo,
+      };
+    } else if (accountValidation === 'invalid') {
+      return {
+        status: 'invalid-account',
+        appInfo: this.appInfoService.appInfo,
+      };
+    } else if (accountValidation === 'valid') {
+
+      if (!this.appInfoService.appInfo.loaded && this.config.projectId) {
+
+        const loadResult = await this.loadProject();
+        if (loadResult !== 'success') {
+          return {
+            status: loadResult,
+            appInfo: this.appInfoService.appInfo,
+          };
+        }
+      }
+
+      return {
+        status: 'success',
+        appInfo: this.appInfoService.appInfo
+      };
+    }
+
+    return {
+      status: 'unknown-error',
+      appInfo: this.appInfoService.appInfo,
+    };
+  }
 
   /**
    * Stop watching file system
    */
-  public stopFileWatcher(): Promise<void> {
-    return this.fileWatcher.stop();
+  public async stop(): Promise<void> {
+    // Stop watching file system
+    await this.fileWatcher.stop();
+
+    // Remove all event listeners
+    this.removeAllListeners();
   }
 
   private onValid() {
@@ -247,120 +226,150 @@ export class LatexApp extends LAEventEmitter {
     }
     this.logger.info('Login Successful');
     this.appInfoService.setLoginStatus('valid');
-    this.emit(LATEX_APP_EVENTS.LOGIN_SUCCEEDED);
   }
 
   private onInvalid() {
+    this.logger.info('Login failed.');
     if (this.appInfoService.appInfo.loginStatus === 'invalid') {
       return;
     }
-    this.logger.info('Login failed.');
     this.appInfoService.setLoginStatus('invalid');
-    this.emit(LATEX_APP_EVENTS.LOGIN_FAILED);
   }
 
   private onOffline() {
+    this.logger.warn('Cannot connect to the server');
     if (this.appInfoService.appInfo.loginStatus === 'offline') {
       return;
     }
-    this.logger.warn('Cannot connect to the server');
     this.appInfoService.setLoginStatus('offline');
-    this.emit(LATEX_APP_EVENTS.LOGIN_OFFLINE);
+  }
+
+  public async sync(): Promise<SyncResult> {
+    // Login
+    const loginResult = await this.login();
+    if (loginResult.status !== 'success') {
+      return loginResult;
+    }
+
+    // File synchronization
+    const result = await this.syncManager.sync();
+    return {
+      status: result.canceled ? 'canceled' : result.success ? 'success' : 'unknown-error',
+      errors: result.errors,
+      appInfo: this.appInfoService.appInfo,
+    };
   }
 
   /**
    * Compile and save pdf, synctex and log files.
    */
   public async compile(): Promise<CompileResult> {
-    this.logger.log('Start compiling');
-    this.emit(LATEX_APP_EVENTS.COMPILATION_STARTED);
+    return this.compilationRunner.run();
+  }
+
+  private async execCompile(): Promise<CompileResult> {
+    this.logger.log('Compilation is started');
+
+    const errors: string[] = [];
+
+    // Load project data if not yet
+    if (!this.appInfoService.appInfo.loaded) {
+      const loadProjectResult = await this.loadProject();
+      if (loadProjectResult !== 'success') {
+        return {
+          status: loadProjectResult,
+          appInfo: this.appInfoService.appInfo,
+
+        };
+      }
+    }
+
     try {
-      if (!this.appInfoService.appInfo.loaded) {
-        const projectInfo = await this.backend.loadProjectInfo();
-        const file = this.fileRepo.findBy('remoteId', projectInfo.compile_target_file_id);
-        if (!file) {
-          this.logger.error('Target file is not found');
-          this.emit(LATEX_APP_EVENTS.TARGET_FILE_NOT_FOUND, '');
-          return { status: 'no-target-error' };
-        }
-        const targetName = path.posix.basename(file.relativePath, '.tex');
-        this.appInfoService.setProjectName(projectInfo.title);
-        this.appInfoService.setTarget(projectInfo.compile_target_file_id, targetName);
-        this.appInfoService.setLoaded();
-        this.emit(LATEX_APP_EVENTS.PROJECT_LOADED, this.appInfo);
-      }
-
+      // Compile
       const result = await this.backend.compileProject();
-
       if (result.status !== 'success') {
-        this.emit(LATEX_APP_EVENTS.COMPILATION_FAILED, result);
-        return result;
+        return {
+          ...result,
+          appInfo: this.appInfoService.appInfo,
+        };
       }
 
-      const promises = [];
+      // Download artifacts
+      errors.push(...await this.downloadCompilationArtifacts(result));
 
-      // download log file
-      if (result.logStream) {
-        if (this.appInfoService.appInfo.logPath) {
-          promises.push(this.fileAdapter.saveAs(this.appInfoService.appInfo.logPath, result.logStream).catch(err => {
-            const msg = 'Some error occurred with saving a log file.';
-            this.logger.error(msg + getErrorTraceStr(err));
-            this.emit(LATEX_APP_EVENTS.UNEXPECTED_ERROR, msg);
-          }));
-        } else {
-          const msg = 'Log file path is not set';
-          this.logger.error(msg);
-          this.emit(LATEX_APP_EVENTS.UNEXPECTED_ERROR, msg);
+      this.logger.log('Compilation is finished');
 
-        }
-      }
-
-      // download pdf
-      if (result.pdfStream) {
-        if (this.appInfoService.appInfo.pdfPath) {
-          promises.push(this.fileAdapter.saveAs(this.appInfoService.appInfo.pdfPath, result.pdfStream).catch(err => {
-            const msg = 'Some error occurred with downloading the compiled pdf file.';
-            this.logger.error(msg + getErrorTraceStr(err));
-            this.emit(LATEX_APP_EVENTS.UNEXPECTED_ERROR, msg);
-          }));
-        } else {
-          const msg = 'PDF file path is not set';
-          this.logger.error(msg);
-          this.emit(LATEX_APP_EVENTS.UNEXPECTED_ERROR, msg);
-        }
-      }
-
-      // download synctex
-      if (result.synctexStream) {
-        if (this.appInfoService.appInfo.synctexPath) {
-          promises.push(
-            this.fileAdapter.saveAs(this.appInfoService.appInfo.synctexPath, result.synctexStream).catch(err => {
-              const msg = 'Some error occurred with saving a synctex file.';
-              this.logger.error(msg + getErrorTraceStr(err));
-              this.emit(LATEX_APP_EVENTS.UNEXPECTED_ERROR, msg);
-
-            })
-          );
-        } else {
-          const msg = 'Synctex file path is not set';
-          this.logger.error(msg);
-          this.emit(LATEX_APP_EVENTS.UNEXPECTED_ERROR, msg);
-        }
-      }
-
-      // wait to download all files
-      await Promise.all(promises);
-
-      this.logger.log('Sucessfully compiled');
-      this.emit(LATEX_APP_EVENTS.COMPILATION_SUCCEEDED, result);
-
-      return result;
+      return {
+        ...result,
+        errors,
+        appInfo: this.appInfoService.appInfo,
+      };
     } catch (err) {
       const msg = 'Some error occurred with compiling.';
       this.logger.warn(msg + getErrorTraceStr(err));
-      this.emit(LATEX_APP_EVENTS.UNEXPECTED_ERROR, msg);
-      return { status: 'unknown-error' };
+      errors.push(msg);
+      return {
+        status: 'unknown-error', errors,
+        appInfo: this.appInfoService.appInfo,
+      };
     }
+  }
+
+  private async downloadCompilationArtifacts(result: BackendCompileResult) {
+    const promises = [];
+    const errors = [];
+
+    // download log file
+    if (result.logStream) {
+      if (this.appInfoService.appInfo.logPath) {
+        promises.push(this.fileAdapter.saveAs(this.appInfoService.appInfo.logPath, result.logStream).catch(err => {
+          const msg = 'Some error occurred with saving a log file.';
+          this.logger.error(msg + getErrorTraceStr(err));
+          errors.push(msg);
+        }));
+      } else {
+        const msg = 'Log file path is not set';
+        this.logger.error(msg);
+        errors.push(msg);
+      }
+    }
+
+    // download pdf
+    if (result.pdfStream) {
+      if (this.appInfoService.appInfo.pdfPath) {
+        promises.push(this.fileAdapter.saveAs(this.appInfoService.appInfo.pdfPath, result.pdfStream).catch(err => {
+          const msg = 'Some error occurred with downloading the compiled pdf file.';
+          this.logger.error(msg + getErrorTraceStr(err));
+          errors.push(msg);
+        }));
+      } else {
+        const msg = 'PDF file path is not set';
+        this.logger.error(msg);
+        errors.push(msg);
+      }
+    }
+
+    // download synctex
+    if (result.synctexStream) {
+      if (this.appInfoService.appInfo.synctexPath) {
+        promises.push(
+          this.fileAdapter.saveAs(this.appInfoService.appInfo.synctexPath, result.synctexStream).catch(err => {
+            const msg = 'Some error occurred with saving a synctex file.';
+            this.logger.error(msg + getErrorTraceStr(err));
+            errors.push(msg);
+          })
+        );
+      } else {
+        const msg = 'Synctex file path is not set';
+        this.logger.error(msg);
+        errors.push(msg);
+      }
+    }
+
+    // wait to download all files
+    await Promise.all(promises);
+
+    return errors;
   }
 
   /**
@@ -368,7 +377,7 @@ export class LatexApp extends LAEventEmitter {
    *
    * @return Promise<'valid' | 'invalid' | 'offline'>
    */
-  public async validateAccount(): Promise<'valid' | 'invalid' | 'offline'> {
+  private async validateAccount(): Promise<'valid' | 'invalid' | 'offline'> {
     try {
       const result = await this.backend.validateToken();
       if (!result) {
@@ -383,26 +392,33 @@ export class LatexApp extends LAEventEmitter {
     return 'valid';
   }
 
-  /**
-   * Set account
-   *
-   * @param account Account
-   */
-  public setAccount(account: Account): void {
-    this.accountService.save(account);
+  private async loadProject(): Promise<'success' | 'no-target-error' | 'unknown-error'> {
+    try {
+      const projectInfo = await this.backend.loadProjectInfo();
+      const file = this.fileRepo.findBy('remoteId', projectInfo.compile_target_file_id);
+      if (!file) {
+        this.logger.error('Target file is not found');
+        return 'no-target-error';
+      }
+      const targetName = path.posix.basename(file.relativePath, '.tex');
+      this.appInfoService.setProjectName(projectInfo.title);
+      this.appInfoService.setTarget(projectInfo.compile_target_file_id, targetName);
+      this.appInfoService.setLoaded();
+      return 'success';
+    } catch (err) {
+      this.logger.error(getErrorTraceStr(err));
+      return 'unknown-error';
+    }
   }
 
-  /**
-   * Start to synchronize files with the remote server
-   */
-  public async startSync(): Promise<void> {
-    await this.syncManager.syncSession();
-  }
 
   /**
    * clear local changes to resolve sync problem
    */
   public resetLocal(): void {
+    this.logger.info('resetLocal()');
     this.fileRepo.all().forEach(f => this.fileRepo.delete(f.id));
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
+    this.fileRepo.save();
   }
 }

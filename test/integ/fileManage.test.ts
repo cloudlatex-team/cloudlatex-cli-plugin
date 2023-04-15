@@ -7,7 +7,7 @@ import { v4 as uuid } from 'uuid';
 import { TypeDB } from '@moritanian/type-db';
 import { FILE_INFO_DESC, FileInfo } from '../../src/model/fileModel';
 import { FileWatcher } from '../../src/fileService/fileWatcher';
-import { SyncManager, SyncResult } from '../../src/fileService/syncManager';
+import { SyncManager } from '../../src/fileService/syncManager';
 import { FileAdapter } from '../../src/fileService/fileAdapter';
 import { BackendStub } from '../tool/backendStub';
 import { Logger } from '../../src/util/logger';
@@ -19,17 +19,31 @@ import { streamToString } from '../../src/util/stream';
 import fsStub from './../tool/fsStub';
 
 const workdir = '/workdir';
+
+const maintex = path.posix.join('main.tex');
+const readmemd = path.posix.join('readme.md');
+const imagesImg1png = path.posix.join('images', 'img1.png');
+const imagesImg2png = path.posix.join('images', 'img2.png');
+const imagesSubimagesSubimg1 = path.posix.join('images', 'sub_images', 'sub_img1.png');
+const testAtxt = path.posix.join('test', 'a.txt');
+
+const imagesDir = path.posix.join('images');
+const imagesSubimagesDir = path.posix.join('images', 'sub_images');
+const testDir = path.posix.join('test');
+
 const testFileDict = {
-  [path.posix.join(workdir, 'main.tex')]: 'content',
-  [path.posix.join(workdir, 'readme.md')]: 'readme',
-  [path.posix.join(workdir, 'images', 'img1.png')]: '',
-  [path.posix.join(workdir, 'images', 'img2.png')]: '',
-  [path.posix.join(workdir, 'images', 'sub_images', 'sub_img1.png')]: '',
+  [path.posix.join(workdir, maintex)]: 'content',
+  [path.posix.join(workdir, readmemd)]: 'readme',
+  [path.posix.join(workdir, imagesImg1png)]: '',
+  [path.posix.join(workdir, imagesImg2png)]: '',
+  [path.posix.join(workdir, imagesSubimagesSubimg1)]: '',
+  [path.posix.join(workdir, testAtxt)]: 'a',
 } as const;
 
 const testFileAndFolderDict = Object.assign({}, testFileDict, {
-  [path.posix.join(workdir, 'images')]: null,
-  [path.posix.join(workdir, 'images', 'sub_images')]: null,
+  [path.posix.join(workdir, imagesDir)]: null,
+  [path.posix.join(workdir, imagesSubimagesDir)]: null,
+  [path.posix.join(workdir, testDir)]: null,
 });
 
 let fileWatcher: FileWatcher;
@@ -64,7 +78,7 @@ const setupInstances = async () => {
     backend.remoteContents[fileInfo.remoteId as string] = testFileAndFolderDict[absPath];
   });
 
-  fsStub(testFileDict);
+  fsStub({ ...testFileDict });
   // File adapter
   const fileAdapter = new FileAdapter(workdir, localFiles, backend);
 
@@ -72,7 +86,7 @@ const setupInstances = async () => {
   const syncManager = new SyncManager(localFiles, fileAdapter, decideSyncMode, logger);
 
   // File watcher
-  fileWatcher = new FileWatcher(workdir, localFiles, () => true, logger);
+  fileWatcher = new FileWatcher({ rootPath: workdir, backend: '', endpoint: '', projectId: 0 }, localFiles, { logger });
   await fileWatcher.init();
 
   return {
@@ -90,7 +104,7 @@ const assertStream = async (stream: NodeJS.ReadableStream, expectedString: strin
 };
 
 type SideChangeSet = {
-  create: string[],
+  create: Array<{ relativePath: string, isFolder: boolean }>,
   update: FileInfo[],
   delete: FileInfo[],
 };
@@ -109,20 +123,20 @@ class TestSituation {
   }
 
   async executeTest() {
-    // Apply some configuration
-    this.instances.backend.isOffline = this.config.isOffline;
-    this.instances.syncModeRef.instance = this.config.syncMode;
-
     // Apply file changes to remote and local filesystems
     await this.applyFileChanges();
 
-    // Wait unitl the system synchronizes local files and remote files
-    const waitTask = new Promise((resolve: (result: SyncResult) => void) => {
-      this.instances.syncManager.on('sync-finished', resolve);
-    });
-    this.instances.syncManager.syncSession();
-    const syncResult = await waitTask;
-    // await tool.sleep(0);
+    // Apply some configuration and sync
+    this.instances.backend.isOffline =
+      this.config.networkMode === 'offline' || this.config.networkMode === 'offline-and-online';
+    this.instances.syncModeRef.instance = this.config.syncMode;
+    let syncResult = await this.instances.syncManager.sync();
+
+    if (this.config.networkMode === 'offline-and-online') {
+      // Sync again in online
+      this.instances.backend.isOffline = false;
+      syncResult = await this.instances.syncManager.sync();
+    }
 
     // Verify syncronization result
     await this.verify(syncResult.success);
@@ -133,10 +147,16 @@ class TestSituation {
     switch (this.config.changeStates.local) {
       case 'create':
         tasks = tasks.concat(this.changeSet.local.create.map(
-          relativePath => fs.promises.writeFile(
-            path.posix.join(workdir, relativePath),
-            this.getChangedContent(relativePath, this.config.changeStates.local, 'local')
-          )
+          file => {
+            if (file.isFolder) {
+              return fs.promises.mkdir(path.posix.join(workdir, file.relativePath));
+            } else {
+              return fs.promises.writeFile(
+                path.posix.join(workdir, file.relativePath),
+                this.getChangedContent(file.relativePath, this.config.changeStates.local, 'local'));
+            }
+
+          }
         ));
         break;
       case 'update':
@@ -149,7 +169,13 @@ class TestSituation {
         break;
       case 'delete':
         tasks = tasks.concat(this.changeSet.local.delete.map(
-          fileInfo => fs.promises.unlink(path.posix.join(workdir, fileInfo.relativePath))
+          fileInfo => {
+            if (fileInfo.isFolder) {
+              return fs.promises.rmdir(path.posix.join(workdir, fileInfo.relativePath));
+            } else {
+              return fs.promises.unlink(path.posix.join(workdir, fileInfo.relativePath));
+            }
+          }
         ));
         break;
     }
@@ -157,9 +183,9 @@ class TestSituation {
     switch (this.config.changeStates.remote) {
       case 'create':
         tasks = tasks.concat(this.changeSet.remote.create.map(
-          relativePath => this.instances.backend._createInRemote(
-            { relativePath },
-            this.getChangedContent(relativePath, this.config.changeStates.remote, 'remote')
+          file => this.instances.backend._createInRemote(
+            file,
+            this.getChangedContent(file.relativePath, this.config.changeStates.remote, 'remote')
           )
         ));
         break;
@@ -183,7 +209,7 @@ class TestSituation {
               throw new Error('remoteId is null');
             }
             return this.instances.backend._deleteInRemote(
-              { relativePath: fileInfo.relativePath }
+              { relativePath: fileInfo.relativePath, isFolder: fileInfo.isFolder }
             );
           }
         ));
@@ -201,10 +227,10 @@ class TestSituation {
     const applyChange = (location: 'local' | 'remote') => {
       switch (this.config.changeStates[location]) {
         case 'create':
-          this.changeSet[location]['create'].forEach(relativePath => {
+          this.changeSet[location]['create'].forEach(file => {
             expectedFileDict[
-              path.posix.join(workdir, relativePath)
-            ] = this.getChangedContent(relativePath, 'create', location);
+              path.posix.join(workdir, file.relativePath)
+            ] = this.getChangedContent(file.relativePath, 'create', location);
           });
           break;
         case 'update':
@@ -215,13 +241,16 @@ class TestSituation {
           });
           break;
         case 'delete':
-          this.changeSet[location]['update'].forEach(fileInfo => {
-            delete expectedFileDict[path.posix.join(workdir, fileInfo.relativePath)];
+          this.changeSet[location]['delete'].forEach(fileInfo => {
+            const absPath = path.posix.join(workdir, fileInfo.relativePath);
+            if (absPath in expectedFileDict) {
+              delete expectedFileDict[absPath];
+            }
           });
           break;
       }
     };
-    if (this.config.isOffline) {
+    if (this.config.networkMode === 'offline') {
       applyChange('local');
     } else if (this.config.syncMode === 'upload') {
       // Apply remote changes first and apply local changes later,
@@ -236,20 +265,20 @@ class TestSituation {
   }
 
   private computeExpectedChangeState(absPath: string): ChangeState {
-    if (!this.config.isOffline) {
+    if (this.config.networkMode !== 'offline') {
       return 'no'; // Changed should be resolved
     }
-    if (this.changeSet.local.create.some(relativePath => (
-      absPath === path.posix.join(workdir, relativePath)
+    if (this.config.changeStates.local === 'create' && this.changeSet.local.create.some(file => (
+      absPath === path.posix.join(workdir, file.relativePath)
     ))) {
       return 'create';
     }
-    if (this.changeSet.local.update.some(fileInfo => (
+    if (this.config.changeStates.local === 'update' && this.changeSet.local.update.some(fileInfo => (
       absPath === path.posix.join(workdir, fileInfo.relativePath)
     ))) {
       return 'update';
     }
-    if (this.changeSet.local.delete.some(fileInfo => (
+    if (this.config.changeStates.local === 'delete' && this.changeSet.local.delete.some(fileInfo => (
       absPath === path.posix.join(workdir, fileInfo.relativePath)
     ))) {
       return 'delete';
@@ -259,12 +288,15 @@ class TestSituation {
 
   private async verify(syncResult: boolean) {
     const expectedFileDict = this.computeExpectedFileDict();
-    if (this.config.isOffline) {
-      chai.assert.isFalse(syncResult);
+    if (this.config.networkMode === 'offline') {
+      chai.assert.isFalse(syncResult, 'syncResult');
     } else {
-      chai.assert.isTrue(syncResult);
+      chai.assert.isTrue(syncResult, 'syncResult');
     }
 
+    if (this.config.networkMode === 'offline') {
+      return;
+    }
 
     const expectedAbsPaths = Object.keys(expectedFileDict);
     // validate the number of files
@@ -293,10 +325,6 @@ class TestSituation {
         tasks.push(assertStream(fs.createReadStream(absPath), expectedContent));
       }
 
-      if (this.config.isOffline) {
-        return;
-      }
-
       // remote
       if (!localFile.isFolder) {
         const remoteContent = this.instances.backend.remoteContents[localFile.remoteId as string];
@@ -308,50 +336,95 @@ class TestSituation {
 
 }
 
-afterEach(() => {
-  fsStub.restore();
-  fileWatcher.stop();
-});
+describe('FileManager', () => {
+  describe('Sync file system', () => {
+    tool.TEST_CONFIG_LIST.forEach(config => {
+      it(config.describe, async () => {
+        const instances = await setupInstances();
+        const localNewFiles = [
+          { relativePath: 'new_file.tex', isFolder: false },
+          { relativePath: 'images/new_img.png', isFolder: false }
+        ];
+        const remoteNewFiles = config.conflict ?
+          localNewFiles : [
+            { relativePath: 'remote_new_file.tex', isFolder: false },
+            { relativePath: 'images/remote_new_img.png', isFolder: false }
+          ];
+        const localChangeFiles = [
+          instances.localFiles.where({ relativePath: readmemd })[0],
+          instances.localFiles.where({ relativePath: imagesSubimagesSubimg1 })[0],
+        ];
+        const remoteChangeFiles = config.conflict ?
+          localChangeFiles : [
+            instances.localFiles.where({ relativePath: imagesImg1png })[0],
+            instances.localFiles.where({ relativePath: imagesImg2png })[0]
+          ];
+        const changeSet: ChangeSet = {
+          'local': {
+            'create': localNewFiles,
+            'update': localChangeFiles,
+            'delete': localChangeFiles
+          },
+          'remote': {
+            'create': remoteNewFiles,
+            'update': remoteChangeFiles,
+            'delete': remoteChangeFiles
+          },
+        };
+
+        const test = new TestSituation(testFileAndFolderDict, changeSet, config, instances);
+        await test.executeTest();
+      });
+    });
+  });
+
+  describe('Sync folder test', () => {
+    tool.TEST_CONFIG_LIST.forEach(config => {
+      if (config.changeStates.local === 'update' || config.changeStates.remote === 'update') {
+        return; // Cannot update folder
+      }
+
+      it(config.describe, async () => {
+        const instances = await setupInstances();
+        const localNewFiles = [
+          { relativePath: 'new_folder', isFolder: true },
+          { relativePath: 'new_folder/new_img.png', isFolder: false }
+        ];
+        const remoteNewFiles = config.conflict ? localNewFiles : [
+          { relativePath: 'remote_new_folder', isFolder: true },
+          { relativePath: 'remote_new_folder/new_img.png', isFolder: false }
+        ];
+        const localDeleteFiles = [
+          instances.localFiles.where({ relativePath: imagesSubimagesSubimg1 })[0],
+          instances.localFiles.where({ relativePath: imagesSubimagesDir })[0]
+        ];
+        const remoteDeleteFiles = config.conflict ? localDeleteFiles : [
+          instances.localFiles.where({ relativePath: testAtxt })[0],
+          instances.localFiles.where({ relativePath: testDir })[0],
+        ];
+        const changeSet: ChangeSet = {
+          'local': {
+            'create': localNewFiles,
+            'update': [],
+            'delete': localDeleteFiles
+          },
+          'remote': {
+            'create': remoteNewFiles,
+            'update': [],
+            'delete': remoteDeleteFiles,
+          },
+        };
+
+        const test = new TestSituation(testFileAndFolderDict, changeSet, config, instances);
+        await test.executeTest();
+      });
 
 
-describe('Sync file system', () => {
-  tool.TEST_CONFIG_LIST.forEach(config => {
-    it(config.describe, async () => {
-      const instances = await setupInstances();
-      const localNewFiles = ['new_file.tex', 'images/new_img.png'];
-      const remoteNewFiles = config.conflict ?
-        localNewFiles : ['remote_new_file.tex', 'images/remote_new_img.png'];
-      const localChangeFiles = [instances.localFiles.all()[1], instances.localFiles.all()[4]];
-      const remoteChangeFiles = config.conflict ?
-        localChangeFiles : [instances.localFiles.all()[2], instances.localFiles.all()[3]];
-      const changeSet: ChangeSet = {
-        'local': {
-          'create': localNewFiles,
-          'update': localChangeFiles,
-          'delete': localChangeFiles
-        },
-        'remote': {
-          'create': remoteNewFiles,
-          'update': remoteChangeFiles,
-          'delete': remoteChangeFiles
-        },
-      };
-      const test = new TestSituation(testFileAndFolderDict, changeSet, config, instances);
-      await test.executeTest();
     });
   });
 });
 
-describe('Sync folder test', () => {
-  it('Create a folder and a file locally', async () => {
-    const instances = await setupInstances();
-    const folderAbsPath = path.posix.join(workdir, 'addedFolder');
-    const fileAbsPath = path.posix.join(workdir, 'addedFolder', 'file.txt');
-    const fileContent = 'file content';
-    await fs.promises.mkdir(folderAbsPath);
-    await fs.promises.writeFile(fileAbsPath, fileContent);
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const syncResult = await instances.syncManager.syncSession();
-    // TODO check the order of sync tasks
-  });
+afterEach(async () => {
+  fsStub.restore();
+  await fileWatcher?.stop();
 });

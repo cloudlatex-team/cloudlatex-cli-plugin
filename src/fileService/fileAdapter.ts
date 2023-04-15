@@ -29,11 +29,13 @@ export class FileAdapter {
       await this.saveAs(file.relativePath, stream);
     } catch (e) {
       file.watcherSynced = true;
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
       this.fileRepo.save();
       throw e;
     }
     file.localChange = 'no';
     file.localRevision = file.remoteRevision;
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     this.fileRepo.save();
   }
 
@@ -78,6 +80,7 @@ export class FileAdapter {
     }
     file.localChange = 'no';
     file.localRevision = file.remoteRevision;
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     this.fileRepo.save();
     return;
   }
@@ -88,6 +91,7 @@ export class FileAdapter {
     file.remoteId = remoteId;
     file.localRevision = remoteRevision;
     file.localChange = 'no';
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     this.fileRepo.save();
   }
 
@@ -100,6 +104,7 @@ export class FileAdapter {
     file.remoteId = remoteId;
     file.localRevision = remoteRevision;
     file.localChange = 'no';
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     this.fileRepo.save();
   }
 
@@ -109,20 +114,26 @@ export class FileAdapter {
     );
     file.localRevision = await this.backend.updateRemote(file, stream);
     file.localChange = 'no';
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     this.fileRepo.save();
   }
 
   public async deleteRemote(file: FileInfo): Promise<void> {
     await this.backend.deleteRemote(file);
     this.fileRepo.delete(file.id);
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     this.fileRepo.save();
   }
 
   public async deleteLocal(file: FileInfo): Promise<void> {
+    file.watcherSynced = false;
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
+    this.fileRepo.save();
+
     const absPath = path.posix.join(this.rootPath, file.relativePath);
     if (file.isFolder) {
       try {
-        fs.promises.rmdir(absPath.replace(new RegExp(path.posix.sep, 'g'), path.sep));
+        await fs.promises.rmdir(absPath.replace(new RegExp(path.posix.sep, 'g'), path.sep));
       } catch (err) {
         // Allow the error that file is already deleted
         if ((err as { code: string }).code !== 'ENOENT') {
@@ -131,12 +142,12 @@ export class FileAdapter {
       }
       return;
     }
-    file.watcherSynced = false;
-    this.fileRepo.save();
+
     try {
       await fs.promises.unlink(absPath.replace(new RegExp(path.posix.sep, 'g'), path.sep));
     } catch (err) {
       file.watcherSynced = true;
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
       this.fileRepo.save();
       // Allow the error that file is already deleted
       if ((err as { code: string }).code !== 'ENOENT') {

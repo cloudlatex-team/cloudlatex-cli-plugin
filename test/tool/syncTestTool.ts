@@ -7,7 +7,8 @@ export type TestConfig = {
   },
   syncMode: SyncMode,
   conflict: boolean,
-  isOffline: boolean,
+  networkMode: 'online' | 'offline'
+  | 'offline-and-online' /** sync under offline and after that sync under onine */,
   describe: string
 };
 
@@ -17,8 +18,9 @@ export const TEST_CONFIG_LIST = (() => {
   changeOptions.forEach(local => {
     changeOptions.forEach(remote => {
       const conflictOptions = [false];
-      if ((local === 'update' || local === 'delete') &&
-        (remote === 'update' || remote === 'delete')) {
+      if (((local === 'update' || local === 'delete') &&
+        (remote === 'update' || remote === 'delete')) ||
+        (local === 'create' && remote === 'create')) {
         conflictOptions.push(true);
       }
       conflictOptions.forEach(conflict => {
@@ -27,38 +29,34 @@ export const TEST_CONFIG_LIST = (() => {
           syncModeOptions.push('download');
         }
         syncModeOptions.forEach(syncMode => {
-          let describe = `local: "${local}" remote: "${remote}" `;
-          if (conflictOptions.length > 1) {
-            describe += `conflict: "${conflict}" `;
-          }
-          if (conflict) {
-            describe += `mode: "${syncMode}" `;
-          }
-          list.push({
-            changeStates: {
-              local,
-              remote,
-            },
-            conflict,
-            syncMode,
-            isOffline: false,
-            describe
+          const networkModeOptions: Array<TestConfig['networkMode']> = ['online', 'offline', 'offline-and-online'];
+          networkModeOptions.forEach(networkMode => {
+            let describe = `local: "${local}" remote: "${remote}" `;
+            if (conflictOptions.length > 1) {
+              describe += `conflict: "${conflict}" `;
+            }
+            if (conflict) {
+              describe += `mode: "${syncMode}" `;
+            }
+
+            describe += `netowork: ${networkMode}`;
+            list.push({
+              changeStates: {
+                local,
+                remote,
+              },
+              conflict,
+              syncMode,
+              networkMode,
+              describe
+            });
           });
+
         });
       });
     });
   });
-  // offline
-  list.push({
-    changeStates: {
-      local: 'update',
-      remote: 'no',
-    },
-    conflict: false,
-    syncMode: 'upload',
-    isOffline: true,
-    describe: 'offline'
-  });
+
   return list;
 })();
 

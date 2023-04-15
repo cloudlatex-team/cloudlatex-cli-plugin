@@ -2,14 +2,12 @@ import { SyncMode, DecideSyncMode, KeyType, ChangeState } from '../types';
 import { FileAdapter } from './fileAdapter';
 import { FileRepository, FileInfo } from '../model/fileModel';
 import * as path from 'path';
-import * as  EventEmitter from 'eventemitter3';
-import * as _ from 'lodash';
-import { Logger, getErrorTraceStr } from '../util/logger';
+import { getErrorTraceStr, Logger } from '../util/logger';
+import { AsyncRunner } from '../util/asyncRunner';
 
 export type SyncResult = {
   success: boolean;
   canceled: boolean;
-  fileChanged: boolean; // show if any file (not folder) is changed
   errors: string[]
 };
 
@@ -18,76 +16,64 @@ type SyncTaskResult = {
   message: string;
 };
 
-type EventType = 'sync-finished' | 'error';
 type SyncTask = 'download' | 'createLocalFolder' | 'createRemoteFolder' |
   'upload' | 'updateRemote' | 'deleteRemote' | 'deleteLocal' | 'no';
 
-export class SyncManager extends EventEmitter<EventType> {
-  private syncing = false;
-  private fileChanged = false; // Whether any file (not folder) is changed
-  public syncSession: () => void;
+export class SyncManager {
+  private runner: AsyncRunner<SyncResult>;
   constructor(
     private fileRepo: FileRepository,
     private fileAdapter: FileAdapter,
     public decideSyncMode: DecideSyncMode,
-    private logger: Logger
+    private logger: Logger,
+    private checkIgnored: (file: FileInfo) => boolean = () => false,
   ) {
-    super();
-    this.syncSession = _.debounce(
-      this._syncSession.bind(this),
-      5000,
-      { trailing: true, leading: true }
-    );
+    this.runner = new AsyncRunner<SyncResult>(() => {
+      return this.execSync();
+    });
   }
 
-  async _syncSession(): Promise<void> {
-    this.fileChanged = false;
-    if (this.syncing) {
-      this.syncSession();
-      return;
-    }
+  public async sync(): Promise<SyncResult> {
+    return this.runner.run();
+  }
 
-    this.logger.log('Synchronizing files with server ...');
+  private async execSync(): Promise<SyncResult> {
+    this.logger.info('File synchronization is started');
 
-    this.syncing = true;
-
+    let remoteFileList: FileInfo[];
+    let remoteFileDict: Record<KeyType, FileInfo> = {};
     try {
-      const result = await this.sync();
-      if (result.success) {
-        this.logger.log('Successfully synchronized!');
-      } else if (result.canceled) {
-        this.logger.log('Synchronizing is canceled');
-      }
-      this.syncing = false;
-      this.emitSyncResult(result);
-    } catch (e) {
-      this.syncing = false;
-      this.logger.log('Failed to sync: ' + getErrorTraceStr(e));
-      this.emitSyncResult({
+      remoteFileList = (await this.fileAdapter.loadFileList())
+        .filter(remoteFile => {
+          // Filter by ignore file settings
+          return !this.checkIgnored(remoteFile);
+        });
+
+      remoteFileDict = remoteFileList.reduce((dict, file) => {
+        if (file.remoteId === null) {
+          // TODO: recover
+          throw new Error('remoteId is null');
+        }
+        dict[file.remoteId] = file;
+        return dict;
+      }, {} as Record<KeyType, FileInfo>);
+    } catch (err) {
+      return {
         success: false,
         canceled: false,
-        fileChanged: this.fileChanged,
-        errors: [getErrorTraceStr(e)]
-      });
+        errors: [getErrorTraceStr(err)]
+      };
     }
-  }
 
-  private emitSyncResult(result: SyncResult) {
-    this.emit('sync-finished', result);
-  }
 
-  private async sync(): Promise<SyncResult> {
-    const remoteFileList = await this.fileAdapter.loadFileList();
-    const remoteFileDict = remoteFileList.reduce((dict, file) => {
-      if (file.remoteId === null) {
-        throw new Error('remoteId is null');
-      }
-      dict[file.remoteId] = file;
-      return dict;
-    }, {} as Record<KeyType, FileInfo>);
-
-    // Reset remote change state and change location
     this.fileRepo.all().forEach(file => {
+      // Remove ignored file entry
+      if (this.checkIgnored(file)) {
+        this.fileRepo.delete(file.id);
+        return;
+      }
+
+      // Reset remote change state and change location
       file.remoteChange = 'no';
       file.changeLocation = 'no';
     });
@@ -98,38 +84,68 @@ export class SyncManager extends EventEmitter<EventType> {
     // Remote to local
     remoteFileList.forEach(remoteFile => {
       let file = this.fileRepo.findBy('remoteId', remoteFile.remoteId);
-      if (!file) { // created in remote
+      if (!file) {
+
+        file = this.fileRepo.findBy('relativePath', remoteFile.relativePath);
+        if (file && file.isFolder) {
+          // Folders with the same name have been created in local and remote
+          file.remoteId = remoteFile.remoteId;
+          file.localChange = 'no';
+          return;
+        } else if (file) {
+          // Files with the same name have been created in local and remote
+          this.logger.log(`${file.relativePath} have been created in both local and remote`);
+          file.remoteChange = 'create';
+          file.localChange = 'create';
+          file.url = remoteFile.url;
+          file.remoteId = remoteFile.remoteId;
+          file.remoteRevision = remoteFile.remoteRevision;
+          return;
+        }
+
+        // created in remote
         file = this.fileRepo.new(remoteFile);
         file.remoteChange = 'create';
         return;
       }
+
       file.remoteRevision = remoteFile.remoteRevision;
       file.url = remoteFile.url;
-      if (file.localRevision !== file.remoteRevision) { // updated in remote
-        file.remoteChange = 'update';
-      } else if (file.relativePath !== remoteFile.relativePath) { // renamed in remote
+
+      if (file.relativePath !== remoteFile.relativePath) { // renamed in remote
         if (file.localChange === 'no') {
+          this.logger.log(`Remote file is renamed: ${file.relativePath} -> ${remoteFile.relativePath}`);
           // express rename as deleting original file and creating renamed file
           file.remoteChange = 'delete';
+
           const renamedFile = this.fileRepo.new(remoteFile);
           renamedFile.remoteChange = 'create';
         } else if (file.localChange === 'create') {
           const msg = 'Unexpected situation is detected:'
             + ` remote file is renamed and local file is created: ${file.relativePath}`;
           this.logger.error(msg);
-          this.emit('error', msg);
         } else if (file.localChange === 'delete') {
-          const msg = 'Unsupported situation is detected:'
-            + ` remote file is renamed and local file is deleted: ${file.relativePath}`;
-          this.logger.error(msg);
-          this.emit('error', msg);
-        } else if (file.localChange === 'update') {
-          const msg = 'Unsupported situation is detected:'
-            + ` remote file is renamed and local file is updated: ${file.relativePath}`;
-          this.logger.error(msg);
-          this.emit('error', msg);
+          this.logger.log(`Remote file is renamed: ${file.relativePath} -> ${remoteFile.relativePath} 
+            and local file is deleted`);
 
+          this.fileRepo.delete(file.id);
+
+          const renamedFile = this.fileRepo.new(remoteFile);
+          renamedFile.remoteChange = 'create';
+        } else if (file.localChange === 'update') {
+          this.logger.log(`Remote file is renamed: ${file.relativePath} -> ${remoteFile.relativePath} 
+          and local file is updated`);
+
+          file.localChange = 'create';
+          file.remoteId = null;
+          file.remoteRevision = null;
+          file.url = '';
+
+          const renamedFile = this.fileRepo.new(remoteFile);
+          renamedFile.remoteChange = 'create';
         }
+      } else if (file.localRevision !== file.remoteRevision) { // updated in remote
+        file.remoteChange = 'update';
       }
     });
 
@@ -139,7 +155,8 @@ export class SyncManager extends EventEmitter<EventType> {
       if (!remoteFile) { // remote file does not exist
         if (file.remoteId) { // remote file is deleted
           file.remoteChange = 'delete';
-          file.remoteId = null;
+        } else { // local file is created
+          file.localChange = 'create';
         }
       }
 
@@ -153,43 +170,51 @@ export class SyncManager extends EventEmitter<EventType> {
       }
     });
 
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     this.fileRepo.save();
 
     let syncMode: SyncMode = 'download';
     if (this.fileRepo.findBy('changeLocation', 'both')) {
+      this.logger.info('File conflict is detected');
+
       try {
         syncMode = await this.decideSyncMode(
           this.fileRepo.where({ 'changeLocation': 'both' }),
         );
       } catch (e) {
+        this.logger.info('File synchronization is canceled');
+
         return {
           success: false,
           canceled: true,
-          fileChanged: this.fileChanged,
           errors: []
         };
       }
+
+      this.logger.info(`SyncMode ${syncMode} is selected`);
     }
 
-    const results = await new TasksExecuter<SyncTaskResult>(
+    const results = await (new TasksExecuter<SyncTaskResult>(
       this.generateSyncTasks(syncMode)
-    ).execute();
+    )).execute();
 
     const fails = results.filter(result => !result.success);
     if (fails.length > 0) {
+      this.logger.info('File synchronization is failed');
+
       return {
         success: false,
         canceled: false,
-        fileChanged: this.fileChanged,
         errors: fails.map(result => result.message)
       };
     }
 
+    this.logger.info('File synchronization is finished');
+
     return {
       success: true,
       canceled: false,
-      fileChanged: this.fileChanged,
-      errors: fails.map(result => result.message)
+      errors: [],
     };
   }
 
@@ -198,11 +223,9 @@ export class SyncManager extends EventEmitter<EventType> {
     this.fileRepo.all().forEach(file => {
       if (file.changeLocation === 'remote' ||
         (file.changeLocation === 'both' && remoteSyncMode === 'download')) {
-        tasks.push(this.syncWithRemoteTask(file));
-        this.logger.log('Pull: ' + file.relativePath);
-        if (!file.isFolder) {
-          this.fileChanged = true;
-        }
+        const task = this.syncWithRemoteTask(file);
+        tasks.push(task);
+        this.logger.log(`Pull:  ${file.relativePath} ${task.name}`);
       } else if (
         file.changeLocation === 'local' ||
         (file.changeLocation === 'both' && remoteSyncMode === 'upload')
@@ -210,10 +233,6 @@ export class SyncManager extends EventEmitter<EventType> {
         const task = this.syncWithLocalTask(file);
         tasks.push(task);
         this.logger.log(`Push: ${file.relativePath} ${task.name}`);
-
-        if (!file.isFolder) {
-          this.fileChanged = true;
-        }
       }
     });
     return tasks;
@@ -231,6 +250,11 @@ export class SyncManager extends EventEmitter<EventType> {
         if (file.isFolder) {
           return this.createPriorityTask('createRemoteFolder', file, priority);
         }
+
+        if (file.remoteChange === 'create') {
+          return this.createPriorityTask('updateRemote', file, priority);
+        }
+
         return this.createPriorityTask('upload', file, priority);
       case 'update':
         if (file.remoteChange === 'delete') {
@@ -244,6 +268,7 @@ export class SyncManager extends EventEmitter<EventType> {
         if (file.remoteChange === 'delete') {
           // The same file is already deleted both in local and remote.
           this.fileRepo.delete(file.id);
+          // eslint-disable-next-line @typescript-eslint/no-floating-promises
           this.fileRepo.save();
           return this.createPriorityTask('no', file, priority);
         }
@@ -262,6 +287,10 @@ export class SyncManager extends EventEmitter<EventType> {
     const priority = this.computePriority(file, 'remote');
     switch (file.remoteChange) {
       case 'create':
+        if (file.isFolder) {
+          return this.createPriorityTask('createLocalFolder', file, priority);
+        }
+        return this.createPriorityTask('download', file, priority);
       case 'update':
         if (file.isFolder) {
           return this.createPriorityTask('createLocalFolder', file, priority);
@@ -271,6 +300,7 @@ export class SyncManager extends EventEmitter<EventType> {
         if (file.localChange === 'delete') {
           // The same file is already deleted both in local and remote.
           this.fileRepo.delete(file.id);
+          // eslint-disable-next-line @typescript-eslint/no-floating-promises
           this.fileRepo.save();
           return this.createPriorityTask('no', file, priority);
         }
@@ -317,9 +347,11 @@ export class SyncManager extends EventEmitter<EventType> {
       try {
         await this.fileAdapter[task](file);
       } catch (e) {
+        const message = `${task} : '${file.relativePath}' :  ${(e && (e as Error).stack || '')}`;
+        this.logger.error(message);
         return {
           success: false,
-          message: `${task} : '${file.relativePath}' : ${file.url} : ${(e && (e as Error).stack || '')}`
+          message,
         };
       }
       return {
@@ -390,7 +422,7 @@ class TasksExecuter<Result = unknown> {
 
   async execute(): Promise<Result[]> {
     const results: Result[] = [];
-    const taskSeries = [];
+    const taskSeries: Array<() => Promise<Result[]>> = [];
     const sortedTaskList = this.taskList.sort((task1, task2) => task1.priority - task2.priority);
     // sortedTaskList[0] has lowest priority and sortedTaskList[-1] has highest priority.
     while (sortedTaskList.length > 0) {

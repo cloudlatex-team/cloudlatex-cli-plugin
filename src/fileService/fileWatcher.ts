@@ -1,66 +1,140 @@
 import * as chokidar from 'chokidar';
-import * as path from 'path';
 import * as  EventEmitter from 'eventemitter3';
 import { FileRepository } from '../model/fileModel';
 import { Logger } from '../util/logger';
+import anymatch, { Matcher } from 'anymatch';
+import { checkIgnoredByFileInfo, toPosixPath, toRelativePath } from './filePath';
+import { Config } from '../types';
+
 
 type EventType = 'change-detected' | 'error';
 
 export class FileWatcher extends EventEmitter<EventType> {
   private fileWatcher?: chokidar.FSWatcher;
-
+  private readonly ignored?: Matcher;
+  private logger: Logger;
+  private initialized = false;
   constructor(
-    private rootPath: string,
+    private config: Config,
     private fileRepo: FileRepository,
-    public readonly watcherFileFilter: (relativePath: string) => boolean = (_) => true,
-    private logger: Logger = new Logger()
+    options?: {
+      ignored?: Matcher,
+      logger?: Logger
+    },
   ) {
     super();
+
+    if (options?.ignored) {
+      this.ignored = options.ignored;
+    }
+
+    this.logger = options?.logger || new Logger();
   }
 
   public init(): Promise<void> {
+
+    this.initialized = false;
+
+    /**
+     * Initialize file entries
+     */
+    this.fileRepo.all().forEach(file => {
+      /**
+      * Remove entries of ignore files from file db
+      */
+      if (checkIgnoredByFileInfo(this.config, file, this.ignored || [])) {
+        this.logger.info(`Remove entry [${file.relativePath}] from file db`);
+        this.fileRepo.delete(file.id);
+        return;
+      }
+
+      /**
+       * Initialize file entry property
+       */
+      file.watcherSynced = false;
+      file.remoteChange = 'no';
+    });
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
+    this.fileRepo.save();
+
     const watcherOption: chokidar.WatchOptions = {
-      ignored: /\.git|\.cloudlatex\.json|synctex\.gz|\.vscode(\\|\/|$)|.DS_Store/, //#TODO
+      ignored: this.ignored,
       awaitWriteFinish: {
         stabilityThreshold: 500,
         pollInterval: 100
       }
     };
-    const fileWatcher = this.fileWatcher = chokidar.watch(this.rootPath, watcherOption);
+    const fileWatcher = this.fileWatcher = chokidar.watch(this.config.rootPath, watcherOption);
+
+    fileWatcher.on('add', (absPath) => this.onFileCreated(toPosixPath(absPath), false));
+    fileWatcher.on('addDir', (absPath) => this.onFileCreated(toPosixPath(absPath), true));
+    fileWatcher.on('change', (absPath) => this.onFileChanged(toPosixPath(absPath)));
+    fileWatcher.on('unlink', (absPath) => this.onFileDeleted(toPosixPath(absPath)));
+    fileWatcher.on('unlinkDir', (absPath) => this.onFileDeleted(toPosixPath(absPath)));
+    fileWatcher.on('error', (err) => this.onWatchingError(err));
+
     return new Promise((resolve) => {
-      // TODO detect changes before running
       fileWatcher.on('ready', () => {
         this.logger.log('On chokidar ready event');
 
-        fileWatcher.on('add', (absPath) => this.onFileCreated(absPath.replace(/\\/g, path.posix.sep), false));
-        fileWatcher.on('addDir', (absPath) => this.onFileCreated(absPath.replace(/\\/g, path.posix.sep), true));
-        fileWatcher.on('change', (absPath) => this.onFileChanged(absPath.replace(/\\/g, path.posix.sep)));
-        fileWatcher.on('unlink', (absPath) => this.onFileDeleted(absPath.replace(/\\/g, path.posix.sep)));
-        fileWatcher.on('unlinkDir', (absPath) => this.onFileDeleted(absPath.replace(/\\/g, path.posix.sep)));
-        fileWatcher.on('error', (err) => this.onWatchingError(err));
+        // Handle the entry which watcherSynced is false as deleted file
+        const notFoundFiles = this.fileRepo.where({ watcherSynced: false });
+        notFoundFiles.forEach(notFound => {
+          notFound.watcherSynced = true;
+          notFound.localChange = 'delete';
+        });
+
+        this.initialized = true;
         resolve();
+
+        // Emit change if needed
+        const changedFiles = this.fileRepo.all().filter(
+          file => file.localChange !== 'no' || file.remoteChange !== 'no'
+        );
+        if (changedFiles.length) {
+          this.logger.info(
+            `Found changed files after initialization: ${JSON.stringify(
+              changedFiles.map(file => ({
+                path: file.relativePath,
+                localChange: file.localChange,
+              }))
+            )}`
+          );
+          this.emitChange();
+        }
       });
     });
   }
 
   private onFileCreated(absPath: string, isFolder = false) {
-    const relativePath = this.getRelativePath(absPath);
-    if (!this.watcherFileFilter(relativePath)) {
+    if (this.ignored && anymatch(this.ignored, absPath)) {
       return;
     }
+
+    const relativePath = this.getRelativePath(absPath);
+
+    if (relativePath === '') { // Ignore root entry
+      return;
+    }
+
     let file = this.fileRepo.findBy('relativePath', relativePath);
+
+
     if (file) {
       if (!file.watcherSynced) {
-        // this file is downloaded from remote
+        // this file is downloaded from remote or detected on initialization
         file.watcherSynced = true;
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises
         this.fileRepo.save();
         return;
       }
+
       if (file.localChange === 'delete') {
         // The same named file is deleted and recreated.
         file.localChange = 'update';
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises
         this.fileRepo.save();
-        this.emit('change-detected');
+        this.emitChange();
         return;
       }
 
@@ -69,6 +143,7 @@ export class FileWatcher extends EventEmitter<EventType> {
       this.emit('error', msg);
       return;
     }
+
     this.logger.log(
       `New ${isFolder ? 'folder' : 'file'} detected: ${absPath}`
     );
@@ -79,15 +154,18 @@ export class FileWatcher extends EventEmitter<EventType> {
       watcherSynced: true,
       isFolder
     });
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     this.fileRepo.save();
-    this.emit('change-detected');
+
+    this.emitChange();
   }
 
   private async onFileChanged(absPath: string) {
-    const relativePath = this.getRelativePath(absPath);
-    if (!this.watcherFileFilter(relativePath)) {
+    if (this.ignored && anymatch(this.ignored, absPath)) {
       return;
     }
+
+    const relativePath = this.getRelativePath(absPath);
     const changedFile = this.fileRepo.findBy('relativePath', relativePath);
     if (!changedFile) {
       const msg = `Local-changed-error: The fileInfo is not found at onFileChanged: ${absPath}`;
@@ -99,6 +177,7 @@ export class FileWatcher extends EventEmitter<EventType> {
     // file was changed by downloading
     if (!changedFile.watcherSynced) {
       changedFile.watcherSynced = true;
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
       this.fileRepo.save();
       return;
     }
@@ -111,15 +190,17 @@ export class FileWatcher extends EventEmitter<EventType> {
       `Update of ${changedFile.isFolder ? 'folder' : 'file'} detected: ${absPath}`
     );
 
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     this.fileRepo.save();
-    this.emit('change-detected');
+    this.emitChange();
   }
 
   private async onFileDeleted(absPath: string) {
-    const relativePath = this.getRelativePath(absPath);
-    if (!this.watcherFileFilter(relativePath)) {
+    if (this.ignored && anymatch(this.ignored, absPath)) {
       return;
     }
+
+    const relativePath = this.getRelativePath(absPath);
     const file = this.fileRepo.findBy('relativePath', relativePath);
     if (!file) {
       const msg = `Local-changed-error: The fileInfo is not found at onFileDeleted: ${absPath}`;
@@ -131,6 +212,7 @@ export class FileWatcher extends EventEmitter<EventType> {
     // The file was deleted by deleteLocal() because remote file is deleted.
     if (!file.watcherSynced) {
       this.fileRepo.delete(file.id);
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
       this.fileRepo.save();
       return;
     }
@@ -141,14 +223,16 @@ export class FileWatcher extends EventEmitter<EventType> {
 
     if (file.localChange === 'create') {
       this.fileRepo.delete(file.id);
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
       this.fileRepo.save();
       this.emit('change-detected');
       return;
     }
 
     file.localChange = 'delete';
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     this.fileRepo.save();
-    this.emit('change-detected');
+    this.emitChange();
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -169,12 +253,18 @@ export class FileWatcher extends EventEmitter<EventType> {
     }
   }
 
+  private emitChange() {
+    if (this.initialized) {
+      this.emit('change-detected');
+    }
+  }
+
   private getRelativePath(absPath: string): string {
-    return path.posix.relative(this.rootPath, absPath);
+    return toRelativePath(this.config, absPath);
   }
 
   public stop(): Promise<void> {
-    this.logger.log('Stop watching file system', this.rootPath);
+    this.logger.log('Stop watching file system', this.config.rootPath);
     return this.fileWatcher ? this.fileWatcher.close() : Promise.resolve();
   }
 }
