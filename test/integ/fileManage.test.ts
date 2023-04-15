@@ -123,14 +123,20 @@ class TestSituation {
   }
 
   async executeTest() {
-    // Apply some configuration
-    this.instances.backend.isOffline = this.config.isOffline;
-    this.instances.syncModeRef.instance = this.config.syncMode;
-
     // Apply file changes to remote and local filesystems
     await this.applyFileChanges();
 
-    const syncResult = await this.instances.syncManager.sync();
+    // Apply some configuration and sync
+    this.instances.backend.isOffline =
+      this.config.networkMode === 'offline' || this.config.networkMode === 'offline-and-online';
+    this.instances.syncModeRef.instance = this.config.syncMode;
+    let syncResult = await this.instances.syncManager.sync();
+
+    if (this.config.networkMode === 'offline-and-online') {
+      // Sync again in online
+      this.instances.backend.isOffline = false;
+      syncResult = await this.instances.syncManager.sync();
+    }
 
     // Verify syncronization result
     await this.verify(syncResult.success);
@@ -244,7 +250,7 @@ class TestSituation {
           break;
       }
     };
-    if (this.config.isOffline) {
+    if (this.config.networkMode === 'offline') {
       applyChange('local');
     } else if (this.config.syncMode === 'upload') {
       // Apply remote changes first and apply local changes later,
@@ -259,20 +265,20 @@ class TestSituation {
   }
 
   private computeExpectedChangeState(absPath: string): ChangeState {
-    if (!this.config.isOffline) {
+    if (this.config.networkMode !== 'offline') {
       return 'no'; // Changed should be resolved
     }
-    if (this.changeSet.local.create.some(file => (
+    if (this.config.changeStates.local === 'create' && this.changeSet.local.create.some(file => (
       absPath === path.posix.join(workdir, file.relativePath)
     ))) {
       return 'create';
     }
-    if (this.changeSet.local.update.some(fileInfo => (
+    if (this.config.changeStates.local === 'update' && this.changeSet.local.update.some(fileInfo => (
       absPath === path.posix.join(workdir, fileInfo.relativePath)
     ))) {
       return 'update';
     }
-    if (this.changeSet.local.delete.some(fileInfo => (
+    if (this.config.changeStates.local === 'delete' && this.changeSet.local.delete.some(fileInfo => (
       absPath === path.posix.join(workdir, fileInfo.relativePath)
     ))) {
       return 'delete';
@@ -282,12 +288,15 @@ class TestSituation {
 
   private async verify(syncResult: boolean) {
     const expectedFileDict = this.computeExpectedFileDict();
-    if (this.config.isOffline) {
+    if (this.config.networkMode === 'offline') {
       chai.assert.isFalse(syncResult, 'syncResult');
     } else {
       chai.assert.isTrue(syncResult, 'syncResult');
     }
 
+    if (this.config.networkMode === 'offline') {
+      return;
+    }
 
     const expectedAbsPaths = Object.keys(expectedFileDict);
     // validate the number of files
@@ -314,10 +323,6 @@ class TestSituation {
       );
       if (!localFile.isFolder) {
         tasks.push(assertStream(fs.createReadStream(absPath), expectedContent));
-      }
-
-      if (this.config.isOffline) {
-        return;
       }
 
       // remote

@@ -4,7 +4,7 @@ import { AsyncRunner } from '../../src/util/asyncRunner';
 import { sleep } from '../tool/syncTestTool';
 
 
-describe('100ms sleep task', () => {
+describe('AsyncRunner with 100ms sleep task', () => {
   let cnt = 0;
   const task = async () => {
     await sleep(100);

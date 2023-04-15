@@ -27,7 +27,7 @@ export class BackendStub implements IBackend {
 
   loadProjectInfo(): Promise<ProjectInfo> {
     if (this.isOffline) {
-      return Promise.reject();
+      return Promise.reject('Network error on loadProjectInfo');
     }
     return Promise.resolve({
       id: 1,
@@ -38,7 +38,7 @@ export class BackendStub implements IBackend {
 
   loadFileList(): Promise<FileInfo[]> {
     if (this.isOffline) {
-      return Promise.reject();
+      return Promise.reject('Network error on loadFileList');
     }
     return Promise.resolve(this.remoteFiles.all());
   }
@@ -49,7 +49,7 @@ export class BackendStub implements IBackend {
     remoteRevision: string;
   }> {
     if (this.isOffline) {
-      return Promise.reject();
+      return Promise.reject('Network error on upload');
     }
 
     if (file.isFolder) {
@@ -70,7 +70,7 @@ export class BackendStub implements IBackend {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars
   async createRemote(file: FileInfo, parent: FileInfo | null): Promise<{ remoteId: KeyType, remoteRevision: any }> {
     if (this.isOffline) {
-      return Promise.reject('offline');
+      return Promise.reject('Network error on createRemote');
     }
     const newFile = this.remoteFiles.new({ ...file });
     newFile.id = -1; // reset local id
@@ -84,7 +84,7 @@ export class BackendStub implements IBackend {
 
   async download(file: FileInfo): Promise<NodeJS.ReadableStream> {
     if (this.isOffline) {
-      return Promise.reject();
+      return Promise.reject('Network error on download');
     }
     const remoteFile = this.remoteFiles.findBy('remoteId', file.remoteId);
     if (!remoteFile) {
@@ -105,7 +105,7 @@ export class BackendStub implements IBackend {
 
   async updateRemote(file: FileInfo, stream: NodeJS.ReadableStream): Promise<KeyType> {
     if (this.isOffline) {
-      return Promise.reject();
+      return Promise.reject('Network error on updateRemote');
     }
     const targetFile = this.remoteFiles.findBy('remoteId', file.remoteId);
     if (!targetFile || !targetFile.remoteId) {
@@ -117,7 +117,7 @@ export class BackendStub implements IBackend {
 
   deleteRemote(file: FileInfo): Promise<void> {
     if (this.isOffline) {
-      return Promise.reject();
+      return Promise.reject('Network error on deleteRemote');
     }
     const targetFile = this.remoteFiles.findBy('remoteId', file.remoteId);
     if (!targetFile) {
@@ -131,7 +131,7 @@ export class BackendStub implements IBackend {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   compileProject(): Promise<any> {
     if (this.isOffline) {
-      return Promise.reject();
+      return Promise.reject('Network error on compileProject');
     }
     return Promise.resolve();
   }
