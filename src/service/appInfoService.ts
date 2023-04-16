@@ -14,7 +14,7 @@ export class AppInfoService {
   get appInfo(): AppInfo {
     return {
       ...this._appInfo,
-      conflictFiles: [...this._appInfo.conflictFiles],
+      conflictFiles: [...this._appInfo.conflictFiles.map(file => ({ ...file }))],
     };
   }
 

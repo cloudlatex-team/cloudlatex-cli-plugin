@@ -60,15 +60,9 @@ export interface AppInfo {
 }
 
 export type KeyType = number | string;
-export type SyncMode = 'upload' | 'download';
+export type ConflictSolution = 'push' | 'pull';
 export type ChangeState = 'no' | 'update' | 'create' | 'delete';
 export type ChangeLocation = 'no' | 'local' | 'remote' | 'both';
-
-export interface DecideSyncMode {
-  (
-    conflictFiles: FileInfo[]
-  ): Promise<SyncMode>
-}
 
 export type BaseResultStatus = 'success' | 'invalid-account' | 'offline' | 'no-target-error' | 'unknown-error';
 
@@ -78,7 +72,7 @@ export type LoginResult = {
   errors?: string[]
 };
 
-export type SyncStatus = BaseResultStatus | 'canceled';
+export type SyncStatus = BaseResultStatus | 'conflict';
 export type SyncResult = {
   status: SyncStatus;
   appInfo: AppInfo;

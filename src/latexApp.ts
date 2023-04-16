@@ -1,7 +1,7 @@
 import * as path from 'path';
 import * as  EventEmitter from 'eventemitter3';
 import { Logger, getErrorTraceStr } from './util/logger';
-import { Config, DecideSyncMode, Account, CompileResult, ILatexApp, LoginResult, SyncResult } from './types';
+import { Config, Account, CompileResult, ILatexApp, LoginResult, SyncResult, ConflictSolution } from './types';
 import { FileAdapter } from './fileService/fileAdapter';
 import { SyncManager } from './fileService/syncManager';
 import { FileWatcher } from './fileService/fileWatcher';
@@ -54,7 +54,6 @@ export class LatexApp extends LAEventEmitter implements ILatexApp {
     private backend: IBackend,
     private fileAdapter: FileAdapter,
     private fileRepo: Repository<typeof FILE_INFO_DESC>,
-    decideSyncMode: DecideSyncMode,
     private logger: Logger = new Logger(),
   ) {
     super();
@@ -76,12 +75,7 @@ export class LatexApp extends LAEventEmitter implements ILatexApp {
     /**
      * Sync Manager
      */
-    this.syncManager = new SyncManager(fileRepo, fileAdapter,
-      async (conflictFiles) => {
-        appInfoService.setConflicts(conflictFiles);
-        return decideSyncMode(conflictFiles);
-      }
-      , logger, checkIgnored);
+    this.syncManager = new SyncManager(fileRepo, fileAdapter, logger, checkIgnored);
 
 
     /**
@@ -112,7 +106,6 @@ export class LatexApp extends LAEventEmitter implements ILatexApp {
    * The file Adapter abstructs file operations of local files and remote ones.
    */
   static async createApp(config: Config, option: {
-    decideSyncMode?: DecideSyncMode,
     logger?: Logger,
     accountService?: AccountService<Account>
   } = {}): Promise<LatexApp> {
@@ -144,9 +137,7 @@ export class LatexApp extends LAEventEmitter implements ILatexApp {
     const fileRepo = db.getRepository(FILE_INFO_DESC);
 
     const fileAdapter = new FileAdapter(config.rootPath, fileRepo, backend);
-    const defaultDecideSyncMode: DecideSyncMode = () => Promise.resolve('upload');
-    const decideSyncMode: DecideSyncMode = option.decideSyncMode || defaultDecideSyncMode;
-    return new LatexApp(config, accountService, appInfoService, backend, fileAdapter, fileRepo, decideSyncMode, logger);
+    return new LatexApp(config, accountService, appInfoService, backend, fileAdapter, fileRepo, logger);
   }
 
   private static sanitizeConfig(config: Config): Config {
@@ -244,7 +235,10 @@ export class LatexApp extends LAEventEmitter implements ILatexApp {
     this.appInfoService.setLoginStatus('offline');
   }
 
-  public async sync(): Promise<SyncResult> {
+  /**
+   * Synchronize files
+   */
+  public async sync(conflictSolution?: ConflictSolution): Promise<SyncResult> {
     // Login
     const loginResult = await this.login();
     if (loginResult.status !== 'success') {
@@ -252,9 +246,18 @@ export class LatexApp extends LAEventEmitter implements ILatexApp {
     }
 
     // File synchronization
-    const result = await this.syncManager.sync();
+    const result = await this.syncManager.sync(conflictSolution);
+
+    // Update conflict
+    const conflictFiles = this.fileRepo.where({ 'changeLocation': 'both' });
+    this.appInfoService.setConflicts(conflictFiles);
+
+
+    const status = result.conflict
+      ? 'conflict'
+      : result.success ? 'success' : 'unknown-error';
     return {
-      status: result.canceled ? 'canceled' : result.success ? 'success' : 'unknown-error',
+      status,
       errors: result.errors,
       appInfo: this.appInfoService.appInfo,
     };
