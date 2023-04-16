@@ -1,4 +1,4 @@
-import { SyncMode, DecideSyncMode, KeyType, ChangeState } from '../types';
+import { ConflictSolution, KeyType, ChangeState } from '../types';
 import { FileAdapter } from './fileAdapter';
 import { FileRepository, FileInfo } from '../model/fileModel';
 import * as path from 'path';
@@ -7,7 +7,7 @@ import { AsyncRunner } from '../util/asyncRunner';
 
 export type SyncResult = {
   success: boolean;
-  canceled: boolean;
+  conflict: boolean;
   errors: string[]
 };
 
@@ -19,21 +19,24 @@ type SyncTaskResult = {
 type SyncTask = 'download' | 'createLocalFolder' | 'createRemoteFolder' |
   'upload' | 'updateRemote' | 'deleteRemote' | 'deleteLocal' | 'no';
 
+type CheckIgnored = (file: FileInfo) => boolean;
+
 export class SyncManager {
   private runner: AsyncRunner<SyncResult>;
+  private conflictSolution?: ConflictSolution;
   constructor(
     private fileRepo: FileRepository,
     private fileAdapter: FileAdapter,
-    public decideSyncMode: DecideSyncMode,
     private logger: Logger,
-    private checkIgnored: (file: FileInfo) => boolean = () => false,
+    private checkIgnored: CheckIgnored = () => false,
   ) {
     this.runner = new AsyncRunner<SyncResult>(() => {
       return this.execSync();
     });
   }
 
-  public async sync(): Promise<SyncResult> {
+  public async sync(conflictSolution?: ConflictSolution): Promise<SyncResult> {
+    this.conflictSolution = conflictSolution;
     return this.runner.run();
   }
 
@@ -60,7 +63,7 @@ export class SyncManager {
     } catch (err) {
       return {
         success: false,
-        canceled: false,
+        conflict: false,
         errors: [getErrorTraceStr(err)]
       };
     }
@@ -173,29 +176,28 @@ export class SyncManager {
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
     this.fileRepo.save();
 
-    let syncMode: SyncMode = 'download';
     if (this.fileRepo.findBy('changeLocation', 'both')) {
       this.logger.info('File conflict is detected');
 
-      try {
-        syncMode = await this.decideSyncMode(
-          this.fileRepo.where({ 'changeLocation': 'both' }),
-        );
-      } catch (e) {
-        this.logger.info('File synchronization is canceled');
+
+
+      if (this.conflictSolution) {
+        this.logger.info(`Use '${this.conflictSolution}' for conflictSolution`);
+      } else {
+        this.logger.info('conflictSolution is not provided');
+
+
 
         return {
           success: false,
-          canceled: true,
-          errors: []
+          conflict: true,
+          errors: [],
         };
       }
-
-      this.logger.info(`SyncMode ${syncMode} is selected`);
     }
 
     const results = await (new TasksExecuter<SyncTaskResult>(
-      this.generateSyncTasks(syncMode)
+      this.generateSyncTasks()
     )).execute();
 
     const fails = results.filter(result => !result.success);
@@ -204,7 +206,7 @@ export class SyncManager {
 
       return {
         success: false,
-        canceled: false,
+        conflict: false,
         errors: fails.map(result => result.message)
       };
     }
@@ -213,22 +215,22 @@ export class SyncManager {
 
     return {
       success: true,
-      canceled: false,
+      conflict: false,
       errors: [],
     };
   }
 
-  private generateSyncTasks(remoteSyncMode: SyncMode): PriorityTask<SyncTaskResult>[] {
+  private generateSyncTasks(): PriorityTask<SyncTaskResult>[] {
     const tasks: PriorityTask<SyncTaskResult>[] = [];
     this.fileRepo.all().forEach(file => {
       if (file.changeLocation === 'remote' ||
-        (file.changeLocation === 'both' && remoteSyncMode === 'download')) {
+        (file.changeLocation === 'both' && this.conflictSolution === 'pull')) {
         const task = this.syncWithRemoteTask(file);
         tasks.push(task);
         this.logger.log(`Pull:  ${file.relativePath} ${task.name}`);
       } else if (
         file.changeLocation === 'local' ||
-        (file.changeLocation === 'both' && remoteSyncMode === 'upload')
+        (file.changeLocation === 'both' && this.conflictSolution === 'push')
       ) {
         const task = this.syncWithLocalTask(file);
         tasks.push(task);

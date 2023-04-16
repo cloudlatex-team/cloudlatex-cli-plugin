@@ -3,7 +3,7 @@
 /* eslint-disable */
 
 import { LatexApp } from './latexApp';
-import { Config, ProjectInfo, AppInfo, SyncMode, DecideSyncMode } from './types';
+import { Config, ProjectInfo, AppInfo, ConflictSolution } from './types';
 
 // TDOO
 function main() {

@@ -1,11 +1,11 @@
-import { SyncMode, ChangeState } from '../../src/types';
+import { ConflictSolution, ChangeState } from '../../src/types';
 
 export type TestConfig = {
   changeStates: {
     local: ChangeState,
     remote: ChangeState,
   },
-  syncMode: SyncMode,
+  conflictSolution?: ConflictSolution,
   conflict: boolean,
   networkMode: 'online' | 'offline'
   | 'offline-and-online' /** sync under offline and after that sync under onine */,
@@ -24,11 +24,12 @@ export const TEST_CONFIG_LIST = (() => {
         conflictOptions.push(true);
       }
       conflictOptions.forEach(conflict => {
-        const syncModeOptions: SyncMode[] = ['upload'];
+        const conflictSolutions: Array<ConflictSolution | undefined> = [undefined];
         if (conflict) {
-          syncModeOptions.push('download');
+          conflictSolutions.push('push');
+          conflictSolutions.push('pull');
         }
-        syncModeOptions.forEach(syncMode => {
+        conflictSolutions.forEach(conflictSolution => {
           const networkModeOptions: Array<TestConfig['networkMode']> = ['online', 'offline', 'offline-and-online'];
           networkModeOptions.forEach(networkMode => {
             let describe = `local: "${local}" remote: "${remote}" `;
@@ -36,7 +37,7 @@ export const TEST_CONFIG_LIST = (() => {
               describe += `conflict: "${conflict}" `;
             }
             if (conflict) {
-              describe += `mode: "${syncMode}" `;
+              describe += `conflictSolution: "${conflictSolution || 'unspecified'}" `;
             }
 
             describe += `netowork: ${networkMode}`;
@@ -46,7 +47,7 @@ export const TEST_CONFIG_LIST = (() => {
                 remote,
               },
               conflict,
-              syncMode,
+              conflictSolution,
               networkMode,
               describe
             });
