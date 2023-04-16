@@ -12,7 +12,7 @@ class AppInfoService {
         };
     }
     get appInfo() {
-        return Object.assign(Object.assign({}, this._appInfo), { conflictFiles: [...this._appInfo.conflictFiles] });
+        return Object.assign(Object.assign({}, this._appInfo), { conflictFiles: [...this._appInfo.conflictFiles.map(file => (Object.assign({}, file)))] });
     }
     setLoginStatus(loginStatus) {
         this._appInfo.loginStatus = loginStatus;

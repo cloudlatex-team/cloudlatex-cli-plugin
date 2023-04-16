@@ -1,4 +1,5 @@
-export { AppInfo, Config, Account, DecideSyncMode, CompileResult, LoginStatus } from './types';
+export { AppInfo, Config, Account, CompileResult, LoginStatus, SyncResult, ConflictSolution } from './types';
+export { FileInfo } from './model/fileModel';
 export { LatexApp, LATEX_APP_EVENTS } from './latexApp';
 export { Logger } from './util/logger';
 export { AccountService } from './service/accountService';

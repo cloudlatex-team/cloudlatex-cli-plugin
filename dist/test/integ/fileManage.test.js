@@ -9,7 +9,6 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-const Sinon = require("sinon");
 const fs = require("fs");
 const path = require("path");
 const chai = require("chai");
@@ -49,10 +48,6 @@ const testFileAndFolderDict = Object.assign({}, testFileDict, {
 });
 let fileWatcher;
 const setupInstances = () => __awaiter(void 0, void 0, void 0, function* () {
-    // Sync Mode Decision
-    const syncModeRef = { instance: 'upload' };
-    const decideSyncMode = () => Promise.resolve(syncModeRef.instance);
-    const decideSyncModeSpy = Sinon.spy(decideSyncMode);
     const logger = new logger_1.Logger('error');
     // Files
     const db = new type_db_1.TypeDB();
@@ -79,13 +74,11 @@ const setupInstances = () => __awaiter(void 0, void 0, void 0, function* () {
     // File adapter
     const fileAdapter = new fileAdapter_1.FileAdapter(workdir, localFiles, backend);
     // Sync Manager
-    const syncManager = new syncManager_1.SyncManager(localFiles, fileAdapter, decideSyncMode, logger);
+    const syncManager = new syncManager_1.SyncManager(localFiles, fileAdapter, logger);
     // File watcher
     fileWatcher = new fileWatcher_1.FileWatcher({ rootPath: workdir, backend: '', endpoint: '', projectId: 0 }, localFiles, { logger });
     yield fileWatcher.init();
     return {
-        decideSyncModeSpy,
-        syncModeRef,
         backend,
         localFiles,
         syncManager
@@ -110,15 +103,14 @@ class TestSituation {
             // Apply some configuration and sync
             this.instances.backend.isOffline =
                 this.config.networkMode === 'offline' || this.config.networkMode === 'offline-and-online';
-            this.instances.syncModeRef.instance = this.config.syncMode;
-            let syncResult = yield this.instances.syncManager.sync();
+            let syncResult = yield this.instances.syncManager.sync(this.config.conflictSolution);
             if (this.config.networkMode === 'offline-and-online') {
                 // Sync again in online
                 this.instances.backend.isOffline = false;
-                syncResult = yield this.instances.syncManager.sync();
+                syncResult = yield this.instances.syncManager.sync(this.config.conflictSolution);
             }
             // Verify syncronization result
-            yield this.verify(syncResult.success);
+            yield this.verify(syncResult);
         });
     }
     applyFileChanges() {
@@ -197,10 +189,10 @@ class TestSituation {
                     break;
             }
         };
-        if (this.config.networkMode === 'offline') {
+        if (this.config.networkMode === 'offline' || (this.config.conflict && !this.config.conflictSolution)) {
             applyChange('local');
         }
-        else if (this.config.syncMode === 'upload') {
+        else if (this.config.conflictSolution === 'push') {
             // Apply remote changes first and apply local changes later,
             // which emulates the 'upload' mode
             ['remote', 'local'].forEach(applyChange);
@@ -230,15 +222,17 @@ class TestSituation {
     verify(syncResult) {
         return __awaiter(this, void 0, void 0, function* () {
             const expectedFileDict = this.computeExpectedFileDict();
-            if (this.config.networkMode === 'offline') {
-                chai.assert.isFalse(syncResult, 'syncResult');
+            if (this.config.networkMode !== 'offline' && this.config.conflict && !this.config.conflictSolution) {
+                chai.assert.isTrue(syncResult.conflict, 'syncResult.conflict');
             }
             else {
-                chai.assert.isTrue(syncResult, 'syncResult');
+                chai.assert.isFalse(syncResult.conflict, 'syncResult.conflict');
             }
-            if (this.config.networkMode === 'offline') {
+            if (this.config.networkMode === 'offline' || (this.config.conflict && !this.config.conflictSolution)) {
+                chai.assert.isFalse(syncResult.success, 'syncResult.success');
                 return;
             }
+            chai.assert.isTrue(syncResult.success, 'syncResult.success');
             const expectedAbsPaths = Object.keys(expectedFileDict);
             // validate the number of files
             chai.assert.lengthOf(this.instances.localFiles.all(), expectedAbsPaths.length, 'number of localFiles');
