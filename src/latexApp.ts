@@ -291,6 +291,7 @@ export class LatexApp extends LAEventEmitter implements ILatexApp {
       // Compile
       const result = await this.backend.compileProject();
       if (result.status !== 'success') {
+        this.logger.log('Compilation is finished with some errors');
         return {
           ...result,
           appInfo: this.appInfoService.appInfo,
