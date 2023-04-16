@@ -1,0 +1,12 @@
+import { Matcher } from 'anymatch';
+import { FileInfo } from '../model/fileModel';
+import { AppInfoService } from '../service/appInfoService';
+import { Config } from '../types';
+export declare const dotFileExceptLatexmkrc = "**/.!(latexmkrc)";
+export declare function toAbsolutePath(config: Config, relativePath: string): string;
+export declare function toRelativePath(config: Config, absolutePath: string): string;
+export declare function calcIgnoredFiles(appInfoService: AppInfoService): Matcher;
+export declare function checkIgnoredByFileInfo(config: Config, file: FileInfo, ignoredFiles: Matcher): boolean;
+export declare function getDBFilePath(config: Config): string | undefined;
+export declare function toPosixPath(p: string): string;
+export declare function calcRelativeOutDir(config: Config): string;
