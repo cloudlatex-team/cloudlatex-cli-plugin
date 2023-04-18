@@ -309,7 +309,7 @@ export class LatexApp extends LAEventEmitter implements ILatexApp {
         appInfo: this.appInfoService.appInfo,
       };
     } catch (err) {
-      const msg = 'Some error occurred with compiling.';
+      const msg = 'Some error occurred with compiling: ';
       this.logger.warn(msg + getErrorTraceStr(err));
       errors.push(msg);
       return {
