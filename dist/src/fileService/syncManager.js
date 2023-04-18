@@ -14,18 +14,18 @@ const path = require("path");
 const logger_1 = require("../util/logger");
 const asyncRunner_1 = require("../util/asyncRunner");
 class SyncManager {
-    constructor(fileRepo, fileAdapter, decideSyncMode, logger, checkIgnored = () => false) {
+    constructor(fileRepo, fileAdapter, logger, checkIgnored = () => false) {
         this.fileRepo = fileRepo;
         this.fileAdapter = fileAdapter;
-        this.decideSyncMode = decideSyncMode;
         this.logger = logger;
         this.checkIgnored = checkIgnored;
         this.runner = new asyncRunner_1.AsyncRunner(() => {
             return this.execSync();
         });
     }
-    sync() {
+    sync(conflictSolution) {
         return __awaiter(this, void 0, void 0, function* () {
+            this.conflictSolution = conflictSolution;
             return this.runner.run();
         });
     }
@@ -52,7 +52,7 @@ class SyncManager {
             catch (err) {
                 return {
                     success: false,
-                    canceled: false,
+                    conflict: false,
                     errors: [logger_1.getErrorTraceStr(err)]
                 };
             }
@@ -156,51 +156,49 @@ class SyncManager {
             });
             // eslint-disable-next-line @typescript-eslint/no-floating-promises
             this.fileRepo.save();
-            let syncMode = 'download';
             if (this.fileRepo.findBy('changeLocation', 'both')) {
                 this.logger.info('File conflict is detected');
-                try {
-                    syncMode = yield this.decideSyncMode(this.fileRepo.where({ 'changeLocation': 'both' }));
+                if (this.conflictSolution) {
+                    this.logger.info(`Use '${this.conflictSolution}' for conflictSolution`);
                 }
-                catch (e) {
-                    this.logger.info('File synchronization is canceled');
+                else {
+                    this.logger.info('conflictSolution is not provided');
                     return {
                         success: false,
-                        canceled: true,
-                        errors: []
+                        conflict: true,
+                        errors: [],
                     };
                 }
-                this.logger.info(`SyncMode ${syncMode} is selected`);
             }
-            const results = yield (new TasksExecuter(this.generateSyncTasks(syncMode))).execute();
+            const results = yield (new TasksExecuter(this.generateSyncTasks())).execute();
             const fails = results.filter(result => !result.success);
             if (fails.length > 0) {
                 this.logger.info('File synchronization is failed');
                 return {
                     success: false,
-                    canceled: false,
+                    conflict: false,
                     errors: fails.map(result => result.message)
                 };
             }
             this.logger.info('File synchronization is finished');
             return {
                 success: true,
-                canceled: false,
+                conflict: false,
                 errors: [],
             };
         });
     }
-    generateSyncTasks(remoteSyncMode) {
+    generateSyncTasks() {
         const tasks = [];
         this.fileRepo.all().forEach(file => {
             if (file.changeLocation === 'remote' ||
-                (file.changeLocation === 'both' && remoteSyncMode === 'download')) {
+                (file.changeLocation === 'both' && this.conflictSolution === 'pull')) {
                 const task = this.syncWithRemoteTask(file);
                 tasks.push(task);
                 this.logger.log(`Pull:  ${file.relativePath} ${task.name}`);
             }
             else if (file.changeLocation === 'local' ||
-                (file.changeLocation === 'both' && remoteSyncMode === 'upload')) {
+                (file.changeLocation === 'both' && this.conflictSolution === 'push')) {
                 const task = this.syncWithLocalTask(file);
                 tasks.push(task);
                 this.logger.log(`Push: ${file.relativePath} ${task.name}`);

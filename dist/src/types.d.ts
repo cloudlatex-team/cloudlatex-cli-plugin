@@ -45,19 +45,16 @@ export interface AppInfo {
     conflictFiles: FileInfo[];
 }
 export declare type KeyType = number | string;
-export declare type SyncMode = 'upload' | 'download';
+export declare type ConflictSolution = 'push' | 'pull';
 export declare type ChangeState = 'no' | 'update' | 'create' | 'delete';
 export declare type ChangeLocation = 'no' | 'local' | 'remote' | 'both';
-export interface DecideSyncMode {
-    (conflictFiles: FileInfo[]): Promise<SyncMode>;
-}
 export declare type BaseResultStatus = 'success' | 'invalid-account' | 'offline' | 'no-target-error' | 'unknown-error';
 export declare type LoginResult = {
     status: BaseResultStatus;
     appInfo: AppInfo;
     errors?: string[];
 };
-export declare type SyncStatus = BaseResultStatus | 'canceled';
+export declare type SyncStatus = BaseResultStatus | 'conflict';
 export declare type SyncResult = {
     status: SyncStatus;
     appInfo: AppInfo;

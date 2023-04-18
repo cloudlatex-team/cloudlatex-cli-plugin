@@ -1,21 +1,22 @@
-import { DecideSyncMode } from '../types';
+import { ConflictSolution } from '../types';
 import { FileAdapter } from './fileAdapter';
 import { FileRepository, FileInfo } from '../model/fileModel';
 import { Logger } from '../util/logger';
 export declare type SyncResult = {
     success: boolean;
-    canceled: boolean;
+    conflict: boolean;
     errors: string[];
 };
+declare type CheckIgnored = (file: FileInfo) => boolean;
 export declare class SyncManager {
     private fileRepo;
     private fileAdapter;
-    decideSyncMode: DecideSyncMode;
     private logger;
     private checkIgnored;
     private runner;
-    constructor(fileRepo: FileRepository, fileAdapter: FileAdapter, decideSyncMode: DecideSyncMode, logger: Logger, checkIgnored?: (file: FileInfo) => boolean);
-    sync(): Promise<SyncResult>;
+    private conflictSolution?;
+    constructor(fileRepo: FileRepository, fileAdapter: FileAdapter, logger: Logger, checkIgnored?: CheckIgnored);
+    sync(conflictSolution?: ConflictSolution): Promise<SyncResult>;
     private execSync;
     private generateSyncTasks;
     /**
@@ -53,3 +54,4 @@ export declare class SyncManager {
      */
     private computePriority;
 }
+export {};

@@ -35,7 +35,7 @@ class LatexApp extends LAEventEmitter {
     /**
      * Do not use this constructor. Be sure to instantiate LatexApp by createApp()
      */
-    constructor(config, accountService, appInfoService, backend, fileAdapter, fileRepo, decideSyncMode, logger = new logger_1.Logger()) {
+    constructor(config, accountService, appInfoService, backend, fileAdapter, fileRepo, logger = new logger_1.Logger()) {
         super();
         this.config = config;
         this.accountService = accountService;
@@ -56,10 +56,7 @@ class LatexApp extends LAEventEmitter {
         /**
          * Sync Manager
          */
-        this.syncManager = new syncManager_1.SyncManager(fileRepo, fileAdapter, (conflictFiles) => __awaiter(this, void 0, void 0, function* () {
-            appInfoService.setConflicts(conflictFiles);
-            return decideSyncMode(conflictFiles);
-        }), logger, checkIgnored);
+        this.syncManager = new syncManager_1.SyncManager(fileRepo, fileAdapter, logger, checkIgnored);
         /**
          * File watcher
          */
@@ -85,7 +82,7 @@ class LatexApp extends LAEventEmitter {
     static createApp(config, option = {}) {
         return __awaiter(this, void 0, void 0, function* () {
             const logger = option.logger || new logger_1.Logger();
-            logger.log(`latex-cli ${'1.0.0'}`);
+            logger.log(`latex-cli ${'3.0.0'}`);
             // Config
             config = this.sanitizeConfig(config);
             // Account
@@ -106,9 +103,7 @@ class LatexApp extends LAEventEmitter {
             }
             const fileRepo = db.getRepository(fileModel_1.FILE_INFO_DESC);
             const fileAdapter = new fileAdapter_1.FileAdapter(config.rootPath, fileRepo, backend);
-            const defaultDecideSyncMode = () => Promise.resolve('upload');
-            const decideSyncMode = option.decideSyncMode || defaultDecideSyncMode;
-            return new LatexApp(config, accountService, appInfoService, backend, fileAdapter, fileRepo, decideSyncMode, logger);
+            return new LatexApp(config, accountService, appInfoService, backend, fileAdapter, fileRepo, logger);
         });
     }
     static sanitizeConfig(config) {
@@ -200,7 +195,10 @@ class LatexApp extends LAEventEmitter {
         }
         this.appInfoService.setLoginStatus('offline');
     }
-    sync() {
+    /**
+     * Synchronize files
+     */
+    sync(conflictSolution) {
         return __awaiter(this, void 0, void 0, function* () {
             // Login
             const loginResult = yield this.login();
@@ -208,9 +206,15 @@ class LatexApp extends LAEventEmitter {
                 return loginResult;
             }
             // File synchronization
-            const result = yield this.syncManager.sync();
+            const result = yield this.syncManager.sync(conflictSolution);
+            // Update conflict
+            const conflictFiles = this.fileRepo.where({ 'changeLocation': 'both' });
+            this.appInfoService.setConflicts(conflictFiles);
+            const status = result.conflict
+                ? 'conflict'
+                : result.success ? 'success' : 'unknown-error';
             return {
-                status: result.canceled ? 'canceled' : result.success ? 'success' : 'unknown-error',
+                status,
                 errors: result.errors,
                 appInfo: this.appInfoService.appInfo,
             };
@@ -242,6 +246,7 @@ class LatexApp extends LAEventEmitter {
                 // Compile
                 const result = yield this.backend.compileProject();
                 if (result.status !== 'success') {
+                    this.logger.log('Compilation is finished with some errors');
                     return Object.assign(Object.assign({}, result), { appInfo: this.appInfoService.appInfo });
                 }
                 // Download artifacts
@@ -250,7 +255,7 @@ class LatexApp extends LAEventEmitter {
                 return Object.assign(Object.assign({}, result), { errors, appInfo: this.appInfoService.appInfo });
             }
             catch (err) {
-                const msg = 'Some error occurred with compiling.';
+                const msg = 'Some error occurred with compiling: ';
                 this.logger.warn(msg + logger_1.getErrorTraceStr(err));
                 errors.push(msg);
                 return {
@@ -340,12 +345,13 @@ class LatexApp extends LAEventEmitter {
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 const projectInfo = yield this.backend.loadProjectInfo();
-                const file = this.fileRepo.findBy('remoteId', projectInfo.compile_target_file_id);
-                if (!file) {
-                    this.logger.error('Target file is not found');
+                const fileList = yield this.backend.loadFileList();
+                const targetFile = fileList.find(file => file.remoteId === projectInfo.compile_target_file_id);
+                if (!targetFile) {
+                    this.logger.error(`Target file ${projectInfo.compile_target_file_id} is not found`);
                     return 'no-target-error';
                 }
-                const targetName = path.posix.basename(file.relativePath, '.tex');
+                const targetName = path.posix.basename(targetFile.relativePath, '.tex');
                 this.appInfoService.setProjectName(projectInfo.title);
                 this.appInfoService.setTarget(projectInfo.compile_target_file_id, targetName);
                 this.appInfoService.setLoaded();

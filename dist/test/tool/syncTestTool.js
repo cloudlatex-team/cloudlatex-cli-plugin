@@ -13,11 +13,12 @@ exports.TEST_CONFIG_LIST = (() => {
                 conflictOptions.push(true);
             }
             conflictOptions.forEach(conflict => {
-                const syncModeOptions = ['upload'];
+                const conflictSolutions = [undefined];
                 if (conflict) {
-                    syncModeOptions.push('download');
+                    conflictSolutions.push('push');
+                    conflictSolutions.push('pull');
                 }
-                syncModeOptions.forEach(syncMode => {
+                conflictSolutions.forEach(conflictSolution => {
                     const networkModeOptions = ['online', 'offline', 'offline-and-online'];
                     networkModeOptions.forEach(networkMode => {
                         let describe = `local: "${local}" remote: "${remote}" `;
@@ -25,7 +26,7 @@ exports.TEST_CONFIG_LIST = (() => {
                             describe += `conflict: "${conflict}" `;
                         }
                         if (conflict) {
-                            describe += `mode: "${syncMode}" `;
+                            describe += `conflictSolution: "${conflictSolution || 'unspecified'}" `;
                         }
                         describe += `netowork: ${networkMode}`;
                         list.push({
@@ -34,7 +35,7 @@ exports.TEST_CONFIG_LIST = (() => {
                                 remote,
                             },
                             conflict,
-                            syncMode,
+                            conflictSolution,
                             networkMode,
                             describe
                         });

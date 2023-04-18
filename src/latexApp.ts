@@ -111,7 +111,7 @@ export class LatexApp extends LAEventEmitter implements ILatexApp {
   } = {}): Promise<LatexApp> {
 
     const logger = option.logger || new Logger();
-    logger.log(`latex-cli ${'1.0.0'}`);
+    logger.log(`latex-cli ${'3.0.0'}`);
 
     // Config
     config = this.sanitizeConfig(config);

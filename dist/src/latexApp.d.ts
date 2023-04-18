@@ -1,6 +1,6 @@
 import * as EventEmitter from 'eventemitter3';
 import { Logger } from './util/logger';
-import { Config, DecideSyncMode, Account, CompileResult, ILatexApp, LoginResult, SyncResult } from './types';
+import { Config, Account, CompileResult, ILatexApp, LoginResult, SyncResult, ConflictSolution } from './types';
 import { FileAdapter } from './fileService/fileAdapter';
 import { Repository } from '@moritanian/type-db';
 import { FILE_INFO_DESC } from './model/fileModel';
@@ -35,7 +35,7 @@ export declare class LatexApp extends LAEventEmitter implements ILatexApp {
     /**
      * Do not use this constructor. Be sure to instantiate LatexApp by createApp()
      */
-    constructor(config: Config, accountService: AccountService<Account>, appInfoService: AppInfoService, backend: IBackend, fileAdapter: FileAdapter, fileRepo: Repository<typeof FILE_INFO_DESC>, decideSyncMode: DecideSyncMode, logger?: Logger);
+    constructor(config: Config, accountService: AccountService<Account>, appInfoService: AppInfoService, backend: IBackend, fileAdapter: FileAdapter, fileRepo: Repository<typeof FILE_INFO_DESC>, logger?: Logger);
     /**
      * setup file management classes
      *
@@ -45,7 +45,6 @@ export declare class LatexApp extends LAEventEmitter implements ILatexApp {
      * The file Adapter abstructs file operations of local files and remote ones.
      */
     static createApp(config: Config, option?: {
-        decideSyncMode?: DecideSyncMode;
         logger?: Logger;
         accountService?: AccountService<Account>;
     }): Promise<LatexApp>;
@@ -65,7 +64,10 @@ export declare class LatexApp extends LAEventEmitter implements ILatexApp {
     private onValid;
     private onInvalid;
     private onOffline;
-    sync(): Promise<SyncResult>;
+    /**
+     * Synchronize files
+     */
+    sync(conflictSolution?: ConflictSolution): Promise<SyncResult>;
     /**
      * Compile and save pdf, synctex and log files.
      */
