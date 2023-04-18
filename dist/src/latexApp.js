@@ -82,7 +82,7 @@ class LatexApp extends LAEventEmitter {
     static createApp(config, option = {}) {
         return __awaiter(this, void 0, void 0, function* () {
             const logger = option.logger || new logger_1.Logger();
-            logger.log(`latex-cli ${'1.0.0'}`);
+            logger.log(`latex-cli ${'3.0.0'}`);
             // Config
             config = this.sanitizeConfig(config);
             // Account
@@ -255,7 +255,7 @@ class LatexApp extends LAEventEmitter {
                 return Object.assign(Object.assign({}, result), { errors, appInfo: this.appInfoService.appInfo });
             }
             catch (err) {
-                const msg = 'Some error occurred with compiling.';
+                const msg = 'Some error occurred with compiling: ';
                 this.logger.warn(msg + logger_1.getErrorTraceStr(err));
                 errors.push(msg);
                 return {
@@ -345,12 +345,13 @@ class LatexApp extends LAEventEmitter {
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 const projectInfo = yield this.backend.loadProjectInfo();
-                const file = this.fileRepo.findBy('remoteId', projectInfo.compile_target_file_id);
-                if (!file) {
-                    this.logger.error('Target file is not found');
+                const fileList = yield this.backend.loadFileList();
+                const targetFile = fileList.find(file => file.remoteId === projectInfo.compile_target_file_id);
+                if (!targetFile) {
+                    this.logger.error(`Target file ${projectInfo.compile_target_file_id} is not found`);
                     return 'no-target-error';
                 }
-                const targetName = path.posix.basename(file.relativePath, '.tex');
+                const targetName = path.posix.basename(targetFile.relativePath, '.tex');
                 this.appInfoService.setProjectName(projectInfo.title);
                 this.appInfoService.setTarget(projectInfo.compile_target_file_id, targetName);
                 this.appInfoService.setLoaded();
