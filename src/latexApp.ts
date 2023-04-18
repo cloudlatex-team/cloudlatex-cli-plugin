@@ -399,12 +399,13 @@ export class LatexApp extends LAEventEmitter implements ILatexApp {
   private async loadProject(): Promise<'success' | 'no-target-error' | 'unknown-error'> {
     try {
       const projectInfo = await this.backend.loadProjectInfo();
-      const file = this.fileRepo.findBy('remoteId', projectInfo.compile_target_file_id);
-      if (!file) {
-        this.logger.error('Target file is not found');
+      const fileList = await this.backend.loadFileList();
+      const targetFile = fileList.find(file => file.remoteId === projectInfo.compile_target_file_id);
+      if (!targetFile) {
+        this.logger.error(`Target file ${projectInfo.compile_target_file_id} is not found`);
         return 'no-target-error';
       }
-      const targetName = path.posix.basename(file.relativePath, '.tex');
+      const targetName = path.posix.basename(targetFile.relativePath, '.tex');
       this.appInfoService.setProjectName(projectInfo.title);
       this.appInfoService.setTarget(projectInfo.compile_target_file_id, targetName);
       this.appInfoService.setLoaded();
