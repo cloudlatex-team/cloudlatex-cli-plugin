@@ -50,13 +50,13 @@ export type LoginStatus = 'offline' | 'valid' | 'invalid';
 export interface AppInfo {
   loginStatus: LoginStatus;
   projectName?: string;
-  compileTarget?: KeyType,
-  targetName?: string,
   logPath?: string,
   pdfPath?: string,
   synctexPath?: string,
   loaded: boolean,
-  conflictFiles: FileInfo[]
+  conflictFiles: FileInfo[],
+  targetFile?: FileInfo,
+  files: FileInfo[],
 }
 
 export type KeyType = number | string;

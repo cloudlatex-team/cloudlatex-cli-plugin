@@ -1,4 +1,3 @@
-import * as path from 'path';
 import * as  EventEmitter from 'eventemitter3';
 import { Logger, getErrorTraceStr } from './util/logger';
 import {
@@ -52,7 +51,6 @@ export class LatexApp extends LAEventEmitter implements ILatexApp {
    */
   constructor(
     private config: Config,
-    private accountService: AccountService<Account>,
     private appInfoService: AppInfoService,
     private backend: IBackend,
     private fileAdapter: FileAdapter,
@@ -123,9 +121,6 @@ export class LatexApp extends LAEventEmitter implements ILatexApp {
     const accountService = option.accountService || new AccountService();
     await accountService.load();
 
-    // AppInfo
-    const appInfoService = new AppInfoService(config);
-
     // Backend
     const backend = backendSelector(config, accountService);
 
@@ -140,7 +135,11 @@ export class LatexApp extends LAEventEmitter implements ILatexApp {
     const fileRepo = db.getRepository(FILE_INFO_DESC);
 
     const fileAdapter = new FileAdapter(config.rootPath, fileRepo, backend);
-    return new LatexApp(config, accountService, appInfoService, backend, fileAdapter, fileRepo, logger);
+
+    // AppInfo
+    const appInfoService = new AppInfoService(config, fileRepo);
+
+    return new LatexApp(config, appInfoService, backend, fileAdapter, fileRepo, logger);
   }
 
   private static sanitizeConfig(config: Config): Config {
@@ -273,11 +272,6 @@ export class LatexApp extends LAEventEmitter implements ILatexApp {
 
     // File synchronization
     const result = await this.syncManager.sync(conflictSolution);
-
-    // Update conflict
-    const conflictFiles = this.fileRepo.where({ 'changeLocation': 'both' });
-    this.appInfoService.setConflicts(conflictFiles);
-
 
     const status = result.conflict
       ? 'conflict'
@@ -431,10 +425,7 @@ export class LatexApp extends LAEventEmitter implements ILatexApp {
         this.logger.error(`Target file ${projectInfo.compile_target_file_id} is not found`);
         return 'no-target-error';
       }
-      const targetName = path.posix.basename(targetFile.relativePath, '.tex');
-      this.appInfoService.setProjectName(projectInfo.title);
-      this.appInfoService.setTarget(projectInfo.compile_target_file_id, targetName);
-      this.appInfoService.setLoaded();
+      this.appInfoService.onProjectLoaded(projectInfo);
       return 'success';
     } catch (err) {
       this.logger.error(getErrorTraceStr(err));

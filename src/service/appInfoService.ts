@@ -1,58 +1,57 @@
 import * as path from 'path';
-import { AppInfo, Config, LoginStatus, KeyType } from '../types';
-import { FileInfo } from './../model/fileModel';
+import { AppInfo, Config, LoginStatus, ProjectInfo } from '../types';
+import { FileRepository, FileInfo } from './../model/fileModel';
 export class AppInfoService {
-  private _appInfo: AppInfo;
-  constructor(public readonly config: Config) {
-    this._appInfo = {
-      loginStatus: 'offline',
-      conflictFiles: [],
-      loaded: false
-    };
+  private projectInfo?: ProjectInfo;
+  private loginStatus: LoginStatus;
+  constructor(public readonly config: Config, private fileRepo: FileRepository) {
+    this.loginStatus = 'offline';
   }
 
   get appInfo(): AppInfo {
     return {
-      ...this._appInfo,
-      conflictFiles: [...this._appInfo.conflictFiles.map(file => ({ ...file }))],
+      loginStatus: this.loginStatus,
+      projectName: this.projectInfo?.title,
+      logPath: this._logPath(),
+      pdfPath: this._pdfPath(),
+      synctexPath: this._synctexPath(),
+      loaded: !!this.projectInfo,
+      conflictFiles: this.fileRepo.where({ 'changeLocation': 'both' }),
+      targetFile: this.targetFile(),
+      files: this.fileRepo.all(),
     };
   }
 
   setLoginStatus(loginStatus: LoginStatus): void {
-    this._appInfo.loginStatus = loginStatus;
+    this.loginStatus = loginStatus;
   }
 
-  setProjectName(projectName: string): void {
-    this._appInfo.projectName = projectName;
+  onProjectLoaded(projectInfo: ProjectInfo): void {
+    this.projectInfo = projectInfo;
   }
 
-  setTarget(compileTarget: KeyType, targetName: string): void {
-    this._appInfo.compileTarget = compileTarget;
-    this._appInfo.targetName = targetName;
-
-    // set dependent paths
-    this._appInfo.logPath = this._logPath();
-    this._appInfo.pdfPath = this._pdfPath();
-    this._appInfo.synctexPath = this._synctexPath();
+  private targetName(): string {
+    if (!this.projectInfo) {
+      return '';
+    }
+    return path.posix.basename(this.targetFile()?.relativePath || 'main', '.tex');
   }
 
-  setLoaded(): void {
-    this._appInfo.loaded = true;
-  }
-
-  setConflicts(files: FileInfo[]): void {
-    this._appInfo.conflictFiles = files;
+  private targetFile(): FileInfo | undefined {
+    return this.projectInfo?.compile_target_file_id !== undefined
+      && this.fileRepo.findBy('remoteId', this.projectInfo.compile_target_file_id)
+      || undefined;
   }
 
   private _logPath(): string {
-    return path.posix.join(this.config.outDir || '', this._appInfo.targetName + '.log');
+    return path.posix.join(this.config.outDir || '', this.targetName() + '.log');
   }
 
   private _pdfPath(): string {
-    return path.posix.join(this.config.outDir || '', this._appInfo.targetName + '.pdf');
+    return path.posix.join(this.config.outDir || '', this.targetName() + '.pdf');
   }
 
   private _synctexPath(): string {
-    return path.posix.join(this.config.outDir || '', this._appInfo.targetName + '.synctex');
+    return path.posix.join(this.config.outDir || '', this.targetName() + '.synctex');
   }
 }
