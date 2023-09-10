@@ -2,7 +2,7 @@
 import fetch, { RequestInit, Headers } from 'node-fetch';
 import { CompileResult } from './types';
 import * as FormData from 'form-data';
-import { Config, ProjectInfo, Account } from '../../types';
+import { Config, ProjectInfo, Account, UpdateProjectInfoParam } from '../../types';
 import { AccountService } from '../../service/accountService';
 
 export class CLWebAppApi {
@@ -86,6 +86,21 @@ export class CLWebAppApi {
     }
     const text = await res.text();
     return JSON.parse(text)['project'] as ProjectInfo;
+  }
+
+  async updateProjectInfo(param: UpdateProjectInfoParam): Promise<ProjectInfo> {
+    const res = await fetch(
+      `${this.apiProjects}/${this.config.projectId}`,
+      this.fetchOption({
+        method: 'PUT',
+        body: JSON.stringify({ project: param }),
+        headerOption: { json: true }
+      })
+    );
+    if (!res.ok) {
+      throw new Error(await res.text());
+    }
+    return JSON.parse(await res.text())?.project;
   }
 
   async loadFiles(): Promise<unknown> {

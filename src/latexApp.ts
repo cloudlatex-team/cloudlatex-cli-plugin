@@ -1,7 +1,10 @@
 import * as path from 'path';
 import * as  EventEmitter from 'eventemitter3';
 import { Logger, getErrorTraceStr } from './util/logger';
-import { Config, Account, CompileResult, ILatexApp, LoginResult, SyncResult, ConflictSolution } from './types';
+import {
+  Config, Account, CompileResult, ILatexApp, LoginResult, SyncResult,
+  ConflictSolution, UpdateProjectInfoResult, UpdateProjectInfoParam
+} from './types';
 import { FileAdapter } from './fileService/fileAdapter';
 import { SyncManager } from './fileService/syncManager';
 import { FileWatcher } from './fileService/fileWatcher';
@@ -233,6 +236,29 @@ export class LatexApp extends LAEventEmitter implements ILatexApp {
       return;
     }
     this.appInfoService.setLoginStatus('offline');
+  }
+
+  /**
+   * Update project info
+   */
+  public async updateProjectInfo(param: UpdateProjectInfoParam): Promise<UpdateProjectInfoResult> {
+    // Login
+    const loginResult = await this.login();
+    if (loginResult.status !== 'success') {
+      return loginResult;
+    }
+
+    try {
+      await this.backend.updateProjectInfo(param);
+      return { status: 'success' };
+    } catch (err) {
+      const msg = 'Some error occurred with updating project info ';
+      this.logger.warn(msg + getErrorTraceStr(err));
+      return {
+        status: 'unknown-error',
+        errors: [msg],
+      };
+    }
   }
 
   /**

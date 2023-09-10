@@ -64,12 +64,20 @@ export type ConflictSolution = 'push' | 'pull';
 export type ChangeState = 'no' | 'update' | 'create' | 'delete';
 export type ChangeLocation = 'no' | 'local' | 'remote' | 'both';
 
+export type UpdateProjectInfoParam = Partial<Omit<ProjectInfo, 'id'>>;
+
+
 export type BaseResultStatus = 'success' | 'invalid-account' | 'offline' | 'no-target-error' | 'unknown-error';
 
 export type LoginResult = {
   status: BaseResultStatus;
   appInfo: AppInfo;
   errors?: string[]
+};
+
+export type UpdateProjectInfoResult = {
+  status: BaseResultStatus;
+  errors?: string[];
 };
 
 export type SyncStatus = BaseResultStatus | 'conflict';

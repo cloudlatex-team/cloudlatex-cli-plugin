@@ -1,4 +1,4 @@
-import { ProjectInfo, KeyType } from '../types';
+import { ProjectInfo, KeyType, UpdateProjectInfoParam } from '../types';
 import { FileInfo, Revision } from '../model/fileModel';
 
 export type CompileResult = {
@@ -18,6 +18,8 @@ export interface IBackend {
   validateToken(): Promise<boolean>;
 
   loadProjectInfo(): Promise<ProjectInfo>;
+
+  updateProjectInfo(param: UpdateProjectInfoParam): Promise<unknown>;
 
   loadFileList(): Promise<FileInfo[]>;
 

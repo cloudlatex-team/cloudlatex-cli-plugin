@@ -7,7 +7,7 @@ import { CLWebAppApi } from './webAppApi';
 import { FileInfo, Revision } from '../../model/fileModel';
 import { ClFile } from './types';
 import { IBackend, CompileResult } from '../ibackend';
-import { Config, ProjectInfo, KeyType, Account } from './../../types';
+import { Config, ProjectInfo, KeyType, Account, UpdateProjectInfoParam } from './../../types';
 import { streamToString, ReadableString } from '../../util/stream';
 import { AccountService } from '../../service/accountService';
 
@@ -77,6 +77,10 @@ export class ClBackend implements IBackend {
 
   public loadProjectInfo(): Promise<ProjectInfo> {
     return this.api.loadProjectInfo();
+  }
+
+  public updateProjectInfo(param: UpdateProjectInfoParam): Promise<unknown> {
+    return this.api.updateProjectInfo(param);
   }
 
   public async loadFileList(): Promise<FileInfo[]> {
