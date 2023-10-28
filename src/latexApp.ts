@@ -249,12 +249,14 @@ export class LatexApp extends LAEventEmitter implements ILatexApp {
 
     try {
       await this.backend.updateProjectInfo(param);
-      return { status: 'success' };
+      const result = await this.loadProject();
+      return { status: result, appInfo: this.appInfoService.appInfo };
     } catch (err) {
       const msg = 'Some error occurred with updating project info ';
       this.logger.warn(msg + getErrorTraceStr(err));
       return {
         status: 'unknown-error',
+        appInfo: this.appInfoService.appInfo,
         errors: [msg],
       };
     }
