@@ -90,7 +90,7 @@ export class ClBackend implements IBackend {
       clParam.title = param.title;
     }
     if (param.compileTargetFileRemoteId) {
-      clParam.compile_target_file_id = param.compileTargetFileRemoteId;
+      clParam.compile_target_file_id = param.compileTargetFileRemoteId as number;
     }
 
     return this.api.updateProjectInfo(clParam);

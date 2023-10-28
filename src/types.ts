@@ -1,9 +1,9 @@
-import { FileInfo } from './model/fileModel';
+import { FileInfo, Revision } from './model/fileModel';
 import { Matcher } from 'anymatch';
 
 export interface ProjectInfo {
   id: number;
-  compileTargetFileRemoteId: number; // remoteId of compile target file
+  compileTargetFileRemoteId: Revision; // remoteId of compile target file
   title: string;
 }
 
@@ -76,6 +76,7 @@ export type LoginResult = {
 
 export type UpdateProjectInfoResult = {
   status: BaseResultStatus;
+  appInfo: AppInfo;
   errors?: string[];
 };
 
