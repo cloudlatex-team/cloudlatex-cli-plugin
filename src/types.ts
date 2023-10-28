@@ -3,8 +3,7 @@ import { Matcher } from 'anymatch';
 
 export interface ProjectInfo {
   id: number;
-  // eslint-disable-next-line @typescript-eslint/naming-convention
-  compile_target_file_id: number;
+  compileTargetFileRemoteId: number; // remoteId of compile target file
   title: string;
 }
 

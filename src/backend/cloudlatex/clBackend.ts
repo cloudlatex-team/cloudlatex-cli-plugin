@@ -5,7 +5,7 @@ import { TextDecoder } from 'text-encoding';
 
 import { CLWebAppApi } from './webAppApi';
 import { FileInfo, Revision } from '../../model/fileModel';
-import { ClFile } from './types';
+import { ClFile, UpdateCLProjectInfoParam } from './types';
 import { IBackend, CompileResult } from '../ibackend';
 import { Config, ProjectInfo, KeyType, Account, UpdateProjectInfoParam } from './../../types';
 import { streamToString, ReadableString } from '../../util/stream';
@@ -75,12 +75,25 @@ export class ClBackend implements IBackend {
     return this.api.deleteFile(file.remoteId);
   }
 
-  public loadProjectInfo(): Promise<ProjectInfo> {
-    return this.api.loadProjectInfo();
+  public async loadProjectInfo(): Promise<ProjectInfo> {
+    const clProjectInfo = await this.api.loadProjectInfo();
+    return {
+      id: clProjectInfo.id,
+      compileTargetFileRemoteId: clProjectInfo.compile_target_file_id,
+      title: clProjectInfo.title
+    };
   }
 
   public updateProjectInfo(param: UpdateProjectInfoParam): Promise<unknown> {
-    return this.api.updateProjectInfo(param);
+    const clParam: UpdateCLProjectInfoParam = {};
+    if (param.title) {
+      clParam.title = param.title;
+    }
+    if (param.compileTargetFileRemoteId) {
+      clParam.compile_target_file_id = param.compileTargetFileRemoteId;
+    }
+
+    return this.api.updateProjectInfo(clParam);
   }
 
   public async loadFileList(): Promise<FileInfo[]> {

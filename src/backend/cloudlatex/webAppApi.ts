@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import fetch, { RequestInit, Headers } from 'node-fetch';
-import { CompileResult } from './types';
+import { CLProjectInfo, UpdateCLProjectInfoParam, CompileResult } from './types';
 import * as FormData from 'form-data';
-import { Config, ProjectInfo, Account, UpdateProjectInfoParam } from '../../types';
+import { Config, ProjectInfo, Account } from '../../types';
 import { AccountService } from '../../service/accountService';
 
 export class CLWebAppApi {
@@ -79,16 +79,16 @@ export class CLWebAppApi {
     return JSON.parse((await res.json()) as string);
   }
 
-  async loadProjectInfo(): Promise<ProjectInfo> {
+  async loadProjectInfo(): Promise<CLProjectInfo> {
     const res = await fetch(`${this.apiProjects}/${this.config.projectId}`, this.fetchOption());
     if (!res.ok) {
       throw new Error(await res.text());
     }
     const text = await res.text();
-    return JSON.parse(text)['project'] as ProjectInfo;
+    return JSON.parse(text)['project'] as CLProjectInfo;
   }
 
-  async updateProjectInfo(param: UpdateProjectInfoParam): Promise<ProjectInfo> {
+  async updateProjectInfo(param: UpdateCLProjectInfoParam): Promise<CLProjectInfo> {
     const res = await fetch(
       `${this.apiProjects}/${this.config.projectId}`,
       this.fetchOption({

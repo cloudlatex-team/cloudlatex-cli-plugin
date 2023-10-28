@@ -420,9 +420,9 @@ export class LatexApp extends LAEventEmitter implements ILatexApp {
     try {
       const projectInfo = await this.backend.loadProjectInfo();
       const fileList = await this.backend.loadFileList();
-      const targetFile = fileList.find(file => file.remoteId === projectInfo.compile_target_file_id);
+      const targetFile = fileList.find(file => file.remoteId === projectInfo.compileTargetFileRemoteId);
       if (!targetFile) {
-        this.logger.error(`Target file ${projectInfo.compile_target_file_id} is not found`);
+        this.logger.error(`Target file ${projectInfo.compileTargetFileRemoteId} is not found`);
         return 'no-target-error';
       }
       this.appInfoService.onProjectLoaded(projectInfo);

@@ -38,8 +38,8 @@ export class AppInfoService {
   }
 
   private targetFile(): FileInfo | undefined {
-    return this.projectInfo?.compile_target_file_id !== undefined
-      && this.fileRepo.findBy('remoteId', this.projectInfo.compile_target_file_id)
+    return this.projectInfo?.compileTargetFileRemoteId !== undefined
+      && this.fileRepo.findBy('remoteId', this.projectInfo.compileTargetFileRemoteId)
       || undefined;
   }
 
