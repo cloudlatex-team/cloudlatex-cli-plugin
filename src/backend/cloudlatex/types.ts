@@ -12,6 +12,15 @@ export interface ClFile {
   thumbnail_url?: string;
 }
 
+export interface CLProjectInfo {
+  id: number;
+  // eslint-disable-next-line @typescript-eslint/naming-convention
+  compile_target_file_id: number;
+  title: string;
+}
+
+export type UpdateCLProjectInfoParam = Partial<Omit<CLProjectInfo, 'id'>>;
+
 export interface ResultError {
   error_log: string;
   url?: string;

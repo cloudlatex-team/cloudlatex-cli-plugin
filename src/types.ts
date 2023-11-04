@@ -1,10 +1,9 @@
-import { FileInfo } from './model/fileModel';
+import { FileInfo, Revision } from './model/fileModel';
 import { Matcher } from 'anymatch';
 
 export interface ProjectInfo {
   id: number;
-  // eslint-disable-next-line @typescript-eslint/naming-convention
-  compile_target_file_id: number;
+  compileTargetFileRemoteId: Revision; // remoteId of compile target file
   title: string;
 }
 
@@ -50,13 +49,14 @@ export type LoginStatus = 'offline' | 'valid' | 'invalid';
 export interface AppInfo {
   loginStatus: LoginStatus;
   projectName?: string;
-  compileTarget?: KeyType,
-  targetName?: string,
   logPath?: string,
   pdfPath?: string,
   synctexPath?: string,
   loaded: boolean,
-  conflictFiles: FileInfo[]
+  conflictFiles: FileInfo[],
+  targetFile?: FileInfo,
+  files: FileInfo[],
+  targetFileCandidates: FileInfo[],
 }
 
 export type KeyType = number | string;
@@ -64,12 +64,21 @@ export type ConflictSolution = 'push' | 'pull';
 export type ChangeState = 'no' | 'update' | 'create' | 'delete';
 export type ChangeLocation = 'no' | 'local' | 'remote' | 'both';
 
+export type UpdateProjectInfoParam = Partial<Omit<ProjectInfo, 'id'>>;
+
+
 export type BaseResultStatus = 'success' | 'invalid-account' | 'offline' | 'no-target-error' | 'unknown-error';
 
 export type LoginResult = {
   status: BaseResultStatus;
   appInfo: AppInfo;
   errors?: string[]
+};
+
+export type UpdateProjectInfoResult = {
+  status: BaseResultStatus;
+  appInfo: AppInfo;
+  errors?: string[];
 };
 
 export type SyncStatus = BaseResultStatus | 'conflict';

@@ -1,7 +1,9 @@
-import * as path from 'path';
 import * as  EventEmitter from 'eventemitter3';
 import { Logger, getErrorTraceStr } from './util/logger';
-import { Config, Account, CompileResult, ILatexApp, LoginResult, SyncResult, ConflictSolution } from './types';
+import {
+  Config, Account, CompileResult, ILatexApp, LoginResult, SyncResult,
+  ConflictSolution, UpdateProjectInfoResult, UpdateProjectInfoParam
+} from './types';
 import { FileAdapter } from './fileService/fileAdapter';
 import { SyncManager } from './fileService/syncManager';
 import { FileWatcher } from './fileService/fileWatcher';
@@ -49,7 +51,6 @@ export class LatexApp extends LAEventEmitter implements ILatexApp {
    */
   constructor(
     private config: Config,
-    private accountService: AccountService<Account>,
     private appInfoService: AppInfoService,
     private backend: IBackend,
     private fileAdapter: FileAdapter,
@@ -120,9 +121,6 @@ export class LatexApp extends LAEventEmitter implements ILatexApp {
     const accountService = option.accountService || new AccountService();
     await accountService.load();
 
-    // AppInfo
-    const appInfoService = new AppInfoService(config);
-
     // Backend
     const backend = backendSelector(config, accountService);
 
@@ -137,7 +135,11 @@ export class LatexApp extends LAEventEmitter implements ILatexApp {
     const fileRepo = db.getRepository(FILE_INFO_DESC);
 
     const fileAdapter = new FileAdapter(config.rootPath, fileRepo, backend);
-    return new LatexApp(config, accountService, appInfoService, backend, fileAdapter, fileRepo, logger);
+
+    // AppInfo
+    const appInfoService = new AppInfoService(config, fileRepo);
+
+    return new LatexApp(config, appInfoService, backend, fileAdapter, fileRepo, logger);
   }
 
   private static sanitizeConfig(config: Config): Config {
@@ -236,6 +238,33 @@ export class LatexApp extends LAEventEmitter implements ILatexApp {
   }
 
   /**
+   * Update project info
+   */
+  public async updateProjectInfo(param: UpdateProjectInfoParam): Promise<UpdateProjectInfoResult> {
+    // Login
+    const loginResult = await this.login();
+    if (loginResult.status !== 'success') {
+      return loginResult;
+    }
+
+    try {
+      await this.backend.updateProjectInfo(param);
+      this.logger.info('Project info updated');
+
+      const result = await this.loadProject();
+      return { status: result, appInfo: this.appInfoService.appInfo };
+    } catch (err) {
+      const msg = 'Some error occurred with updating project info ';
+      this.logger.warn(msg + getErrorTraceStr(err));
+      return {
+        status: 'unknown-error',
+        appInfo: this.appInfoService.appInfo,
+        errors: [msg],
+      };
+    }
+  }
+
+  /**
    * Synchronize files
    */
   public async sync(conflictSolution?: ConflictSolution): Promise<SyncResult> {
@@ -247,11 +276,6 @@ export class LatexApp extends LAEventEmitter implements ILatexApp {
 
     // File synchronization
     const result = await this.syncManager.sync(conflictSolution);
-
-    // Update conflict
-    const conflictFiles = this.fileRepo.where({ 'changeLocation': 'both' });
-    this.appInfoService.setConflicts(conflictFiles);
-
 
     const status = result.conflict
       ? 'conflict'
@@ -400,15 +424,12 @@ export class LatexApp extends LAEventEmitter implements ILatexApp {
     try {
       const projectInfo = await this.backend.loadProjectInfo();
       const fileList = await this.backend.loadFileList();
-      const targetFile = fileList.find(file => file.remoteId === projectInfo.compile_target_file_id);
+      const targetFile = fileList.find(file => file.remoteId === projectInfo.compileTargetFileRemoteId);
       if (!targetFile) {
-        this.logger.error(`Target file ${projectInfo.compile_target_file_id} is not found`);
+        this.logger.error(`Target file ${projectInfo.compileTargetFileRemoteId} is not found`);
         return 'no-target-error';
       }
-      const targetName = path.posix.basename(targetFile.relativePath, '.tex');
-      this.appInfoService.setProjectName(projectInfo.title);
-      this.appInfoService.setTarget(projectInfo.compile_target_file_id, targetName);
-      this.appInfoService.setLoaded();
+      this.appInfoService.onProjectLoaded(projectInfo);
       return 'success';
     } catch (err) {
       this.logger.error(getErrorTraceStr(err));
