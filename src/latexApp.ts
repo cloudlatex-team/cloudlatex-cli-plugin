@@ -1,4 +1,5 @@
 import * as  EventEmitter from 'eventemitter3';
+import { version } from '../package.json';
 import { Logger, getErrorTraceStr } from './util/logger';
 import {
   Config, Account, CompileResult, ILatexApp, LoginResult, SyncResult,
@@ -112,7 +113,7 @@ export class LatexApp extends LAEventEmitter implements ILatexApp {
   } = {}): Promise<LatexApp> {
 
     const logger = option.logger || new Logger();
-    logger.log(`latex-cli ${'3.1.0'}`);
+    logger.log(`latex-cli ${version}`);
 
     // Config
     config = this.sanitizeConfig(config);
