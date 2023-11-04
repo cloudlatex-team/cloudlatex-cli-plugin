@@ -36,9 +36,15 @@ class BackendStub {
         }
         return Promise.resolve({
             id: 1,
-            compile_target_file_id: 1,
+            compileTargetFileRemoteId: 1,
             title: '',
         });
+    }
+    updateProjectInfo() {
+        if (this.isOffline) {
+            return Promise.reject('Network error on updateProjectInfo');
+        }
+        return Promise.resolve({});
     }
     loadFileList() {
         if (this.isOffline) {

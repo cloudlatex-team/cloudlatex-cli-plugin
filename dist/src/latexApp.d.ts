@@ -1,6 +1,6 @@
 import * as EventEmitter from 'eventemitter3';
 import { Logger } from './util/logger';
-import { Config, Account, CompileResult, ILatexApp, LoginResult, SyncResult, ConflictSolution } from './types';
+import { Config, Account, CompileResult, ILatexApp, LoginResult, SyncResult, ConflictSolution, UpdateProjectInfoResult, UpdateProjectInfoParam } from './types';
 import { FileAdapter } from './fileService/fileAdapter';
 import { Repository } from '@moritanian/type-db';
 import { FILE_INFO_DESC } from './model/fileModel';
@@ -23,7 +23,6 @@ interface LAEventEmitter {
 }
 export declare class LatexApp extends LAEventEmitter implements ILatexApp {
     private config;
-    private accountService;
     private appInfoService;
     private backend;
     private fileAdapter;
@@ -35,7 +34,7 @@ export declare class LatexApp extends LAEventEmitter implements ILatexApp {
     /**
      * Do not use this constructor. Be sure to instantiate LatexApp by createApp()
      */
-    constructor(config: Config, accountService: AccountService<Account>, appInfoService: AppInfoService, backend: IBackend, fileAdapter: FileAdapter, fileRepo: Repository<typeof FILE_INFO_DESC>, logger?: Logger);
+    constructor(config: Config, appInfoService: AppInfoService, backend: IBackend, fileAdapter: FileAdapter, fileRepo: Repository<typeof FILE_INFO_DESC>, logger?: Logger);
     /**
      * setup file management classes
      *
@@ -64,6 +63,10 @@ export declare class LatexApp extends LAEventEmitter implements ILatexApp {
     private onValid;
     private onInvalid;
     private onOffline;
+    /**
+     * Update project info
+     */
+    updateProjectInfo(param: UpdateProjectInfoParam): Promise<UpdateProjectInfoResult>;
     /**
      * Synchronize files
      */

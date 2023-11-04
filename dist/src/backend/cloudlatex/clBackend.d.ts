@@ -1,7 +1,7 @@
 /// <reference types="node" />
 import { FileInfo, Revision } from '../../model/fileModel';
 import { IBackend, CompileResult } from '../ibackend';
-import { Config, ProjectInfo, KeyType, Account } from './../../types';
+import { Config, ProjectInfo, KeyType, Account, UpdateProjectInfoParam } from './../../types';
 import { AccountService } from '../../service/accountService';
 export declare class ClBackend implements IBackend {
     private api;
@@ -24,6 +24,7 @@ export declare class ClBackend implements IBackend {
         remoteId: number;
     }): Promise<unknown>;
     loadProjectInfo(): Promise<ProjectInfo>;
+    updateProjectInfo(param: UpdateProjectInfoParam): Promise<unknown>;
     loadFileList(): Promise<FileInfo[]>;
     loadSynctexObject(url: string): Promise<ArrayBuffer>;
     compileProject(): Promise<{

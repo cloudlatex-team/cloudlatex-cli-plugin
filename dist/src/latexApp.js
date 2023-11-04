@@ -10,7 +10,6 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.LatexApp = exports.LATEX_APP_EVENTS = void 0;
-const path = require("path");
 const EventEmitter = require("eventemitter3");
 const logger_1 = require("./util/logger");
 const fileAdapter_1 = require("./fileService/fileAdapter");
@@ -35,10 +34,9 @@ class LatexApp extends LAEventEmitter {
     /**
      * Do not use this constructor. Be sure to instantiate LatexApp by createApp()
      */
-    constructor(config, accountService, appInfoService, backend, fileAdapter, fileRepo, logger = new logger_1.Logger()) {
+    constructor(config, appInfoService, backend, fileAdapter, fileRepo, logger = new logger_1.Logger()) {
         super();
         this.config = config;
-        this.accountService = accountService;
         this.appInfoService = appInfoService;
         this.backend = backend;
         this.fileAdapter = fileAdapter;
@@ -88,8 +86,6 @@ class LatexApp extends LAEventEmitter {
             // Account
             const accountService = option.accountService || new accountService_1.AccountService();
             yield accountService.load();
-            // AppInfo
-            const appInfoService = new appInfoService_1.AppInfoService(config);
             // Backend
             const backend = backendSelector_1.backendSelector(config, accountService);
             // DB
@@ -103,7 +99,9 @@ class LatexApp extends LAEventEmitter {
             }
             const fileRepo = db.getRepository(fileModel_1.FILE_INFO_DESC);
             const fileAdapter = new fileAdapter_1.FileAdapter(config.rootPath, fileRepo, backend);
-            return new LatexApp(config, accountService, appInfoService, backend, fileAdapter, fileRepo, logger);
+            // AppInfo
+            const appInfoService = new appInfoService_1.AppInfoService(config, fileRepo);
+            return new LatexApp(config, appInfoService, backend, fileAdapter, fileRepo, logger);
         });
     }
     static sanitizeConfig(config) {
@@ -196,6 +194,33 @@ class LatexApp extends LAEventEmitter {
         this.appInfoService.setLoginStatus('offline');
     }
     /**
+     * Update project info
+     */
+    updateProjectInfo(param) {
+        return __awaiter(this, void 0, void 0, function* () {
+            // Login
+            const loginResult = yield this.login();
+            if (loginResult.status !== 'success') {
+                return loginResult;
+            }
+            try {
+                yield this.backend.updateProjectInfo(param);
+                this.logger.info('Project info updated');
+                const result = yield this.loadProject();
+                return { status: result, appInfo: this.appInfoService.appInfo };
+            }
+            catch (err) {
+                const msg = 'Some error occurred with updating project info ';
+                this.logger.warn(msg + logger_1.getErrorTraceStr(err));
+                return {
+                    status: 'unknown-error',
+                    appInfo: this.appInfoService.appInfo,
+                    errors: [msg],
+                };
+            }
+        });
+    }
+    /**
      * Synchronize files
      */
     sync(conflictSolution) {
@@ -207,9 +232,6 @@ class LatexApp extends LAEventEmitter {
             }
             // File synchronization
             const result = yield this.syncManager.sync(conflictSolution);
-            // Update conflict
-            const conflictFiles = this.fileRepo.where({ 'changeLocation': 'both' });
-            this.appInfoService.setConflicts(conflictFiles);
             const status = result.conflict
                 ? 'conflict'
                 : result.success ? 'success' : 'unknown-error';
@@ -346,15 +368,12 @@ class LatexApp extends LAEventEmitter {
             try {
                 const projectInfo = yield this.backend.loadProjectInfo();
                 const fileList = yield this.backend.loadFileList();
-                const targetFile = fileList.find(file => file.remoteId === projectInfo.compile_target_file_id);
+                const targetFile = fileList.find(file => file.remoteId === projectInfo.compileTargetFileRemoteId);
                 if (!targetFile) {
-                    this.logger.error(`Target file ${projectInfo.compile_target_file_id} is not found`);
+                    this.logger.error(`Target file ${projectInfo.compileTargetFileRemoteId} is not found`);
                     return 'no-target-error';
                 }
-                const targetName = path.posix.basename(targetFile.relativePath, '.tex');
-                this.appInfoService.setProjectName(projectInfo.title);
-                this.appInfoService.setTarget(projectInfo.compile_target_file_id, targetName);
-                this.appInfoService.setLoaded();
+                this.appInfoService.onProjectLoaded(projectInfo);
                 return 'success';
             }
             catch (err) {

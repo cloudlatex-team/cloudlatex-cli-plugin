@@ -1,8 +1,8 @@
-import { FileInfo } from './model/fileModel';
+import { FileInfo, Revision } from './model/fileModel';
 import { Matcher } from 'anymatch';
 export interface ProjectInfo {
     id: number;
-    compile_target_file_id: number;
+    compileTargetFileRemoteId: Revision;
     title: string;
 }
 /**
@@ -36,20 +36,27 @@ export declare type LoginStatus = 'offline' | 'valid' | 'invalid';
 export interface AppInfo {
     loginStatus: LoginStatus;
     projectName?: string;
-    compileTarget?: KeyType;
-    targetName?: string;
     logPath?: string;
     pdfPath?: string;
     synctexPath?: string;
     loaded: boolean;
     conflictFiles: FileInfo[];
+    targetFile?: FileInfo;
+    files: FileInfo[];
+    targetFileCandidates: FileInfo[];
 }
 export declare type KeyType = number | string;
 export declare type ConflictSolution = 'push' | 'pull';
 export declare type ChangeState = 'no' | 'update' | 'create' | 'delete';
 export declare type ChangeLocation = 'no' | 'local' | 'remote' | 'both';
+export declare type UpdateProjectInfoParam = Partial<Omit<ProjectInfo, 'id'>>;
 export declare type BaseResultStatus = 'success' | 'invalid-account' | 'offline' | 'no-target-error' | 'unknown-error';
 export declare type LoginResult = {
+    status: BaseResultStatus;
+    appInfo: AppInfo;
+    errors?: string[];
+};
+export declare type UpdateProjectInfoResult = {
     status: BaseResultStatus;
     appInfo: AppInfo;
     errors?: string[];

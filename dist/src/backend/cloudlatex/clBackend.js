@@ -75,7 +75,24 @@ class ClBackend {
         });
     }
     loadProjectInfo() {
-        return this.api.loadProjectInfo();
+        return __awaiter(this, void 0, void 0, function* () {
+            const clProjectInfo = yield this.api.loadProjectInfo();
+            return {
+                id: clProjectInfo.id,
+                compileTargetFileRemoteId: clProjectInfo.compile_target_file_id,
+                title: clProjectInfo.title
+            };
+        });
+    }
+    updateProjectInfo(param) {
+        const clParam = {};
+        if (param.title) {
+            clParam.title = param.title;
+        }
+        if (param.compileTargetFileRemoteId) {
+            clParam.compile_target_file_id = param.compileTargetFileRemoteId;
+        }
+        return this.api.updateProjectInfo(clParam);
     }
     loadFileList() {
         return __awaiter(this, void 0, void 0, function* () {

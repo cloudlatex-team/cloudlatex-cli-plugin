@@ -1,5 +1,5 @@
 /// <reference types="node" />
-import { CompileResult } from './types';
+import { CLProjectInfo, UpdateCLProjectInfoParam, CompileResult } from './types';
 import { Config, ProjectInfo, Account } from '../../types';
 import { AccountService } from '../../service/accountService';
 export declare class CLWebAppApi {
@@ -12,7 +12,8 @@ export declare class CLWebAppApi {
     private fetchOption;
     validateToken(): Promise<boolean>;
     loadProjects(): Promise<ProjectInfo[]>;
-    loadProjectInfo(): Promise<ProjectInfo>;
+    loadProjectInfo(): Promise<CLProjectInfo>;
+    updateProjectInfo(param: UpdateCLProjectInfoParam): Promise<CLProjectInfo>;
     loadFiles(): Promise<unknown>;
     createFile(name: string, belonging_to: number | null, is_folder: boolean): Promise<unknown>;
     deleteFile(id: number): Promise<unknown>;

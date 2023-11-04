@@ -10,6 +10,7 @@ export declare class BackendStub implements IBackend {
     constructor();
     validateToken(): Promise<boolean>;
     loadProjectInfo(): Promise<ProjectInfo>;
+    updateProjectInfo(): Promise<unknown>;
     loadFileList(): Promise<FileInfo[]>;
     upload(file: FileInfo, stream: NodeJS.ReadableStream, option?: unknown): Promise<{
         remoteId: string;

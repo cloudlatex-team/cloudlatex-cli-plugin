@@ -86,6 +86,20 @@ class CLWebAppApi {
             return JSON.parse(text)['project'];
         });
     }
+    updateProjectInfo(param) {
+        var _a;
+        return __awaiter(this, void 0, void 0, function* () {
+            const res = yield node_fetch_1.default(`${this.apiProjects}/${this.config.projectId}`, this.fetchOption({
+                method: 'PUT',
+                body: JSON.stringify({ project: param }),
+                headerOption: { json: true }
+            }));
+            if (!res.ok) {
+                throw new Error(yield res.text());
+            }
+            return (_a = JSON.parse(yield res.text())) === null || _a === void 0 ? void 0 : _a.project;
+        });
+    }
     loadFiles() {
         return __awaiter(this, void 0, void 0, function* () {
             const res = yield node_fetch_1.default(`${this.apiProjects}/${this.config.projectId}/files`, this.fetchOption());

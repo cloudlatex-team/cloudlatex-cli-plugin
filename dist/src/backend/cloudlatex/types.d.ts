@@ -10,6 +10,12 @@ export interface ClFile {
     file_url: string;
     thumbnail_url?: string;
 }
+export interface CLProjectInfo {
+    id: number;
+    compile_target_file_id: number;
+    title: string;
+}
+export declare type UpdateCLProjectInfoParam = Partial<Omit<CLProjectInfo, 'id'>>;
 export interface ResultError {
     error_log: string;
     url?: string;
