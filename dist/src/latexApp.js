@@ -11,6 +11,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.LatexApp = exports.LATEX_APP_EVENTS = void 0;
 const EventEmitter = require("eventemitter3");
+const package_json_1 = require("../package.json");
 const logger_1 = require("./util/logger");
 const fileAdapter_1 = require("./fileService/fileAdapter");
 const syncManager_1 = require("./fileService/syncManager");
@@ -80,7 +81,7 @@ class LatexApp extends LAEventEmitter {
     static createApp(config, option = {}) {
         return __awaiter(this, void 0, void 0, function* () {
             const logger = option.logger || new logger_1.Logger();
-            logger.log(`latex-cli ${'3.0.0'}`);
+            logger.log(`latex-cli ${package_json_1.version}`);
             // Config
             config = this.sanitizeConfig(config);
             // Account
