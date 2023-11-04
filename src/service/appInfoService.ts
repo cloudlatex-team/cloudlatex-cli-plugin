@@ -9,6 +9,13 @@ export class AppInfoService {
   }
 
   get appInfo(): AppInfo {
+    const files = this.fileRepo.all();
+    const targetFile = this.targetFile();
+    const targetFileCandidates = files.filter(
+      file => file.relativePath.split(path.posix.sep).length === 1
+        && path.posix.extname(file.relativePath) === '.tex'
+    );
+
     return {
       loginStatus: this.loginStatus,
       projectName: this.projectInfo?.title,
@@ -17,8 +24,9 @@ export class AppInfoService {
       synctexPath: this._synctexPath(),
       loaded: !!this.projectInfo,
       conflictFiles: this.fileRepo.where({ 'changeLocation': 'both' }),
-      targetFile: this.targetFile(),
-      files: this.fileRepo.all(),
+      targetFile,
+      files,
+      targetFileCandidates
     };
   }
 

@@ -56,6 +56,7 @@ export interface AppInfo {
   conflictFiles: FileInfo[],
   targetFile?: FileInfo,
   files: FileInfo[],
+  targetFileCandidates: FileInfo[],
 }
 
 export type KeyType = number | string;
