@@ -34,7 +34,7 @@
     "@types/glob": "^7.1.1",
     "@types/mocha": "^7.0.2",
     "@types/mock-fs": "^4.10.0",
-    "@types/node": "^14.0.4",
+    "@types/node": "^18.19.4",
     "@types/node-fetch": "^2.5.5",
     "@types/pako": "^1.0.1",
     "@types/sinon": "^9.0.4",
