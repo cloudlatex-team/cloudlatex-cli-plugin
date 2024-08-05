@@ -1,6 +1,6 @@
-import * as fs from 'fs';
-import * as path from 'path';
-import * as chai from 'chai';
+import fs from 'fs';
+import path from 'path';
+import chai from 'chai';
 import { v4 as uuid } from 'uuid';
 
 import { TypeDB } from '@moritanian/type-db';

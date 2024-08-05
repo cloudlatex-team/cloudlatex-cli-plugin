@@ -1,7 +1,7 @@
 import { ConflictSolution, KeyType, ChangeState } from '../types';
 import { FileAdapter } from './fileAdapter';
 import { FileRepository, FileInfo } from '../model/fileModel';
-import * as path from 'path';
+import path from 'path';
 import { getErrorTraceStr, Logger } from '../util/logger';
 import { AsyncRunner } from '../util/asyncRunner';
 

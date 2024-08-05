@@ -1,4 +1,4 @@
-import * as chai from 'chai';
+import chai from 'chai';
 import { Config } from '../../src';
 import anymatch from 'anymatch';
 

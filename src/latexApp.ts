@@ -1,4 +1,4 @@
-import * as  EventEmitter from 'eventemitter3';
+import EventEmitter from 'eventemitter3';
 import { version } from '../package.json';
 import { Logger, getErrorTraceStr } from './util/logger';
 import {

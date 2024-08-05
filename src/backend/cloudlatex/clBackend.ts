@@ -1,6 +1,6 @@
-import * as path from 'path';
-import * as url from 'url';
-import * as pako from 'pako';
+import path from 'path';
+import url from 'url';
+import pako from 'pako';
 import { TextDecoder } from 'text-encoding';
 
 import { CLWebAppApi } from './webAppApi';

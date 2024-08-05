@@ -1,8 +1,8 @@
 import { FileWatcher } from './../../src/fileService/fileWatcher';
-import * as Sinon from 'sinon';
-import * as chai from 'chai';
-import * as path from 'path';
-import * as fs from 'fs-extra';
+import Sinon from 'sinon';
+import chai from 'chai';
+import path from 'path';
+import fs from 'fs-extra';
 import { TypeDB } from '@moritanian/type-db';
 import { FILE_INFO_DESC } from '../../src/model/fileModel';
 import { Logger } from '../../src/util/logger';

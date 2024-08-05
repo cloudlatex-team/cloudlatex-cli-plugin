@@ -1,4 +1,4 @@
-import * as path from 'path';
+import path from 'path';
 import { AppInfo, Config, LoginStatus, ProjectInfo } from '../types';
 import { FileRepository, FileInfo } from './../model/fileModel';
 export class AppInfoService {

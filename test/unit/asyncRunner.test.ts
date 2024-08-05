@@ -1,4 +1,4 @@
-import * as chai from 'chai';
+import chai from 'chai';
 import { AsyncRunner } from '../../src/util/asyncRunner';
 
 import { sleep } from '../tool/syncTestTool';

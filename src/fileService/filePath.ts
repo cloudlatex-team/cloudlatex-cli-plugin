@@ -1,6 +1,6 @@
 import { Matcher } from 'anymatch';
 import anymatch from 'anymatch';
-import * as path from 'path';
+import path from 'path';
 import { FileInfo } from '../model/fileModel';
 import { AppInfoService } from '../service/appInfoService';
 import { Config } from '../types';

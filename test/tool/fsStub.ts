@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import * as Sinon from 'sinon';
-import * as chokidar from 'chokidar';
-import * as fs from 'fs';
-import * as mockFs from 'mock-fs';
+import Sinon from 'sinon';
+import chokidar from 'chokidar';
+import fs from 'fs';
+import mockFs from 'mock-fs';
 
 function fsStub(files: Record<string, string>): void {
   mockFs(files);
