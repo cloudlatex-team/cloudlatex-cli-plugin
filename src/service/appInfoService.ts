@@ -1,6 +1,6 @@
-import path from 'path';
-import { AppInfo, Config, LoginStatus, ProjectInfo } from '../types';
-import { FileRepository, FileInfo } from './../model/fileModel';
+import path from 'node:path';
+import { AppInfo, Config, LoginStatus, ProjectInfo } from '../types.ts';
+import { FileRepository, FileInfo } from './../model/fileModel.ts';
 export class AppInfoService {
   private projectInfo?: ProjectInfo;
   private loginStatus: LoginStatus;

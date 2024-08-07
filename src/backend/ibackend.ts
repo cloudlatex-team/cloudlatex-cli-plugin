@@ -1,5 +1,5 @@
-import { ProjectInfo, KeyType, UpdateProjectInfoParam } from '../types';
-import { FileInfo, Revision } from '../model/fileModel';
+import { ProjectInfo, KeyType, UpdateProjectInfoParam } from '../types.ts';
+import { FileInfo, Revision } from '../model/fileModel.ts';
 
 export type CompileResult = {
   status: 'success' | 'no-target-error' | 'compiler-error' | 'unknown-error';

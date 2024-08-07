@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import Sinon from 'sinon';
-import chokidar from 'chokidar';
-import fs from 'fs';
-import mockFs from 'mock-fs';
+import Sinon from 'npm:sinon';
+import chokidar from 'npm:chokidar';
+import fs from 'node:fs';
+import mockFs from 'npm:mock-fs';
 
 function fsStub(files: Record<string, string>): void {
   mockFs(files);
@@ -14,7 +14,7 @@ function fsStub(files: Record<string, string>): void {
   const originalUnlink = fs.promises.unlink;
   const originalRmdir = fs.promises.rmdir;
 
-  Sinon.stub(fs, 'createWriteStream').callsFake((path: fs.PathLike, options?: any) => {
+  Sinon.stub(fs, 'createWritestream.ts').callsFake((path: fs.PathLike, options?: any) => {
     const stream = originalCreateWriteStream(path, options);
     const statPromise = fs.promises.stat(path);
     stream.on('finish', () => {

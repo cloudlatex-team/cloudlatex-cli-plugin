@@ -1,9 +1,9 @@
-import { ConflictSolution, KeyType, ChangeState } from '../types';
-import { FileAdapter } from './fileAdapter';
-import { FileRepository, FileInfo } from '../model/fileModel';
-import path from 'path';
-import { getErrorTraceStr, Logger } from '../util/logger';
-import { AsyncRunner } from '../util/asyncRunner';
+import { ConflictSolution, KeyType, ChangeState } from '../types.ts';
+import { FileAdapter } from './fileAdapter.ts';
+import { FileRepository, FileInfo } from '../model/fileModel.ts';
+import path from 'node:path';
+import { getErrorTraceStr, Logger } from '../util/logger.ts';
+import { AsyncRunner } from '../util/asyncRunner.ts';
 
 export type SyncResult = {
   success: boolean;

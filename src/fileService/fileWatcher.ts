@@ -1,10 +1,10 @@
-import chokidar from 'chokidar';
-import EventEmitter from 'eventemitter3';
-import { FileRepository } from '../model/fileModel';
-import { Logger } from '../util/logger';
-import anymatch, { Matcher } from 'anymatch';
-import { checkIgnoredByFileInfo, toPosixPath, toRelativePath } from './filePath';
-import { Config } from '../types';
+import chokidar from 'npm:chokidar';
+import EventEmitter from 'npm:eventemitter3';
+import { FileRepository } from '../model/fileModel.ts';
+import { Logger } from '../util/logger.ts';
+import anymatch, { Matcher } from 'npm:anymatch';
+import { checkIgnoredByFileInfo, toPosixPath, toRelativePath } from './filePath.ts';
+import { Config } from '../types.ts';
 
 
 type EventType = 'change-detected' | 'error';

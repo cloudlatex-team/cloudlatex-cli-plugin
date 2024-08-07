@@ -1,4 +1,4 @@
-import { Readable } from 'stream';
+import { Readable } from 'node:stream';
 
 export function streamToString(stream: NodeJS.ReadableStream): Promise<string> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

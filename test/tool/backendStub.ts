@@ -1,10 +1,10 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import { IBackend } from '../../src/backend/ibackend';
-import { ProjectInfo, KeyType } from '../../src/types';
-import { TypeDB, Repository } from '@moritanian/type-db';
-import { FILE_INFO_DESC, FileInfo } from '../../src/model/fileModel';
-import { v4 as uuid } from 'uuid';
-import { ReadableString, streamToString } from '../../src/util/stream';
+import { IBackend } from '../../src/backend/ibackend.ts';
+import { ProjectInfo, KeyType } from '../../src/types.ts';
+import { TypeDB, Repository } from 'npm:@moritanian/type-db';
+import { FILE_INFO_DESC, FileInfo } from '../../src/model/fileModel.ts';
+import { v4 as uuid } from 'npm:uuid';
+import { ReadableString, streamToString } from '../../src/util/stream.ts';
 
 /*
  * BackendMock Class

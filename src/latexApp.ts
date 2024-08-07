@@ -1,23 +1,23 @@
-import EventEmitter from 'eventemitter3';
+import EventEmitter from 'npm:eventemitter3';
 import { version } from '../package.json';
-import { Logger, getErrorTraceStr } from './util/logger';
+import { Logger, getErrorTraceStr } from './util/logger.ts';
 import {
   Config, Account, CompileResult, ILatexApp, LoginResult, SyncResult,
   ConflictSolution, UpdateProjectInfoResult, UpdateProjectInfoParam
-} from './types';
-import { FileAdapter } from './fileService/fileAdapter';
-import { SyncManager } from './fileService/syncManager';
-import { FileWatcher } from './fileService/fileWatcher';
-import { TypeDB, Repository } from '@moritanian/type-db';
-import { FileInfo, FILE_INFO_DESC } from './model/fileModel';
-import { IBackend, CompileResult as BackendCompileResult } from './backend/ibackend';
-import { backendSelector } from './backend/backendSelector';
-import { AccountService } from './service/accountService';
-import { AppInfoService } from './service/appInfoService';
+} from './types.ts';
+import { FileAdapter } from './fileService/fileAdapter.ts';
+import { SyncManager } from './fileService/syncManager.ts';
+import { FileWatcher } from './fileService/fileWatcher.ts';
+import { TypeDB, Repository } from 'npm:@moritanian/type-db';
+import { FileInfo, FILE_INFO_DESC } from './model/fileModel.ts';
+import { IBackend, CompileResult as BackendCompileResult } from './backend/ibackend.ts';
+import { backendSelector } from './backend/backendSelector.ts';
+import { AccountService } from './service/accountService.ts';
+import { AppInfoService } from './service/appInfoService.ts';
 import {
   calcIgnoredFiles, calcRelativeOutDir, getDBFilePath, toPosixPath, checkIgnoredByFileInfo
-} from './fileService/filePath';
-import { AsyncRunner } from './util/asyncRunner';
+} from './fileService/filePath.ts';
+import { AsyncRunner } from './util/asyncRunner.ts';
 
 /* eslint-disable @typescript-eslint/naming-convention */
 export const LATEX_APP_EVENTS = {

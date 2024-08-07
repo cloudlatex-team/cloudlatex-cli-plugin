@@ -1,8 +1,8 @@
 
-import { ClBackend } from './cloudlatex/clBackend';
-import { Config, Account } from './../types';
-import { IBackend } from './ibackend';
-import { AccountService } from '../service/accountService';
+import { ClBackend } from './cloudlatex/clBackend.ts';
+import { Config, Account } from './../types.ts';
+import { IBackend } from './ibackend.ts';
+import { AccountService } from '../service/accountService.ts';
 
 export function backendSelector(config: Config, accountService: AccountService<Account>): IBackend {
   if (config.backend === 'cloudlatex') {

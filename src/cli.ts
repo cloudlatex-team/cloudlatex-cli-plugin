@@ -2,8 +2,8 @@
 
 /* eslint-disable */
 
-import { LatexApp } from './latexApp';
-import { Config, ProjectInfo, AppInfo, ConflictSolution } from './types';
+import { LatexApp } from './latexApp.ts';
+import { Config, ProjectInfo, AppInfo, ConflictSolution } from './types.ts';
 
 // TDOO
 function main() {

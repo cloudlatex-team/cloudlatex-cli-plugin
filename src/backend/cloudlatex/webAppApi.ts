@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import fetch, { RequestInit, Headers } from 'node-fetch';
-import { CLProjectInfo, UpdateCLProjectInfoParam, CompileResult } from './types';
-import FormData from 'form-data';
-import { Config, ProjectInfo, Account } from '../../types';
-import { AccountService } from '../../service/accountService';
+import fetch, { RequestInit, Headers } from 'npm:node-fetch';
+import { CLProjectInfo, UpdateCLProjectInfoParam, CompileResult } from './types.ts';
+import FormData from 'npm:form-data';
+import { Config, ProjectInfo, Account } from '../../types.ts';
+import { AccountService } from '../../service/accountService.ts';
 
 export class CLWebAppApi {
   private apiRoot: string;

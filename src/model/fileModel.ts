@@ -1,5 +1,5 @@
-import { ChangeState, ChangeLocation } from '../types';
-import { Repository } from '@moritanian/type-db';
+import { ChangeState, ChangeLocation } from '../types.ts';
+import { Repository } from 'npm:@moritanian/type-db';
 
 export type Revision = string | number | null;
 export const FILE_INFO_DESC = {

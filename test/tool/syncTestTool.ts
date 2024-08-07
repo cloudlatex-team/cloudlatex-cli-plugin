@@ -1,4 +1,4 @@
-import { ConflictSolution, ChangeState } from '../../src/types';
+import { ConflictSolution, ChangeState } from '../../src/types.ts';
 
 export type TestConfig = {
   changeStates: {

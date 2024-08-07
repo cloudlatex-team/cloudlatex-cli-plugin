@@ -1,7 +1,7 @@
-import chai from 'chai';
-import { AsyncRunner } from '../../src/util/asyncRunner';
+import chai from 'npm:chai';
+import { AsyncRunner } from '../../src/util/asyncRunner.ts';
 
-import { sleep } from '../tool/syncTestTool';
+import { sleep } from '../tool/syncTestTool.ts';
 
 
 describe('AsyncRunner with 100ms sleep task', () => {

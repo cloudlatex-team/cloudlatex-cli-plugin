@@ -1,20 +1,20 @@
-import fs from 'fs';
-import path from 'path';
-import chai from 'chai';
-import { v4 as uuid } from 'uuid';
+import fs from 'node:fs';
+import path from 'node:path';
+import chai from 'npm:chai';
+import { v4 as uuid } from 'npm:uuid';
 
-import { TypeDB } from '@moritanian/type-db';
-import { FILE_INFO_DESC, FileInfo } from '../../src/model/fileModel';
-import { FileWatcher } from '../../src/fileService/fileWatcher';
-import { SyncManager, SyncResult } from '../../src/fileService/syncManager';
-import { FileAdapter } from '../../src/fileService/fileAdapter';
-import { BackendStub } from '../tool/backendStub';
-import { Logger } from '../../src/util/logger';
-import { ChangeState, ChangeLocation } from '../../src/types';
+import { TypeDB } from 'npm:@moritanian/type-db';
+import { FILE_INFO_DESC, FileInfo } from '../../src/model/fileModel.ts';
+import { FileWatcher } from '../../src/fileService/fileWatcher.ts';
+import { SyncManager, SyncResult } from '../../src/fileService/syncManager.ts';
+import { FileAdapter } from '../../src/fileService/fileAdapter.ts';
+import { BackendStub } from '../tool/backendStub.ts';
+import { Logger } from '../../src/util/logger.ts';
+import { ChangeState, ChangeLocation } from '../../src/types.ts';
 
-import * as tool from './../tool/syncTestTool';
-import { streamToString } from '../../src/util/stream';
-import fsStub from './../tool/fsStub';
+import * as tool from './../tool/syncTestTool.ts';
+import { streamToString } from '../../src/util/stream.ts';
+import fsStub from './../tool/fsStub.ts';
 
 const workdir = '/workdir';
 

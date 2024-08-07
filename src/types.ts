@@ -1,5 +1,5 @@
-import { FileInfo, Revision } from './model/fileModel';
-import { Matcher } from 'anymatch';
+import { FileInfo, Revision } from './model/fileModel.ts';
+import { Matcher } from 'npm:anymatch';
 
 export interface ProjectInfo {
   id: number;

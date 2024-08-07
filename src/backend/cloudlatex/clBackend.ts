@@ -1,15 +1,15 @@
-import path from 'path';
-import url from 'url';
-import pako from 'pako';
-import { TextDecoder } from 'text-encoding';
+import path from 'node:path';
+import url from 'node:url';
+import pako from 'npm:pako';
+import { TextDecoder } from 'npm:text-encoding';
 
-import { CLWebAppApi } from './webAppApi';
-import { FileInfo, Revision } from '../../model/fileModel';
-import { ClFile, UpdateCLProjectInfoParam } from './types';
-import { IBackend, CompileResult } from '../ibackend';
-import { Config, ProjectInfo, KeyType, Account, UpdateProjectInfoParam } from './../../types';
-import { streamToString, ReadableString } from '../../util/stream';
-import { AccountService } from '../../service/accountService';
+import { CLWebAppApi } from './webAppApi.ts';
+import { FileInfo, Revision } from '../../model/fileModel.ts';
+import { ClFile, UpdateCLProjectInfoParam } from './types.ts';
+import { IBackend, CompileResult } from '../ibackend.ts';
+import { Config, ProjectInfo, KeyType, Account, UpdateProjectInfoParam } from './../../types.ts';
+import { streamToString, ReadableString } from '../../util/stream.ts';
+import { AccountService } from '../../service/accountService.ts';
 
 export class ClBackend implements IBackend {
   private api: CLWebAppApi;

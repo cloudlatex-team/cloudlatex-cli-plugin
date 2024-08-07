@@ -1,7 +1,7 @@
-import fs from 'fs';
-import path from 'path';
-import { IBackend } from '../backend/ibackend';
-import { FileRepository, FileInfo } from '../model/fileModel';
+import fs from 'node:fs';
+import path from 'node:path';
+import { IBackend } from '../backend/ibackend.ts';
+import { FileRepository, FileInfo } from '../model/fileModel.ts';
 
 /**
  * FileAdapter class

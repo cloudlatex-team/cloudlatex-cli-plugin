@@ -1,9 +1,9 @@
-import { Matcher } from 'anymatch';
-import anymatch from 'anymatch';
-import path from 'path';
-import { FileInfo } from '../model/fileModel';
-import { AppInfoService } from '../service/appInfoService';
-import { Config } from '../types';
+import { Matcher } from 'npm:anymatch';
+import anymatch from 'npm:anymatch';
+import path from 'node:path';
+import { FileInfo } from '../model/fileModel.ts';
+import { AppInfoService } from '../service/appInfoService.ts';
+import { Config } from '../types.ts';
 const SYSTEM_IGNORED_FILES = [
   '**/.git/**',
   '**/node_modules/**',

@@ -1,8 +1,8 @@
-import chai from 'chai';
-import { Config } from '../../src';
-import anymatch from 'anymatch';
+import chai from 'npm:chai';
+import { Config } from '../../src/index.ts';
+import anymatch from 'npm:anymatch';
 
-import { toAbsolutePath, toRelativePath, toPosixPath, dotFileExceptLatexmkrc } from './../../src/fileService/filePath';
+import { toAbsolutePath, toRelativePath, toPosixPath, dotFileExceptLatexmkrc } from './../../src/fileService/filePath.ts';
 
 const config: Config = {
   rootPath: '/home/user/tex_proj',

@@ -1,13 +1,13 @@
-import { FileWatcher } from './../../src/fileService/fileWatcher';
-import Sinon from 'sinon';
-import chai from 'chai';
-import path from 'path';
+import { FileWatcher } from './../../src/fileService/fileWatcher.ts';
+import Sinon from 'npm:sinon';
+import chai from 'npm:chai';
+import path from 'node:path';
 import fs from 'fs-extra';
-import { TypeDB } from '@moritanian/type-db';
-import { FILE_INFO_DESC } from '../../src/model/fileModel';
-import { Logger } from '../../src/util/logger';
-import * as tool from './../tool/syncTestTool';
-import { toPosixPath } from '../../src/fileService/filePath';
+import { TypeDB } from 'npm:@moritanian/type-db';
+import { FILE_INFO_DESC } from '../../src/model/fileModel.ts';
+import { Logger } from '../../src/util/logger.ts';
+import * as tool from './../tool/syncTestTool.ts';
+import { toPosixPath } from '../../src/fileService/filePath.ts';
 
 const fixturePath = toPosixPath(path.resolve(__dirname, './../fixture'));
 const workspacePath = toPosixPath(path.resolve(__dirname, './../workspace'));
