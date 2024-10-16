@@ -24,6 +24,10 @@ export class ClBackend implements IBackend {
   }
 
   public download(file: FileInfo): Promise<NodeJS.ReadableStream> {
+    /**
+     * TODO use `api/projects/[projectId]/files/[fileId]/download` endpoint
+     */
+
     /*
      * url of some files such as pdf begins with '/'
      *    like '/projects/180901/files/1811770/preview'
