@@ -75,6 +75,11 @@ export type LoginResult = {
   errors?: string[]
 };
 
+export type ListProjectsResult = {
+  status: BaseResultStatus;
+  projects: ProjectInfo[];
+};
+
 export type UpdateProjectInfoResult = {
   status: BaseResultStatus;
   appInfo: AppInfo;

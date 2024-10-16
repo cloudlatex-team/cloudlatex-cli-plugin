@@ -3,7 +3,8 @@ import { version } from '../package.json';
 import { Logger, getErrorTraceStr } from './util/logger';
 import {
   Config, Account, CompileResult, ILatexApp, LoginResult, SyncResult,
-  ConflictSolution, UpdateProjectInfoResult, UpdateProjectInfoParam
+  ConflictSolution, UpdateProjectInfoResult, UpdateProjectInfoParam,
+  ListProjectsResult
 } from './types';
 import { FileAdapter } from './fileService/fileAdapter';
 import { SyncManager } from './fileService/syncManager';
@@ -201,6 +202,29 @@ export class LatexApp extends LAEventEmitter implements ILatexApp {
       status: 'unknown-error',
       appInfo: this.appInfoService.appInfo,
     };
+  }
+
+  /**
+   * List projeect
+   */
+  public async listProjects(): Promise<ListProjectsResult> {
+    // Login
+    const loginResult = await this.login();
+    if (loginResult.status !== 'success') {
+      return { ...loginResult, projects: [] };
+    }
+
+    try {
+      const projects = await this.backend.loadProjectList();
+      return { status: 'success', projects };
+    } catch (err) {
+      const msg = 'Some error occurred in loading project list: ';
+      this.logger.warn(msg + getErrorTraceStr(err));
+      return {
+        status: 'unknown-error',
+        projects: [],
+      };
+    }
   }
 
   /**

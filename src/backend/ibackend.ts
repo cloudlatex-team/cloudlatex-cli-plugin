@@ -17,6 +17,8 @@ export type CompileResult = {
 export interface IBackend {
   validateToken(): Promise<boolean>;
 
+  loadProjectList(): Promise<Array<ProjectInfo>>
+
   loadProjectInfo(): Promise<ProjectInfo>;
 
   updateProjectInfo(param: UpdateProjectInfoParam): Promise<unknown>;

@@ -75,6 +75,10 @@ export class ClBackend implements IBackend {
     return this.api.deleteFile(file.remoteId);
   }
 
+  public async loadProjectList(): Promise<Array<ProjectInfo>> {
+    return this.api.loadProjects();
+  }
+
   public async loadProjectInfo(): Promise<ProjectInfo> {
     const clProjectInfo = await this.api.loadProjectInfo();
     return {
