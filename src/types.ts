@@ -86,7 +86,7 @@ export type UpdateProjectInfoResult = {
   errors?: string[];
 };
 
-export type SyncStatus = BaseResultStatus | 'conflict';
+export type SyncStatus = BaseResultStatus | 'conflict' | 'not-empty-directory';
 export type SyncResult = {
   status: SyncStatus;
   appInfo: AppInfo;

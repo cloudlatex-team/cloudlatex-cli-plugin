@@ -19,6 +19,7 @@ import {
   calcIgnoredFiles, calcRelativeOutDir, getDBFilePath, toPosixPath, checkIgnoredByFileInfo
 } from './fileService/filePath';
 import { AsyncRunner } from './util/asyncRunner';
+import { SYNC_DESC } from './model/syncModel';
 
 /* eslint-disable @typescript-eslint/naming-convention */
 export const LATEX_APP_EVENTS = {
@@ -57,6 +58,7 @@ export class LatexApp extends LAEventEmitter implements ILatexApp {
     private backend: IBackend,
     private fileAdapter: FileAdapter,
     private fileRepo: Repository<typeof FILE_INFO_DESC>,
+    private syncRepo: Repository<typeof SYNC_DESC>,
     private logger: Logger = new Logger(),
   ) {
     super();
@@ -129,8 +131,10 @@ export class LatexApp extends LAEventEmitter implements ILatexApp {
     // DB
     const dbFilePath = getDBFilePath(config);
     const db = new TypeDB(dbFilePath);
+    let dbLoaded = false;
     try {
       await db.load();
+      dbLoaded = true;
     } catch (err) {
       // Not initialized because there is no db file.
     }
@@ -138,10 +142,23 @@ export class LatexApp extends LAEventEmitter implements ILatexApp {
 
     const fileAdapter = new FileAdapter(config.rootPath, fileRepo, backend);
 
+    // Sync repo
+    const syncRepo = db.getRepository(SYNC_DESC);
+    if (dbLoaded) {
+      if (syncRepo.all().length === 0) {
+        // Previously synced but record is not crated
+        syncRepo.new({ synced: true });
+      }
+    } else {
+      // Not synced yet
+      syncRepo.new({ synced: false });
+    }
+    await syncRepo.save();
+
     // AppInfo
     const appInfoService = new AppInfoService(config, fileRepo);
 
-    return new LatexApp(config, appInfoService, backend, fileAdapter, fileRepo, logger);
+    return new LatexApp(config, appInfoService, backend, fileAdapter, fileRepo, syncRepo, logger);
   }
 
   private static sanitizeConfig(config: Config): Config {
@@ -298,6 +315,20 @@ export class LatexApp extends LAEventEmitter implements ILatexApp {
     if (loginResult.status !== 'success') {
       return loginResult;
     }
+
+    // Check if first sync and not empty directory
+    const isFirstSync = this.syncRepo.all()[0].synced === false;
+    if (isFirstSync && this.fileRepo.all().length > 0) {
+      this.logger.warn('First sync and not empty directory');
+      return {
+        status: 'not-empty-directory',
+        appInfo: this.appInfoService.appInfo,
+      };
+    }
+
+    this.syncRepo.new({ synced: true });
+    await this.syncRepo.save();
+
 
     // File synchronization
     const result = await this.syncManager.sync(conflictSolution);
