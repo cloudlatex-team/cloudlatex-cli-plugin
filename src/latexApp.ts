@@ -504,10 +504,26 @@ export class LatexApp extends LAEventEmitter implements ILatexApp {
   /**
    * clear local changes to resolve sync problem
    */
-  public resetLocal(): void {
+  public async resetLocal(): Promise<void> {
     this.logger.info('resetLocal()');
     this.fileRepo.all().forEach(f => this.fileRepo.delete(f.id));
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    this.fileRepo.save();
+
+    // Remove db file
+    const dbFilePath = getDBFilePath(this.config);
+    if (!dbFilePath) {
+      this.logger.warn('DB file path is not set');
+      return;
+    }
+
+    if (!fs.existsSync(dbFilePath)) {
+      return;
+    }
+
+    this.logger.info(`Remove db file: ${dbFilePath}`);
+    try {
+      await fs.promises.rm(dbFilePath);
+    } catch (err) {
+      this.logger.error(getErrorTraceStr(err));
+    }
   }
 }
