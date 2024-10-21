@@ -315,16 +315,13 @@ export class LatexApp extends LAEventEmitter implements ILatexApp {
    * Synchronize files
    */
   public async sync(conflictSolution?: ConflictSolution): Promise<SyncResult> {
-    // Login
-    const loginResult = await this.login();
-    if (loginResult.status !== 'success') {
-      return loginResult;
-    }
-
     // Check if first sync and not empty directory
+    const alreadyNotEmptyError = this.appInfoService.appInfo.activationStatus === 'not-empty-directory-error';
     const isFirstSync = this.syncRepo.all()[0].synced === false;
-    if (isFirstSync && this.fileRepo.all().length > 0) {
+    const notEmptyError = isFirstSync && this.fileRepo.all().length > 0;
+    if (alreadyNotEmptyError || notEmptyError) {
       this.logger.warn('First sync and not empty directory');
+      this.appInfoService.setActivationStatus('not-empty-directory-error');
       return {
         status: 'not-empty-directory',
         appInfo: this.appInfoService.appInfo,
@@ -334,11 +331,16 @@ export class LatexApp extends LAEventEmitter implements ILatexApp {
     this.syncRepo.all()[0].synced = true;
     await this.syncRepo.save();
 
+    // Login
+    const loginResult = await this.login();
+    if (loginResult.status !== 'success') {
+      return loginResult;
+    }
 
     // File synchronization
     const result = await this.syncManager.sync(conflictSolution);
 
-    this.appInfoService.setActivation(true);
+    this.appInfoService.setActivationStatus('active');
 
     const status = result.conflict
       ? 'conflict'

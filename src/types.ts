@@ -44,10 +44,11 @@ export type Account = {
   client: string
 };
 
+export type ActivationStatus = 'active' | 'inactive' | 'not-empty-directory-error';
 export type LoginStatus = 'offline' | 'valid' | 'invalid';
 
 export interface AppInfo {
-  activation: boolean;
+  activationStatus: ActivationStatus;
   loginStatus: LoginStatus;
   projectName?: string;
   logPath?: string,
