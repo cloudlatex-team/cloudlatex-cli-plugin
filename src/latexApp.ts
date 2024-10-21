@@ -1,4 +1,5 @@
 import * as  EventEmitter from 'eventemitter3';
+import * as fs from 'fs';
 import { version } from '../package.json';
 import { Logger, getErrorTraceStr } from './util/logger';
 import {
@@ -133,10 +134,12 @@ export class LatexApp extends LAEventEmitter implements ILatexApp {
     const db = new TypeDB(dbFilePath);
     let dbLoaded = false;
     try {
+      logger.info(`Load db file: ${dbFilePath}`);
       await db.load();
       dbLoaded = true;
     } catch (err) {
       // Not initialized because there is no db file.
+      logger.info('DB file cannot be loaded');
     }
     const fileRepo = db.getRepository(FILE_INFO_DESC);
 
@@ -147,10 +150,12 @@ export class LatexApp extends LAEventEmitter implements ILatexApp {
     if (dbLoaded) {
       if (syncRepo.all().length === 0) {
         // Previously synced but record is not crated
+        logger.info('Previously synced but record is not created');
         syncRepo.new({ synced: true });
       }
     } else {
       // Not synced yet
+      logger.info('Not synced yet');
       syncRepo.new({ synced: false });
     }
     await syncRepo.save();
@@ -326,12 +331,14 @@ export class LatexApp extends LAEventEmitter implements ILatexApp {
       };
     }
 
-    this.syncRepo.new({ synced: true });
+    this.syncRepo.all()[0].synced = true;
     await this.syncRepo.save();
 
 
     // File synchronization
     const result = await this.syncManager.sync(conflictSolution);
+
+    this.appInfoService.setActivation(true);
 
     const status = result.conflict
       ? 'conflict'

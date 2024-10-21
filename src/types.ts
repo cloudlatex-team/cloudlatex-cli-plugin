@@ -47,6 +47,7 @@ export type Account = {
 export type LoginStatus = 'offline' | 'valid' | 'invalid';
 
 export interface AppInfo {
+  activation: boolean;
   loginStatus: LoginStatus;
   projectName?: string;
   logPath?: string,
