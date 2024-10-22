@@ -25,6 +25,9 @@ class ClBackend {
         return this.api.validateToken();
     }
     download(file) {
+        /**
+         * TODO use `api/projects/[projectId]/files/[fileId]/download` endpoint
+         */
         /*
          * url of some files such as pdf begins with '/'
          *    like '/projects/180901/files/1811770/preview'
@@ -72,6 +75,11 @@ class ClBackend {
     deleteRemote(file) {
         return __awaiter(this, void 0, void 0, function* () {
             return this.api.deleteFile(file.remoteId);
+        });
+    }
+    loadProjectList() {
+        return __awaiter(this, void 0, void 0, function* () {
+            return this.api.loadProjects();
         });
     }
     loadProjectInfo() {

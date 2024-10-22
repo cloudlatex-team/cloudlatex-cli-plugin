@@ -1,0 +1,1 @@
+{"version":3,"file":"syncModel.js","sourceRoot":"","sources":["../../../src/model/syncModel.ts"],"names":[],"mappings":";;;AAGa,QAAA,SAAS,GAAG;IACvB,IAAI,EAAE,MAAM;IACZ,OAAO,EAAE;QACP,EAAE,EAAE,CAAC;QACL,MAAM,EAAE,KAAK;KACd;IACD,UAAU,EAAE,IAAI;IAChB,aAAa,EAAE,IAAI;CACpB,CAAC"}

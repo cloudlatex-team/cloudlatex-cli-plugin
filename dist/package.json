@@ -1,0 +1,67 @@
+{
+    "name": "cloudlatex-cli-plugin",
+    "version": "3.1.0",
+    "license": "MIT",
+    "main": "./dist/src/index.js",
+    "bin": {
+        "latexcli": "./dist/src/cli.js"
+    },
+    "scripts": {
+        "build": "tsc",
+        "lint": "eslint src test --ext ts",
+        "watch": "tsc -watch -p ./",
+        "test": "nyc mocha -r ts-node/register \"test/**/*.ts\"",
+        "unit": "nyc mocha -r ts-node/register \"test/unit/*.ts\"",
+        "integ": "nyc mocha -r ts-node/register \"test/integ/*.ts\"",
+        "report-coverage": "nyc report --reporter=text-lcov > coverage.lcov"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/cloudlatex-team/cloudlatex-cli-plugin.git"
+    },
+    "homepage": "https://github.com/cloudlatex-team/cloudlatex-cli-plugin",
+    "keywords": [
+        "db",
+        "typescript"
+    ],
+    "types": "dist/src/index.d.ts",
+    "files": [
+        "dist"
+    ],
+    "devDependencies": {
+        "@types/chai": "^4.2.11",
+        "@types/fs-extra": "^9.0.1",
+        "@types/glob": "^7.1.1",
+        "@types/mocha": "^7.0.2",
+        "@types/mock-fs": "^4.10.0",
+        "@types/node": "^14.0.4",
+        "@types/node-fetch": "^2.5.5",
+        "@types/pako": "^1.0.1",
+        "@types/sinon": "^9.0.4",
+        "@types/text-encoding": "^0.0.35",
+        "@types/uuid": "^8.0.0",
+        "@typescript-eslint/eslint-plugin": "^3.10.1",
+        "@typescript-eslint/parser": "^3.10.1",
+        "chai": "^4.2.0",
+        "eslint": "^7.32.0",
+        "fs-extra": "^9.0.1",
+        "glob": "^7.1.6",
+        "mocha": "^9.2.0",
+        "mock-fs": "^4.12.0",
+        "nyc": "^15.0.1",
+        "sinon": "^9.0.2",
+        "ts-node": "^8.10.1",
+        "typescript": "^3.9.3"
+    },
+    "dependencies": {
+        "@moritanian/type-db": "^0.2.0",
+        "anymatch": "^3.1.3",
+        "chokidar": "^3.3.1",
+        "eventemitter3": "^4.0.0",
+        "form-data": "^3.0.0",
+        "node-fetch": "^2.6.7",
+        "pako": "^1.0.11",
+        "text-encoding": "^0.7.0",
+        "uuid": "^8.1.0"
+    }
+}
