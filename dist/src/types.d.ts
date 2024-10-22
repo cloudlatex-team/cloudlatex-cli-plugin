@@ -32,8 +32,10 @@ export declare type Account = {
     /** client ID */
     client: string;
 };
+export declare type ActivationStatus = 'active' | 'inactive' | 'not-empty-directory-error';
 export declare type LoginStatus = 'offline' | 'valid' | 'invalid';
 export interface AppInfo {
+    activationStatus: ActivationStatus;
     loginStatus: LoginStatus;
     projectName?: string;
     logPath?: string;
@@ -56,12 +58,16 @@ export declare type LoginResult = {
     appInfo: AppInfo;
     errors?: string[];
 };
+export declare type ListProjectsResult = {
+    status: BaseResultStatus;
+    projects: ProjectInfo[];
+};
 export declare type UpdateProjectInfoResult = {
     status: BaseResultStatus;
     appInfo: AppInfo;
     errors?: string[];
 };
-export declare type SyncStatus = BaseResultStatus | 'conflict';
+export declare type SyncStatus = BaseResultStatus | 'conflict' | 'not-empty-directory';
 export declare type SyncResult = {
     status: SyncStatus;
     appInfo: AppInfo;

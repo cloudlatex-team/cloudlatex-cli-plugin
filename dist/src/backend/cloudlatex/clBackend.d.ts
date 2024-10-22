@@ -23,6 +23,7 @@ export declare class ClBackend implements IBackend {
     deleteRemote(file: FileInfo & {
         remoteId: number;
     }): Promise<unknown>;
+    loadProjectList(): Promise<Array<ProjectInfo>>;
     loadProjectInfo(): Promise<ProjectInfo>;
     updateProjectInfo(param: UpdateProjectInfoParam): Promise<unknown>;
     loadFileList(): Promise<FileInfo[]>;

@@ -73,7 +73,7 @@ class CLWebAppApi {
             if (!res.ok) {
                 throw new Error(yield res.text());
             }
-            return JSON.parse((yield res.json()));
+            return (yield res.json())['projects'];
         });
     }
     loadProjectInfo() {

@@ -1,12 +1,13 @@
 import * as EventEmitter from 'eventemitter3';
 import { Logger } from './util/logger';
-import { Config, Account, CompileResult, ILatexApp, LoginResult, SyncResult, ConflictSolution, UpdateProjectInfoResult, UpdateProjectInfoParam } from './types';
+import { Config, Account, CompileResult, ILatexApp, LoginResult, SyncResult, ConflictSolution, UpdateProjectInfoResult, UpdateProjectInfoParam, ListProjectsResult } from './types';
 import { FileAdapter } from './fileService/fileAdapter';
 import { Repository } from '@moritanian/type-db';
 import { FILE_INFO_DESC } from './model/fileModel';
 import { IBackend } from './backend/ibackend';
 import { AccountService } from './service/accountService';
 import { AppInfoService } from './service/appInfoService';
+import { SYNC_DESC } from './model/syncModel';
 export declare const LATEX_APP_EVENTS: {
     readonly FILE_CHANGED: "file-changed";
     readonly FILE_CHANGE_ERROR: "file-change-error";
@@ -27,6 +28,7 @@ export declare class LatexApp extends LAEventEmitter implements ILatexApp {
     private backend;
     private fileAdapter;
     private fileRepo;
+    private syncRepo;
     private logger;
     private syncManager;
     private fileWatcher;
@@ -34,7 +36,7 @@ export declare class LatexApp extends LAEventEmitter implements ILatexApp {
     /**
      * Do not use this constructor. Be sure to instantiate LatexApp by createApp()
      */
-    constructor(config: Config, appInfoService: AppInfoService, backend: IBackend, fileAdapter: FileAdapter, fileRepo: Repository<typeof FILE_INFO_DESC>, logger?: Logger);
+    constructor(config: Config, appInfoService: AppInfoService, backend: IBackend, fileAdapter: FileAdapter, fileRepo: Repository<typeof FILE_INFO_DESC>, syncRepo: Repository<typeof SYNC_DESC>, logger?: Logger);
     /**
      * setup file management classes
      *
@@ -56,6 +58,10 @@ export declare class LatexApp extends LAEventEmitter implements ILatexApp {
      * Login
      */
     login(): Promise<LoginResult>;
+    /**
+     * List projeect
+     */
+    listProjects(): Promise<ListProjectsResult>;
     /**
      * Stop watching file system
      */
@@ -87,6 +93,6 @@ export declare class LatexApp extends LAEventEmitter implements ILatexApp {
     /**
      * clear local changes to resolve sync problem
      */
-    resetLocal(): void;
+    resetLocal(): Promise<void>;
 }
 export {};

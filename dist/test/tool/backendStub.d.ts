@@ -9,6 +9,7 @@ export declare class BackendStub implements IBackend {
     remoteFiles: Repository<typeof FILE_INFO_DESC>;
     constructor();
     validateToken(): Promise<boolean>;
+    loadProjectList(): Promise<Array<ProjectInfo>>;
     loadProjectInfo(): Promise<ProjectInfo>;
     updateProjectInfo(): Promise<unknown>;
     loadFileList(): Promise<FileInfo[]>;
