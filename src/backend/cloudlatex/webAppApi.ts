@@ -76,7 +76,7 @@ export class CLWebAppApi {
     if (!res.ok) {
       throw new Error(await res.text());
     }
-    return JSON.parse((await res.json()) as string);
+    return (await res.json())['projects'];
   }
 
   async loadProjectInfo(): Promise<CLProjectInfo> {
