@@ -10,6 +10,8 @@ const SYSTEM_IGNORED_FILES = [
   '**/.DS_Store',
 ];
 
+export const dotFileExceptLatexmkrc = '**/.!(latexmkrc)';
+
 const DEFAULT_USER_IGNORED_FILES = [
   '**/*.aux',
   '**/*.bbl',
@@ -35,9 +37,9 @@ const DEFAULT_USER_IGNORED_FILES = [
   '**/*.fdb_latexmk',
   '**/*.synctex.gz',
   '**/*.run.xml',
+  dotFileExceptLatexmkrc,
 ];
 
-export const dotFileExceptLatexmkrc = '**/.!(latexmkrc)';
 
 function mergeMatcher(...macthers: Matcher[]): Matcher {
   return macthers.reduce<Matcher & Array<unknown>>((merged, matcher) => {

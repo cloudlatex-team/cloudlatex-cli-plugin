@@ -30,6 +30,12 @@ class BackendStub {
     validateToken() {
         return Promise.resolve(true);
     }
+    loadProjectList() {
+        if (this.isOffline) {
+            return Promise.reject('Network error on loadProjectList');
+        }
+        return Promise.resolve([]);
+    }
     loadProjectInfo() {
         if (this.isOffline) {
             return Promise.reject('Network error on loadProjectInfo');

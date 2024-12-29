@@ -25,6 +25,13 @@ export class BackendStub implements IBackend {
     return Promise.resolve(true);
   }
 
+  loadProjectList(): Promise<Array<ProjectInfo>> {
+    if (this.isOffline) {
+      return Promise.reject('Network error on loadProjectList');
+    }
+    return Promise.resolve([]);
+  }
+
   loadProjectInfo(): Promise<ProjectInfo> {
     if (this.isOffline) {
       return Promise.reject('Network error on loadProjectInfo');

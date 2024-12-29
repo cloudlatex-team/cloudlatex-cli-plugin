@@ -6,6 +6,7 @@ class AppInfoService {
     constructor(config, fileRepo) {
         this.config = config;
         this.fileRepo = fileRepo;
+        this.activationStatus = 'inactive';
         this.loginStatus = 'offline';
     }
     get appInfo() {
@@ -15,6 +16,7 @@ class AppInfoService {
         const targetFileCandidates = files.filter(file => file.relativePath.split(path.posix.sep).length === 1
             && path.posix.extname(file.relativePath) === '.tex');
         return {
+            activationStatus: this.activationStatus,
             loginStatus: this.loginStatus,
             projectName: (_a = this.projectInfo) === null || _a === void 0 ? void 0 : _a.title,
             logPath: this._logPath(),
@@ -26,6 +28,9 @@ class AppInfoService {
             files,
             targetFileCandidates
         };
+    }
+    setActivationStatus(activationStatus) {
+        this.activationStatus = activationStatus;
     }
     setLoginStatus(loginStatus) {
         this.loginStatus = loginStatus;
