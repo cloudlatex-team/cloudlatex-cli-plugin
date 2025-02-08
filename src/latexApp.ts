@@ -21,6 +21,7 @@ import {
 } from './fileService/filePath';
 import { AsyncRunner } from './util/asyncRunner';
 import { SYNC_DESC } from './model/syncModel';
+import { debounce } from './util/time';
 
 /* eslint-disable @typescript-eslint/naming-convention */
 export const LATEX_APP_EVENTS = {
@@ -50,6 +51,7 @@ export class LatexApp extends LAEventEmitter implements ILatexApp {
   private fileWatcher: FileWatcher;
   private compilationRunner: AsyncRunner<CompileResult>;
 
+  private emitFileChangeEvent: () => void;
   /**
    * Do not use this constructor. Be sure to instantiate LatexApp by createApp()
    */
@@ -63,6 +65,8 @@ export class LatexApp extends LAEventEmitter implements ILatexApp {
     private logger: Logger = new Logger(),
   ) {
     super();
+
+    this.emitFileChangeEvent = debounce(() => this.emit(LATEX_APP_EVENTS.FILE_CHANGED), 600);
 
     this.compilationRunner = new AsyncRunner(() => this.execCompile());
 
@@ -94,7 +98,7 @@ export class LatexApp extends LAEventEmitter implements ILatexApp {
       });
 
     this.fileWatcher.on('change-detected', async () => {
-      this.emit(LATEX_APP_EVENTS.FILE_CHANGED);
+      this.emitFileChangeEvent();
     });
 
     this.fileWatcher.on('error', (err) => {
