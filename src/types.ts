@@ -44,9 +44,11 @@ export type Account = {
   client: string
 };
 
+export type ActivationStatus = 'active' | 'inactive' | 'not-empty-directory-error';
 export type LoginStatus = 'offline' | 'valid' | 'invalid';
 
 export interface AppInfo {
+  activationStatus: ActivationStatus;
   loginStatus: LoginStatus;
   projectName?: string;
   logPath?: string,
@@ -75,13 +77,18 @@ export type LoginResult = {
   errors?: string[]
 };
 
+export type ListProjectsResult = {
+  status: BaseResultStatus;
+  projects: ProjectInfo[];
+};
+
 export type UpdateProjectInfoResult = {
   status: BaseResultStatus;
   appInfo: AppInfo;
   errors?: string[];
 };
 
-export type SyncStatus = BaseResultStatus | 'conflict';
+export type SyncStatus = BaseResultStatus | 'conflict' | 'not-empty-directory';
 export type SyncResult = {
   status: SyncStatus;
   appInfo: AppInfo;

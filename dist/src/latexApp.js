@@ -11,6 +11,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.LatexApp = exports.LATEX_APP_EVENTS = void 0;
 const EventEmitter = require("eventemitter3");
+const fs = require("fs");
+const package_json_1 = require("../package.json");
 const logger_1 = require("./util/logger");
 const fileAdapter_1 = require("./fileService/fileAdapter");
 const syncManager_1 = require("./fileService/syncManager");
@@ -22,6 +24,7 @@ const accountService_1 = require("./service/accountService");
 const appInfoService_1 = require("./service/appInfoService");
 const filePath_1 = require("./fileService/filePath");
 const asyncRunner_1 = require("./util/asyncRunner");
+const syncModel_1 = require("./model/syncModel");
 /* eslint-disable @typescript-eslint/naming-convention */
 exports.LATEX_APP_EVENTS = {
     FILE_CHANGED: 'file-changed',
@@ -34,13 +37,14 @@ class LatexApp extends LAEventEmitter {
     /**
      * Do not use this constructor. Be sure to instantiate LatexApp by createApp()
      */
-    constructor(config, appInfoService, backend, fileAdapter, fileRepo, logger = new logger_1.Logger()) {
+    constructor(config, appInfoService, backend, fileAdapter, fileRepo, syncRepo, logger = new logger_1.Logger()) {
         super();
         this.config = config;
         this.appInfoService = appInfoService;
         this.backend = backend;
         this.fileAdapter = fileAdapter;
         this.fileRepo = fileRepo;
+        this.syncRepo = syncRepo;
         this.logger = logger;
         this.compilationRunner = new asyncRunner_1.AsyncRunner(() => this.execCompile());
         /**
@@ -80,7 +84,7 @@ class LatexApp extends LAEventEmitter {
     static createApp(config, option = {}) {
         return __awaiter(this, void 0, void 0, function* () {
             const logger = option.logger || new logger_1.Logger();
-            logger.log(`latex-cli ${'3.0.0'}`);
+            logger.log(`latex-cli ${package_json_1.version}`);
             // Config
             config = this.sanitizeConfig(config);
             // Account
@@ -91,17 +95,36 @@ class LatexApp extends LAEventEmitter {
             // DB
             const dbFilePath = filePath_1.getDBFilePath(config);
             const db = new type_db_1.TypeDB(dbFilePath);
+            let dbLoaded = false;
             try {
+                logger.info(`Load db file: ${dbFilePath}`);
                 yield db.load();
+                dbLoaded = true;
             }
             catch (err) {
                 // Not initialized because there is no db file.
+                logger.info('DB file cannot be loaded');
             }
             const fileRepo = db.getRepository(fileModel_1.FILE_INFO_DESC);
             const fileAdapter = new fileAdapter_1.FileAdapter(config.rootPath, fileRepo, backend);
+            // Sync repo
+            const syncRepo = db.getRepository(syncModel_1.SYNC_DESC);
+            if (dbLoaded) {
+                if (syncRepo.all().length === 0) {
+                    // Previously synced but record is not crated
+                    logger.info('Previously synced but record is not created');
+                    syncRepo.new({ synced: true });
+                }
+            }
+            else {
+                // Not synced yet
+                logger.info('Not synced yet');
+                syncRepo.new({ synced: false });
+            }
+            yield syncRepo.save();
             // AppInfo
             const appInfoService = new appInfoService_1.AppInfoService(config, fileRepo);
-            return new LatexApp(config, appInfoService, backend, fileAdapter, fileRepo, logger);
+            return new LatexApp(config, appInfoService, backend, fileAdapter, fileRepo, syncRepo, logger);
         });
     }
     static sanitizeConfig(config) {
@@ -159,6 +182,30 @@ class LatexApp extends LAEventEmitter {
                 status: 'unknown-error',
                 appInfo: this.appInfoService.appInfo,
             };
+        });
+    }
+    /**
+     * List projeect
+     */
+    listProjects() {
+        return __awaiter(this, void 0, void 0, function* () {
+            // Login
+            const loginResult = yield this.login();
+            if (loginResult.status !== 'success') {
+                return Object.assign(Object.assign({}, loginResult), { projects: [] });
+            }
+            try {
+                const projects = yield this.backend.loadProjectList();
+                return { status: 'success', projects };
+            }
+            catch (err) {
+                const msg = 'Some error occurred in loading project list: ';
+                this.logger.warn(msg + logger_1.getErrorTraceStr(err));
+                return {
+                    status: 'unknown-error',
+                    projects: [],
+                };
+            }
         });
     }
     /**
@@ -225,6 +272,20 @@ class LatexApp extends LAEventEmitter {
      */
     sync(conflictSolution) {
         return __awaiter(this, void 0, void 0, function* () {
+            // Check if first sync and not empty directory
+            const alreadyNotEmptyError = this.appInfoService.appInfo.activationStatus === 'not-empty-directory-error';
+            const isFirstSync = this.syncRepo.all()[0].synced === false;
+            const notEmptyError = isFirstSync && this.fileRepo.all().length > 0;
+            if (alreadyNotEmptyError || notEmptyError) {
+                this.logger.warn('First sync and not empty directory');
+                this.appInfoService.setActivationStatus('not-empty-directory-error');
+                return {
+                    status: 'not-empty-directory',
+                    appInfo: this.appInfoService.appInfo,
+                };
+            }
+            this.syncRepo.all()[0].synced = true;
+            yield this.syncRepo.save();
             // Login
             const loginResult = yield this.login();
             if (loginResult.status !== 'success') {
@@ -232,6 +293,7 @@ class LatexApp extends LAEventEmitter {
             }
             // File synchronization
             const result = yield this.syncManager.sync(conflictSolution);
+            this.appInfoService.setActivationStatus('active');
             const status = result.conflict
                 ? 'conflict'
                 : result.success ? 'success' : 'unknown-error';
@@ -386,10 +448,26 @@ class LatexApp extends LAEventEmitter {
      * clear local changes to resolve sync problem
      */
     resetLocal() {
-        this.logger.info('resetLocal()');
-        this.fileRepo.all().forEach(f => this.fileRepo.delete(f.id));
-        // eslint-disable-next-line @typescript-eslint/no-floating-promises
-        this.fileRepo.save();
+        return __awaiter(this, void 0, void 0, function* () {
+            this.logger.info('resetLocal()');
+            this.fileRepo.all().forEach(f => this.fileRepo.delete(f.id));
+            // Remove db file
+            const dbFilePath = filePath_1.getDBFilePath(this.config);
+            if (!dbFilePath) {
+                this.logger.warn('DB file path is not set');
+                return;
+            }
+            if (!fs.existsSync(dbFilePath)) {
+                return;
+            }
+            this.logger.info(`Remove db file: ${dbFilePath}`);
+            try {
+                yield fs.promises.rm(dbFilePath);
+            }
+            catch (err) {
+                this.logger.error(logger_1.getErrorTraceStr(err));
+            }
+        });
     }
 }
 exports.LatexApp = LatexApp;

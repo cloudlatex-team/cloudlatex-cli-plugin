@@ -1,9 +1,11 @@
 import * as  EventEmitter from 'eventemitter3';
+import * as fs from 'fs';
 import { version } from '../package.json';
 import { Logger, getErrorTraceStr } from './util/logger';
 import {
   Config, Account, CompileResult, ILatexApp, LoginResult, SyncResult,
-  ConflictSolution, UpdateProjectInfoResult, UpdateProjectInfoParam
+  ConflictSolution, UpdateProjectInfoResult, UpdateProjectInfoParam,
+  ListProjectsResult
 } from './types';
 import { FileAdapter } from './fileService/fileAdapter';
 import { SyncManager } from './fileService/syncManager';
@@ -18,6 +20,7 @@ import {
   calcIgnoredFiles, calcRelativeOutDir, getDBFilePath, toPosixPath, checkIgnoredByFileInfo
 } from './fileService/filePath';
 import { AsyncRunner } from './util/asyncRunner';
+import { SYNC_DESC } from './model/syncModel';
 
 /* eslint-disable @typescript-eslint/naming-convention */
 export const LATEX_APP_EVENTS = {
@@ -56,6 +59,7 @@ export class LatexApp extends LAEventEmitter implements ILatexApp {
     private backend: IBackend,
     private fileAdapter: FileAdapter,
     private fileRepo: Repository<typeof FILE_INFO_DESC>,
+    private syncRepo: Repository<typeof SYNC_DESC>,
     private logger: Logger = new Logger(),
   ) {
     super();
@@ -128,19 +132,38 @@ export class LatexApp extends LAEventEmitter implements ILatexApp {
     // DB
     const dbFilePath = getDBFilePath(config);
     const db = new TypeDB(dbFilePath);
+    let dbLoaded = false;
     try {
+      logger.info(`Load db file: ${dbFilePath}`);
       await db.load();
+      dbLoaded = true;
     } catch (err) {
       // Not initialized because there is no db file.
+      logger.info('DB file cannot be loaded');
     }
     const fileRepo = db.getRepository(FILE_INFO_DESC);
 
     const fileAdapter = new FileAdapter(config.rootPath, fileRepo, backend);
 
+    // Sync repo
+    const syncRepo = db.getRepository(SYNC_DESC);
+    if (dbLoaded) {
+      if (syncRepo.all().length === 0) {
+        // Previously synced but record is not crated
+        logger.info('Previously synced but record is not created');
+        syncRepo.new({ synced: true });
+      }
+    } else {
+      // Not synced yet
+      logger.info('Not synced yet');
+      syncRepo.new({ synced: false });
+    }
+    await syncRepo.save();
+
     // AppInfo
     const appInfoService = new AppInfoService(config, fileRepo);
 
-    return new LatexApp(config, appInfoService, backend, fileAdapter, fileRepo, logger);
+    return new LatexApp(config, appInfoService, backend, fileAdapter, fileRepo, syncRepo, logger);
   }
 
   private static sanitizeConfig(config: Config): Config {
@@ -201,6 +224,29 @@ export class LatexApp extends LAEventEmitter implements ILatexApp {
       status: 'unknown-error',
       appInfo: this.appInfoService.appInfo,
     };
+  }
+
+  /**
+   * List projeect
+   */
+  public async listProjects(): Promise<ListProjectsResult> {
+    // Login
+    const loginResult = await this.login();
+    if (loginResult.status !== 'success') {
+      return { ...loginResult, projects: [] };
+    }
+
+    try {
+      const projects = await this.backend.loadProjectList();
+      return { status: 'success', projects };
+    } catch (err) {
+      const msg = 'Some error occurred in loading project list: ';
+      this.logger.warn(msg + getErrorTraceStr(err));
+      return {
+        status: 'unknown-error',
+        projects: [],
+      };
+    }
   }
 
   /**
@@ -269,6 +315,22 @@ export class LatexApp extends LAEventEmitter implements ILatexApp {
    * Synchronize files
    */
   public async sync(conflictSolution?: ConflictSolution): Promise<SyncResult> {
+    // Check if first sync and not empty directory
+    const alreadyNotEmptyError = this.appInfoService.appInfo.activationStatus === 'not-empty-directory-error';
+    const isFirstSync = this.syncRepo.all()[0].synced === false;
+    const notEmptyError = isFirstSync && this.fileRepo.all().length > 0;
+    if (alreadyNotEmptyError || notEmptyError) {
+      this.logger.warn('First sync and not empty directory');
+      this.appInfoService.setActivationStatus('not-empty-directory-error');
+      return {
+        status: 'not-empty-directory',
+        appInfo: this.appInfoService.appInfo,
+      };
+    }
+
+    this.syncRepo.all()[0].synced = true;
+    await this.syncRepo.save();
+
     // Login
     const loginResult = await this.login();
     if (loginResult.status !== 'success') {
@@ -277,6 +339,8 @@ export class LatexApp extends LAEventEmitter implements ILatexApp {
 
     // File synchronization
     const result = await this.syncManager.sync(conflictSolution);
+
+    this.appInfoService.setActivationStatus('active');
 
     const status = result.conflict
       ? 'conflict'
@@ -442,10 +506,26 @@ export class LatexApp extends LAEventEmitter implements ILatexApp {
   /**
    * clear local changes to resolve sync problem
    */
-  public resetLocal(): void {
+  public async resetLocal(): Promise<void> {
     this.logger.info('resetLocal()');
     this.fileRepo.all().forEach(f => this.fileRepo.delete(f.id));
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    this.fileRepo.save();
+
+    // Remove db file
+    const dbFilePath = getDBFilePath(this.config);
+    if (!dbFilePath) {
+      this.logger.warn('DB file path is not set');
+      return;
+    }
+
+    if (!fs.existsSync(dbFilePath)) {
+      return;
+    }
+
+    this.logger.info(`Remove db file: ${dbFilePath}`);
+    try {
+      await fs.promises.rm(dbFilePath);
+    } catch (err) {
+      this.logger.error(getErrorTraceStr(err));
+    }
   }
 }

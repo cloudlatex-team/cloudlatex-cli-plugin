@@ -1,10 +1,12 @@
 import * as path from 'path';
-import { AppInfo, Config, LoginStatus, ProjectInfo } from '../types';
+import { ActivationStatus, AppInfo, Config, LoginStatus, ProjectInfo } from '../types';
 import { FileRepository, FileInfo } from './../model/fileModel';
 export class AppInfoService {
   private projectInfo?: ProjectInfo;
+  private activationStatus: ActivationStatus;
   private loginStatus: LoginStatus;
   constructor(public readonly config: Config, private fileRepo: FileRepository) {
+    this.activationStatus = 'inactive';
     this.loginStatus = 'offline';
   }
 
@@ -17,6 +19,7 @@ export class AppInfoService {
     );
 
     return {
+      activationStatus: this.activationStatus,
       loginStatus: this.loginStatus,
       projectName: this.projectInfo?.title,
       logPath: this._logPath(),
@@ -28,6 +31,10 @@ export class AppInfoService {
       files,
       targetFileCandidates
     };
+  }
+
+  setActivationStatus(activationStatus: ActivationStatus): void {
+    this.activationStatus = activationStatus;
   }
 
   setLoginStatus(loginStatus: LoginStatus): void {
