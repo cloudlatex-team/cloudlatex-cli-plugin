@@ -6,5 +6,4 @@ export function debounce(func: () => unknown, wait: number): () => void {
       func();
     }, wait);
   };
-
 }
