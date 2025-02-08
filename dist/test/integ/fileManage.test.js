@@ -343,6 +343,91 @@ describe('FileManager', () => {
             }));
         });
     });
+    /**
+     * Rename local file/folder is handled as delete and create.
+     * However, rename remote file/folder is handled as update.
+     * This is because the remote file/folder is identified by remoteId.
+     * Therefore, the remote file/folder is not deleted and created.
+     */
+    describe('renaming', () => {
+        it('Rename local and remote folder', () => __awaiter(void 0, void 0, void 0, function* () {
+            const instances = yield setupInstances();
+            yield instances.backend._renameInRemote(({ relativePath: imagesDir, isFolder: true }), 'renamed_images');
+            yield instances.backend._renameInRemote(({ relativePath: imagesImg1png, isFolder: false }), path.posix.join('renamed_images', 'img1.png'));
+            yield instances.backend._renameInRemote(({ relativePath: imagesImg2png, isFolder: false }), path.posix.join('renamed_images', 'img2.png'));
+            yield instances.backend._renameInRemote(({ relativePath: imagesSubimagesDir, isFolder: true }), path.posix.join('renamed_images', 'sub_images'));
+            yield instances.backend._renameInRemote(({ relativePath: imagesSubimagesSubimg1, isFolder: false }), path.posix.join('renamed_images', 'sub_images', 'sub_img1.png'));
+            yield fs.promises.rename(path.posix.join(workdir, imagesDir), path.posix.join(workdir, 'renamed_images'));
+            const syncResult = yield instances.syncManager.sync(); // Should be conflict
+            const syncResult2 = yield instances.syncManager.sync('pull');
+            chai.assert.isFalse(syncResult.success, 'syncResult.success');
+            chai.assert.isTrue(syncResult.conflict, 'syncResult.conflict');
+            chai.assert.isTrue(syncResult2.success, 'syncResult2.success');
+            const renamedFolder = instances.localFiles.findBy('relativePath', 'renamed_images');
+            chai.assert.isTrue(renamedFolder === null || renamedFolder === void 0 ? void 0 : renamedFolder.isFolder, 'renamedFolder.isFolder');
+            // Renamed file and folder should exist
+            const newImg1 = instances.localFiles.findBy('relativePath', path.posix.join('renamed_images', 'img1.png'));
+            chai.assert.isDefined(newImg1, 'newImg1');
+            chai.assert.isFalse(newImg1 === null || newImg1 === void 0 ? void 0 : newImg1.isFolder, 'newImg1.isFolder');
+            const newImg2 = instances.localFiles.findBy('relativePath', path.posix.join('renamed_images', 'img2.png'));
+            chai.assert.isDefined(newImg2, 'newImg2');
+            chai.assert.isFalse(newImg2 === null || newImg2 === void 0 ? void 0 : newImg2.isFolder, 'newImg2.isFolder');
+            const newSubimgDir = instances.localFiles.findBy('relativePath', path.posix.join('renamed_images', 'sub_images'));
+            chai.assert.isDefined(newSubimgDir, 'newSubimgDir');
+            chai.assert.isTrue(newSubimgDir === null || newSubimgDir === void 0 ? void 0 : newSubimgDir.isFolder, 'newSubimgDir.isFolder');
+            const newSubimg1 = instances.localFiles.findBy('relativePath', path.posix.join('renamed_images', 'sub_images', 'sub_img1.png'));
+            chai.assert.isDefined(newSubimg1, 'subimg1');
+            chai.assert.isFalse(newSubimg1 === null || newSubimg1 === void 0 ? void 0 : newSubimg1.isFolder, 'subimg1.isFolder');
+            // Old file and folder should be deleted
+            const img1 = instances.localFiles.findBy('relativePath', imagesImg1png);
+            chai.assert.isNull(img1, 'img1');
+            const img2 = instances.localFiles.findBy('relativePath', imagesImg2png);
+            chai.assert.isNull(img2, 'img2');
+            const subimg1 = instances.localFiles.findBy('relativePath', imagesSubimagesSubimg1);
+            chai.assert.isNull(subimg1, 'subimg1');
+        }));
+    });
+    // TODO: remove skip
+    describe.skip('change file <-> foleder', () => {
+        it('change remote file to folder', () => __awaiter(void 0, void 0, void 0, function* () {
+            const instances = yield setupInstances();
+            yield instances.backend._deleteInRemote({ relativePath: readmemd, isFolder: false });
+            yield instances.backend._createInRemote({ relativePath: readmemd, isFolder: true }, '');
+            const syncResult = yield instances.syncManager.sync();
+            chai.assert.isTrue(syncResult.success, 'syncResult.success');
+            const becomeFolder = instances.localFiles.findBy('relativePath', readmemd);
+            chai.assert.isTrue(becomeFolder === null || becomeFolder === void 0 ? void 0 : becomeFolder.isFolder, 'becomeFolder.isFolder');
+        }));
+        it('change remote folder to file', () => __awaiter(void 0, void 0, void 0, function* () {
+            const instances = yield setupInstances();
+            yield instances.backend._deleteInRemote({ relativePath: testDir, isFolder: true });
+            yield instances.backend._createInRemote({ relativePath: testDir, isFolder: false }, 'content');
+            const syncResult = yield instances.syncManager.sync();
+            chai.assert.isTrue(syncResult.success, 'syncResult.success');
+            const becomeFolder = instances.localFiles.findBy('relativePath', testDir);
+            chai.assert.isFalse(becomeFolder === null || becomeFolder === void 0 ? void 0 : becomeFolder.isFolder, 'becomeFolder.isFolder');
+            yield assertStream(fs.createReadStream(path.posix.join(workdir, testDir)), 'content');
+        }));
+        it('change local file to folder', () => __awaiter(void 0, void 0, void 0, function* () {
+            const instances = yield setupInstances();
+            yield fs.promises.rm(path.posix.join(workdir, readmemd));
+            yield fs.promises.mkdir(path.posix.join(workdir, readmemd));
+            const syncResult = yield instances.syncManager.sync();
+            chai.assert.isTrue(syncResult.success, 'syncResult.success');
+            const becomeFolder = instances.localFiles.findBy('relativePath', readmemd);
+            chai.assert.isTrue(becomeFolder === null || becomeFolder === void 0 ? void 0 : becomeFolder.isFolder, 'becomeFolder.isFolder');
+        }));
+        it('change local folder to file', () => __awaiter(void 0, void 0, void 0, function* () {
+            const instances = yield setupInstances();
+            yield fs.promises.rmdir(path.posix.join(workdir, testDir));
+            yield fs.promises.writeFile(path.posix.join(workdir, testDir), 'content');
+            const syncResult = yield instances.syncManager.sync();
+            chai.assert.isTrue(syncResult.success, 'syncResult.success');
+            const becomeFolder = instances.localFiles.findBy('relativePath', testDir);
+            chai.assert.isFalse(becomeFolder === null || becomeFolder === void 0 ? void 0 : becomeFolder.isFolder, 'becomeFolder.isFolder');
+            yield assertStream(fs.createReadStream(path.posix.join(workdir, testDir)), 'content');
+        }));
+    });
 });
 afterEach(() => __awaiter(void 0, void 0, void 0, function* () {
     fsStub_1.default.restore();

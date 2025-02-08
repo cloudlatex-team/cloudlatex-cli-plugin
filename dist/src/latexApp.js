@@ -25,6 +25,7 @@ const appInfoService_1 = require("./service/appInfoService");
 const filePath_1 = require("./fileService/filePath");
 const asyncRunner_1 = require("./util/asyncRunner");
 const syncModel_1 = require("./model/syncModel");
+const time_1 = require("./util/time");
 /* eslint-disable @typescript-eslint/naming-convention */
 exports.LATEX_APP_EVENTS = {
     FILE_CHANGED: 'file-changed',
@@ -46,6 +47,7 @@ class LatexApp extends LAEventEmitter {
         this.fileRepo = fileRepo;
         this.syncRepo = syncRepo;
         this.logger = logger;
+        this.emitFileChangeEvent = time_1.debounce(() => this.emit(exports.LATEX_APP_EVENTS.FILE_CHANGED), 600);
         this.compilationRunner = new asyncRunner_1.AsyncRunner(() => this.execCompile());
         /**
          * Ignore file setting
@@ -67,7 +69,7 @@ class LatexApp extends LAEventEmitter {
             logger
         });
         this.fileWatcher.on('change-detected', () => __awaiter(this, void 0, void 0, function* () {
-            this.emit(exports.LATEX_APP_EVENTS.FILE_CHANGED);
+            this.emitFileChangeEvent();
         }));
         this.fileWatcher.on('error', (err) => {
             this.emit(exports.LATEX_APP_EVENTS.FILE_CHANGE_ERROR, err);

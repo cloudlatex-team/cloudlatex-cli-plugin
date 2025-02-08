@@ -18,6 +18,11 @@ export declare class SyncManager {
     constructor(fileRepo: FileRepository, fileAdapter: FileAdapter, logger: Logger, checkIgnored?: CheckIgnored);
     sync(conflictSolution?: ConflictSolution): Promise<SyncResult>;
     private execSync;
+    private updateFileState;
+    /**
+     * Compare local and remote file whose relativePath is the same and decide remote change state
+     */
+    private decideRemoteChange;
     private generateSyncTasks;
     /**
      * Return task of applying local file change to remote file
