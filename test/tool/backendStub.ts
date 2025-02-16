@@ -191,4 +191,13 @@ export class BackendStub implements IBackend {
     this.isOffline = isOffline;
     return Promise.resolve();
   }
+
+  async _renameInRemote(fileInfo: Partial<FileInfo>, newRelativePath: string): Promise<void> {
+    const remoteFiles = this.remoteFiles.where(fileInfo);
+    if (!remoteFiles || remoteFiles.length !== 1) {
+      throw new Error('Remote file is not found');
+    }
+    remoteFiles[0].relativePath = newRelativePath;
+    return Promise.resolve();
+  }
 }

@@ -28,4 +28,5 @@ export declare class BackendStub implements IBackend {
     _createInRemote(fileInfo: Partial<FileInfo>, content: string): Promise<void>;
     _updateInRemote(fileInfo: Partial<FileInfo>, content: string): Promise<void>;
     _deleteInRemote(fileInfo: Partial<FileInfo>): Promise<void>;
+    _renameInRemote(fileInfo: Partial<FileInfo>, newRelativePath: string): Promise<void>;
 }

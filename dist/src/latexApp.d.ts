@@ -33,6 +33,7 @@ export declare class LatexApp extends LAEventEmitter implements ILatexApp {
     private syncManager;
     private fileWatcher;
     private compilationRunner;
+    private emitFileChangeEvent;
     /**
      * Do not use this constructor. Be sure to instantiate LatexApp by createApp()
      */

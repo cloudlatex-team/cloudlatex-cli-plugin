@@ -114,8 +114,14 @@ class SyncManager {
                         this.logger.log(`Remote file is renamed: ${file.relativePath} -> ${remoteFile.relativePath} 
             and local file is deleted`);
                         this.fileRepo.delete(file.id);
-                        const renamedFile = this.fileRepo.new(remoteFile);
-                        renamedFile.remoteChange = 'create';
+                        const renamedFile = this.fileRepo.findBy('relativePath', remoteFile.relativePath);
+                        if (renamedFile) {
+                            this.updateFileState(renamedFile, remoteFile);
+                        }
+                        else {
+                            const renamedFile = this.fileRepo.new(remoteFile);
+                            renamedFile.remoteChange = 'create';
+                        }
                     }
                     else if (file.localChange === 'update') {
                         this.logger.log(`Remote file is renamed: ${file.relativePath} -> ${remoteFile.relativePath} 
@@ -126,6 +132,17 @@ class SyncManager {
                         file.url = '';
                         const renamedFile = this.fileRepo.new(remoteFile);
                         renamedFile.remoteChange = 'create';
+                    }
+                }
+                else if (file.localChange === 'create') {
+                    // The same file is already created both in local and remote.
+                    if (file.isFolder) {
+                        file.remoteChange = 'no';
+                        file.localChange = 'no';
+                    }
+                    else {
+                        file.remoteChange = 'create';
+                        file.localChange = 'create';
                     }
                 }
                 else if (file.localRevision !== file.remoteRevision) { // updated in remote
@@ -187,6 +204,51 @@ class SyncManager {
                 errors: [],
             };
         });
+    }
+    updateFileState(localFile, remoteFile) {
+        const remoteChange = this.decideRemoteChange(localFile, remoteFile);
+        const localChange = localFile.localChange;
+        if (localChange === 'delete' && remoteChange === 'delete') {
+            // The same file is already deleted both in local and remote.
+            this.fileRepo.delete(localFile.id);
+            return;
+        }
+        localFile.remoteChange = remoteChange;
+        localFile.url = remoteFile.url;
+        localFile.remoteId = remoteFile.remoteId;
+        localFile.remoteRevision = remoteFile.remoteRevision;
+        if (localChange === 'create' && remoteChange === 'create' && localFile.isFolder) {
+            // The same folder is already created both in local and remote.
+            localFile.localChange = 'no';
+            localFile.remoteChange = 'no';
+        }
+    }
+    /**
+     * Compare local and remote file whose relativePath is the same and decide remote change state
+     */
+    // TODO: support case that localFile is undefined
+    decideRemoteChange(localFile, remoteFile) {
+        if (remoteFile) {
+            if (localFile.localChange === 'create') {
+                return 'create';
+            }
+            else {
+                if (localFile.localRevision === remoteFile.remoteRevision) {
+                    return 'no';
+                }
+                else {
+                    return 'update';
+                }
+            }
+        }
+        else {
+            if (localFile.localChange === 'create') {
+                return 'no';
+            }
+            else {
+                return 'delete';
+            }
+        }
     }
     generateSyncTasks() {
         const tasks = [];
