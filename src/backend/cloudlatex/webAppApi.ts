@@ -200,7 +200,7 @@ export class CLWebAppApi {
     return res.body;
   }
 
-  async downdloadPreview(url: string): Promise<NodeJS.ReadableStream> {
+  async downloadPreview(url: string): Promise<NodeJS.ReadableStream> {
     const res = await fetch(url, this.fetchOption());
     if (!res.body) {
       throw new Error('res.body is null');

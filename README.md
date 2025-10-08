@@ -47,7 +47,7 @@ cloudlatex-cli --path ./  \
 
 
 Then, your project files will be downloaded.
-Local file changes will synchronized with the Cloud LaTeX server and compilation is fired on the server.
+Local file changes will be synchronized with the Cloud LaTeX server and compilation is fired on the server.
 
 After the second time, run the same command as before.
 

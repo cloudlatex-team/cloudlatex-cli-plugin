@@ -5,7 +5,7 @@
 import { LatexApp } from './latexApp';
 import { Config, ProjectInfo, AppInfo, ConflictSolution } from './types';
 
-// TDOO
+// TODO
 function main() {
   console.log('cli module is not currently supported');
   return;

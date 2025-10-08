@@ -39,8 +39,8 @@ const DEFAULT_USER_IGNORED_FILES = [
 
 export const dotFileExceptLatexmkrc = '**/.!(latexmkrc)';
 
-function mergeMatcher(...macthers: Matcher[]): Matcher {
-  return macthers.reduce<Matcher & Array<unknown>>((merged, matcher) => {
+function mergeMatcher(...matchers: Matcher[]): Matcher {
+  return matchers.reduce<Matcher & Array<unknown>>((merged, matcher) => {
     if (Array.isArray(matcher)) {
       merged.push(...matcher);
     } else {
@@ -67,7 +67,7 @@ function calcIgnoredFilesByConfig(userIgnoredFiles?: Matcher): Matcher {
   }
 }
 
-// Absoulte path pattern
+// Absolute path pattern
 function calcIgnoredFilesByArtifacts(appInfoService: AppInfoService): Matcher {
   return (absPath) => [
     appInfoService.appInfo.logPath,
@@ -76,7 +76,7 @@ function calcIgnoredFilesByArtifacts(appInfoService: AppInfoService): Matcher {
   ].includes(toRelativePath(appInfoService.config, absPath));
 }
 
-// Absoulte path pattern
+// Absolute path pattern
 export function calcIgnoredFiles(appInfoService: AppInfoService): Matcher {
   return mergeMatcher(
     calcIgnoredFilesByConfig(appInfoService.config.ignoredFiles),

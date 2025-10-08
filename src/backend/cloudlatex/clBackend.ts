@@ -34,7 +34,7 @@ export class ClBackend implements IBackend {
      */
     if (file.url[0] === '/') {
       const fileUrl = url.resolve(url.resolve(this.config.endpoint, '..'), file.url);
-      return this.api.downdloadPreview(fileUrl);
+      return this.api.downloadPreview(fileUrl);
     }
 
     return this.api.download(file.url);
