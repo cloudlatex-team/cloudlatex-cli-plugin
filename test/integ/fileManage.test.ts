@@ -128,7 +128,7 @@ class TestSituation {
       syncResult = await this.instances.syncManager.sync(this.config.conflictSolution);
     }
 
-    // Verify syncronization result
+    // Verify synchronization result
     await this.verify(syncResult);
   }
 

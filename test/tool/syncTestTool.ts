@@ -40,7 +40,7 @@ export const TEST_CONFIG_LIST = (() => {
               describe += `conflictSolution: "${conflictSolution || 'unspecified'}" `;
             }
 
-            describe += `netowork: ${networkMode}`;
+            describe += `network: ${networkMode}`;
             list.push({
               changeStates: {
                 local,

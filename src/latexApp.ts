@@ -112,8 +112,8 @@ export class LatexApp extends LAEventEmitter implements ILatexApp {
    *
    * Instantiate fileAdapter, fileWatcher and syncManager.
    * The fileWatcher detects local changes.
-   * The syncManager synchronize local files with remote ones.
-   * The file Adapter abstructs file operations of local files and remote ones.
+   * The syncManager synchronizes local files with remote ones.
+   * The file Adapter abstracts file operations of local files and remote ones.
    */
   static async createApp(config: Config, option: {
     logger?: Logger,
@@ -153,7 +153,7 @@ export class LatexApp extends LAEventEmitter implements ILatexApp {
     const syncRepo = db.getRepository(SYNC_DESC);
     if (dbLoaded) {
       if (syncRepo.all().length === 0) {
-        // Previously synced but record is not crated
+        // Previously synced but record is not created
         logger.info('Previously synced but record is not created');
         syncRepo.new({ synced: true });
       }

@@ -9,44 +9,44 @@ const level2Number = {
 export class Logger {
   constructor(public logLevel: 'log' | 'info' | 'warn' | 'error' | 'silent' = 'log') {
   }
-  log(message: unknown, ...optinalParams: unknown[]): void {
+  log(message: unknown, ...optionalParams: unknown[]): void {
     if (level2Number[this.logLevel] <= level2Number.log) {
-      this._log(message, ...optinalParams);
+      this._log(message, ...optionalParams);
     }
   }
 
-  _log(message: unknown, ...optinalParams: unknown[]): void {
-    console.log(message, ...optinalParams);
+  _log(message: unknown, ...optionalParams: unknown[]): void {
+    console.log(message, ...optionalParams);
   }
 
-  info(message: unknown, ...optinalParams: unknown[]): void {
+  info(message: unknown, ...optionalParams: unknown[]): void {
     if (level2Number[this.logLevel] <= level2Number.info) {
-      this._info(message, ...optinalParams);
+      this._info(message, ...optionalParams);
     }
   }
 
-  _info(message: unknown, ...optinalParams: unknown[]): void {
-    console.info(message, ...optinalParams);
+  _info(message: unknown, ...optionalParams: unknown[]): void {
+    console.info(message, ...optionalParams);
   }
 
-  warn(message: unknown, ...optinalParams: unknown[]): void {
+  warn(message: unknown, ...optionalParams: unknown[]): void {
     if (level2Number[this.logLevel] <= level2Number.warn) {
-      this._warn(message, ...optinalParams);
+      this._warn(message, ...optionalParams);
     }
   }
 
-  _warn(message: unknown, ...optinalParams: unknown[]): void {
-    console.warn(message, ...optinalParams);
+  _warn(message: unknown, ...optionalParams: unknown[]): void {
+    console.warn(message, ...optionalParams);
   }
 
-  error(message: unknown, ...optinalParams: unknown[]): void {
+  error(message: unknown, ...optionalParams: unknown[]): void {
     if (level2Number[this.logLevel] <= level2Number.error) {
-      this._error(message, ...optinalParams);
+      this._error(message, ...optionalParams);
     }
   }
 
-  _error(message: unknown, ...optinalParams: unknown[]): void {
-    console.error(message, ...optinalParams);
+  _error(message: unknown, ...optionalParams: unknown[]): void {
+    console.error(message, ...optionalParams);
   }
 }
 

@@ -8,7 +8,7 @@ export class AccountService<Account> {
   }
 
   /**
-   * save account (if savePath is undefined, only stored on memmory)
+   * save account (if savePath is undefined, only stored on memory)
    *
    * @param account account to save
    */
