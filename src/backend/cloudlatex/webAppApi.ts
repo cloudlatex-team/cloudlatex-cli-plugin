@@ -104,7 +104,10 @@ export class CLWebAppApi {
   }
 
   async loadFiles(): Promise<unknown> {
-    const res = await fetch(`${this.apiProjects}/${this.config.projectId}/files`, this.fetchOption());
+    const res = await fetch(
+      `${this.apiProjects}/${this.config.projectId}/files`,
+      this.fetchOption()
+    );
     if (!res.ok) {
       throw new Error(await res.text());
     }
@@ -187,9 +190,10 @@ export class CLWebAppApi {
     return JSON.parse(await res.text());
   }
 
-  async download(url: string): Promise<NodeJS.ReadableStream> {
+  async downloadFile(fileId: number): Promise<NodeJS.ReadableStream> {
     const res = await fetch(
-      `${url}`
+      `${this.apiProjects}/${this.config.projectId}/files/${fileId}/download/`,
+      this.fetchOption()
     );
     if (!res.ok) {
       throw new Error(await res.text());
@@ -200,8 +204,13 @@ export class CLWebAppApi {
     return res.body;
   }
 
-  async downloadPreview(url: string): Promise<NodeJS.ReadableStream> {
-    const res = await fetch(url, this.fetchOption());
+  async download(url: string): Promise<NodeJS.ReadableStream> {
+    const res = await fetch(
+      `${url}`
+    );
+    if (!res.ok) {
+      throw new Error(await res.text());
+    }
     if (!res.body) {
       throw new Error('res.body is null');
     }

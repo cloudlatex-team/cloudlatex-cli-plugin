@@ -1,5 +1,4 @@
 import * as path from 'path';
-import * as url from 'url';
 import * as pako from 'pako';
 import { TextDecoder } from 'text-encoding';
 
@@ -24,20 +23,11 @@ export class ClBackend implements IBackend {
   }
 
   public download(file: FileInfo): Promise<NodeJS.ReadableStream> {
-    /**
-     * TODO use `api/projects/[projectId]/files/[fileId]/download` endpoint
-     */
-
-    /*
-     * url of some files such as pdf begins with '/'
-     *    like '/projects/180901/files/1811770/preview'
-     */
-    if (file.url[0] === '/') {
-      const fileUrl = url.resolve(url.resolve(this.config.endpoint, '..'), file.url);
-      return this.api.downloadPreview(fileUrl);
+    // Use /files/:id/download endpoint instead of presigned URL
+    if (file.remoteId === null) {
+      throw new Error('remoteId is null');
     }
-
-    return this.api.download(file.url);
+    return this.api.downloadFile(Number(file.remoteId));
   }
 
   public async upload(
@@ -114,7 +104,7 @@ export class ClBackend implements IBackend {
         id: -1,
         isFolder: !!materialFile.is_folder,
         relativePath: String(materialFile.full_path),
-        url: String(materialFile.file_url),
+        url: '',  // No longer used, keeping for backward compatibility
         remoteRevision: materialFile.revision,
         localRevision: materialFile.revision,
         localChange: 'no',
