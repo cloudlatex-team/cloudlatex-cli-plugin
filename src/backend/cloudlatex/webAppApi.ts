@@ -192,7 +192,7 @@ export class CLWebAppApi {
 
   async downloadFile(fileId: number): Promise<NodeJS.ReadableStream> {
     const res = await fetch(
-      `${this.apiProjects}/${this.config.projectId}/files/${fileId}/download/`,
+      `${this.apiProjects}/${this.config.projectId}/files/${fileId}/download`,
       this.fetchOption()
     );
     if (!res.ok) {
