@@ -7,7 +7,6 @@ export interface ClFile {
     mimetype: string;
     belonging_to: number;
     full_path: string;
-    file_url: string;
     thumbnail_url?: string;
 }
 export interface CLProjectInfo {

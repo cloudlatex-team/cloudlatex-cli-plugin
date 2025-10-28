@@ -174,9 +174,9 @@ class CLWebAppApi {
             return JSON.parse(yield res.text());
         });
     }
-    download(url) {
+    downloadFile(fileId) {
         return __awaiter(this, void 0, void 0, function* () {
-            const res = yield node_fetch_1.default(`${url}`);
+            const res = yield node_fetch_1.default(`${this.apiProjects}/${this.config.projectId}/files/${fileId}/download`, this.fetchOption());
             if (!res.ok) {
                 throw new Error(yield res.text());
             }
@@ -186,9 +186,12 @@ class CLWebAppApi {
             return res.body;
         });
     }
-    downdloadPreview(url) {
+    download(url) {
         return __awaiter(this, void 0, void 0, function* () {
-            const res = yield node_fetch_1.default(url, this.fetchOption());
+            const res = yield node_fetch_1.default(`${url}`);
+            if (!res.ok) {
+                throw new Error(yield res.text());
+            }
             if (!res.body) {
                 throw new Error('res.body is null');
             }

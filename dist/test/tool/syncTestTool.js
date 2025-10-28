@@ -28,7 +28,7 @@ exports.TEST_CONFIG_LIST = (() => {
                         if (conflict) {
                             describe += `conflictSolution: "${conflictSolution || 'unspecified'}" `;
                         }
-                        describe += `netowork: ${networkMode}`;
+                        describe += `network: ${networkMode}`;
                         list.push({
                             changeStates: {
                                 local,

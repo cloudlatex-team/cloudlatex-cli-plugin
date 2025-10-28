@@ -11,7 +11,6 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ClBackend = void 0;
 const path = require("path");
-const url = require("url");
 const pako = require("pako");
 const text_encoding_1 = require("text-encoding");
 const webAppApi_1 = require("./webAppApi");
@@ -25,18 +24,11 @@ class ClBackend {
         return this.api.validateToken();
     }
     download(file) {
-        /**
-         * TODO use `api/projects/[projectId]/files/[fileId]/download` endpoint
-         */
-        /*
-         * url of some files such as pdf begins with '/'
-         *    like '/projects/180901/files/1811770/preview'
-         */
-        if (file.url[0] === '/') {
-            const fileUrl = url.resolve(url.resolve(this.config.endpoint, '..'), file.url);
-            return this.api.downdloadPreview(fileUrl);
+        // Use /files/:id/download endpoint instead of presigned URL
+        if (file.remoteId === null) {
+            throw new Error('remoteId is null');
         }
-        return this.api.download(file.url);
+        return this.api.downloadFile(Number(file.remoteId));
     }
     upload(
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -112,7 +104,7 @@ class ClBackend {
                     id: -1,
                     isFolder: !!materialFile.is_folder,
                     relativePath: String(materialFile.full_path),
-                    url: String(materialFile.file_url),
+                    url: '',
                     remoteRevision: materialFile.revision,
                     localRevision: materialFile.revision,
                     localChange: 'no',

@@ -3,7 +3,7 @@
 /* eslint-disable */
 Object.defineProperty(exports, "__esModule", { value: true });
 const latexApp_1 = require("./latexApp");
-// TDOO
+// TODO
 function main() {
     console.log('cli module is not currently supported');
     return;

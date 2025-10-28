@@ -12,37 +12,37 @@ class Logger {
     constructor(logLevel = 'log') {
         this.logLevel = logLevel;
     }
-    log(message, ...optinalParams) {
+    log(message, ...optionalParams) {
         if (level2Number[this.logLevel] <= level2Number.log) {
-            this._log(message, ...optinalParams);
+            this._log(message, ...optionalParams);
         }
     }
-    _log(message, ...optinalParams) {
-        console.log(message, ...optinalParams);
+    _log(message, ...optionalParams) {
+        console.log(message, ...optionalParams);
     }
-    info(message, ...optinalParams) {
+    info(message, ...optionalParams) {
         if (level2Number[this.logLevel] <= level2Number.info) {
-            this._info(message, ...optinalParams);
+            this._info(message, ...optionalParams);
         }
     }
-    _info(message, ...optinalParams) {
-        console.info(message, ...optinalParams);
+    _info(message, ...optionalParams) {
+        console.info(message, ...optionalParams);
     }
-    warn(message, ...optinalParams) {
+    warn(message, ...optionalParams) {
         if (level2Number[this.logLevel] <= level2Number.warn) {
-            this._warn(message, ...optinalParams);
+            this._warn(message, ...optionalParams);
         }
     }
-    _warn(message, ...optinalParams) {
-        console.warn(message, ...optinalParams);
+    _warn(message, ...optionalParams) {
+        console.warn(message, ...optionalParams);
     }
-    error(message, ...optinalParams) {
+    error(message, ...optionalParams) {
         if (level2Number[this.logLevel] <= level2Number.error) {
-            this._error(message, ...optinalParams);
+            this._error(message, ...optionalParams);
         }
     }
-    _error(message, ...optinalParams) {
-        console.error(message, ...optinalParams);
+    _error(message, ...optionalParams) {
+        console.error(message, ...optionalParams);
     }
 }
 exports.Logger = Logger;
