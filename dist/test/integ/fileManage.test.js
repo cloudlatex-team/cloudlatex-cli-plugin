@@ -109,7 +109,7 @@ class TestSituation {
                 this.instances.backend.isOffline = false;
                 syncResult = yield this.instances.syncManager.sync(this.config.conflictSolution);
             }
-            // Verify syncronization result
+            // Verify synchronization result
             yield this.verify(syncResult);
         });
     }

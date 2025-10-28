@@ -22,7 +22,7 @@ export declare class CLWebAppApi {
     }>;
     compileProject(): Promise<CompileResult>;
     uploadFile(stream: NodeJS.ReadableStream, relativeDir: string): Promise<unknown>;
+    downloadFile(fileId: number): Promise<NodeJS.ReadableStream>;
     download(url: string): Promise<NodeJS.ReadableStream>;
-    downdloadPreview(url: string): Promise<NodeJS.ReadableStream>;
     loadSynctexObject(url: string): Promise<ArrayBuffer>;
 }

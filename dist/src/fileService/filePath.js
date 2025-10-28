@@ -35,8 +35,8 @@ const DEFAULT_USER_IGNORED_FILES = [
     '**/*.run.xml',
 ];
 exports.dotFileExceptLatexmkrc = '**/.!(latexmkrc)';
-function mergeMatcher(...macthers) {
-    return macthers.reduce((merged, matcher) => {
+function mergeMatcher(...matchers) {
+    return matchers.reduce((merged, matcher) => {
         if (Array.isArray(matcher)) {
             merged.push(...matcher);
         }
@@ -63,7 +63,7 @@ function calcIgnoredFilesByConfig(userIgnoredFiles) {
         return mergeMatcher(SYSTEM_IGNORED_FILES, DEFAULT_USER_IGNORED_FILES);
     }
 }
-// Absoulte path pattern
+// Absolute path pattern
 function calcIgnoredFilesByArtifacts(appInfoService) {
     return (absPath) => [
         appInfoService.appInfo.logPath,
@@ -71,7 +71,7 @@ function calcIgnoredFilesByArtifacts(appInfoService) {
         appInfoService.appInfo.synctexPath
     ].includes(toRelativePath(appInfoService.config, absPath));
 }
-// Absoulte path pattern
+// Absolute path pattern
 function calcIgnoredFiles(appInfoService) {
     return mergeMatcher(calcIgnoredFilesByConfig(appInfoService.config.ignoredFiles), calcIgnoredFilesByArtifacts(appInfoService));
 }
