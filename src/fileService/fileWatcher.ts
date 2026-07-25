@@ -62,7 +62,8 @@ export class FileWatcher extends EventEmitter<EventType> {
       awaitWriteFinish: {
         stabilityThreshold: 500,
         pollInterval: 100
-      }
+      },
+      cwd: this.config.rootPath,
     };
     const fileWatcher = this.fileWatcher = chokidar.watch(this.config.rootPath, watcherOption);
 
