@@ -1,5 +1,5 @@
-import * as chokidar from 'chokidar';
-import * as  EventEmitter from 'eventemitter3';
+import chokidar from 'chokidar';
+import EventEmitter from 'eventemitter3';
 import { FileRepository } from '../model/fileModel';
 import { Logger } from '../util/logger';
 import anymatch, { Matcher } from 'anymatch';

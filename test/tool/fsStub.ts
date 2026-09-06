@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import * as Sinon from 'sinon';
-import * as chokidar from 'chokidar';
-import * as fs from 'fs';
+import chokidar from 'chokidar';
+import fs from 'fs';
 import * as path from 'path';
-import * as mockFs from 'mock-fs';
+import mockFs from 'mock-fs';
 
 function fsStub(files: Record<string, string>): void {
   mockFs(files);
@@ -29,8 +29,9 @@ function fsStub(files: Record<string, string>): void {
     return stream;
   });
 
-  Sinon.stub(fs.promises, 'writeFile').callsFake((path: any, data: string | Uint8Array, options?: any) => (
-    fs.promises.stat(path).then(() => (
+  // This mock is used with file paths only, not FileHandle objects.
+  Sinon.stub(fs.promises, 'writeFile').callsFake((path, data, options) => (
+    fs.promises.stat(path as fs.PathLike).then(() => (
       originalWriteFile(path, data, options).then(() => 'change')
     )).catch(() => (
       originalWriteFile(path, data, options).then(() => 'add')

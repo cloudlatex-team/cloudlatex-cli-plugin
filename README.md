@@ -55,5 +55,19 @@ After the second time, run the same command as before.
 
 </details>
 
+## Development
+
+Use Node.js 24 LTS and Yarn Classic (1.22.x).
+
+```sh
+yarn install --frozen-lockfile
+yarn run lint
+yarn run test
+yarn run build
+```
+
+Tests use ts-node to compile TypeScript. The Mocha configuration disables Node's
+built-in type stripping so parameter properties and the project tsconfig are handled by ts-node.
+
 # License
 Apache License 2.0

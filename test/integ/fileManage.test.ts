@@ -1,4 +1,4 @@
-import * as fs from 'fs';
+import fs from 'fs';
 import * as path from 'path';
 import * as chai from 'chai';
 import { v4 as uuid } from 'uuid';

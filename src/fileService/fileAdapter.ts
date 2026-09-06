@@ -1,4 +1,4 @@
-import * as fs from 'fs';
+import fs from 'fs';
 import * as path from 'path';
 import { IBackend } from '../backend/ibackend';
 import { FileRepository, FileInfo } from '../model/fileModel';

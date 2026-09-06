@@ -1,5 +1,4 @@
 import { Repository } from '@moritanian/type-db';
-import { sync } from 'glob';
 
 export const SYNC_DESC = {
   name: 'Sync',

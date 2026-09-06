@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import fetch, { RequestInit, Headers } from 'node-fetch';
 import { CLProjectInfo, UpdateCLProjectInfoParam, CompileResult } from './types';
-import * as FormData from 'form-data';
+import FormData from 'form-data';
 import { Config, ProjectInfo, Account } from '../../types';
 import { AccountService } from '../../service/accountService';
 
