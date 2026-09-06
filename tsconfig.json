@@ -1,6 +1,9 @@
 {
   "compilerOptions": {
-    "module": "commonjs",
+    "module": "node16",
+    "moduleResolution": "node16",
+    "esModuleInterop": true,
+    "types": ["node", "mocha"],
     "target": "es6",
     "outDir": "dist",
     "lib": [

@@ -19,7 +19,7 @@ export class AsyncRunner<Result> {
           if (!this.runningTask) {
             return this.run();
           }
-          this.runningTask.finally(() => {
+          void this.runningTask.finally(() => {
             this.waitingTask = undefined;
             this.runningTask = undefined;
             this.run().then(resolve).catch(reject);
@@ -31,7 +31,7 @@ export class AsyncRunner<Result> {
 
     // If there is no running task, start a new one
     this.runningTask = this.func();
-    this.runningTask.finally(() => {
+    void this.runningTask.finally(() => {
       this.runningTask = undefined;
     });
     return this.runningTask;

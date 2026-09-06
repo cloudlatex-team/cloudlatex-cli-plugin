@@ -468,7 +468,7 @@ class PriorityTask<Result = unknown> {
   constructor(
     public readonly run: () => Promise<Result>,
     public readonly priority: number,
-    public readonly name: string = ''
+    public readonly name = ''
   ) {
   }
 }
