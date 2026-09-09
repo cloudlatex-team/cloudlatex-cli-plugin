@@ -59,6 +59,9 @@ After the second time, run the same command as before.
 
 Use Node.js 24 LTS and Yarn Classic (1.22.x).
 
+TypeScript uses NodeNext module rules while continuing to emit CommonJS.
+Node.js 24 can load the ESM-only uuid dependency from that CommonJS output.
+
 ```sh
 yarn install --frozen-lockfile
 yarn run lint
