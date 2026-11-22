@@ -3,7 +3,7 @@ import { IBackend } from '../../src/backend/ibackend';
 import { ProjectInfo, KeyType } from '../../src/types';
 import { TypeDB, Repository } from '@moritanian/type-db';
 import { FILE_INFO_DESC, FileInfo } from '../../src/model/fileModel';
-import { v4 as uuid } from 'uuid';
+import { randomUUID as uuid } from 'crypto';
 import { ReadableString, streamToString } from '../../src/util/stream';
 
 /*

@@ -1,7 +1,7 @@
 import fs from 'fs';
 import * as path from 'path';
 import * as chai from 'chai';
-import { v4 as uuid } from 'uuid';
+import { randomUUID as uuid } from 'crypto';
 
 import { TypeDB } from '@moritanian/type-db';
 import { FILE_INFO_DESC, FileInfo } from '../../src/model/fileModel';
