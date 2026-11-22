@@ -29,27 +29,24 @@
     "dist"
   ],
   "devDependencies": {
+    "@stylistic/eslint-plugin": "^5.10.0",
     "@types/chai": "^4.2.11",
     "@types/fs-extra": "^9.0.1",
-    "@types/glob": "^7.1.1",
-    "@types/mocha": "^7.0.2",
+    "@types/mocha": "^10.0.10",
     "@types/mock-fs": "^4.10.0",
     "@types/node": "^24.13.3",
     "@types/node-fetch": "^2.5.5",
     "@types/pako": "^1.0.1",
     "@types/sinon": "^9.0.4",
     "@types/text-encoding": "^0.0.35",
-    "@types/uuid": "^8.0.0",
-    "@stylistic/eslint-plugin": "^5.10.0",
     "@typescript-eslint/eslint-plugin": "^8.69.0",
     "@typescript-eslint/parser": "^8.69.0",
     "chai": "^4.2.0",
     "eslint": "^10.10.0",
     "fs-extra": "^9.0.1",
-    "glob": "^7.1.6",
-    "mocha": "^9.2.0",
+    "mocha": "^12.0.3",
     "mock-fs": "^4.12.0",
-    "nyc": "^15.0.1",
+    "nyc": "^18.0.0",
     "sinon": "^9.0.2",
     "ts-node": "^10.9.2",
     "typescript": "^6.0.3"
@@ -62,7 +59,6 @@
     "form-data": "^3.0.5",
     "node-fetch": "^2.6.7",
     "pako": "^1.0.11",
-    "text-encoding": "^0.7.0",
-    "uuid": "^8.1.0"
+    "text-encoding": "^0.7.0"
   }
 }
