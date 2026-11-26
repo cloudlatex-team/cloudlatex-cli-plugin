@@ -69,5 +69,13 @@ yarn run build
 Tests use ts-node to compile TypeScript. The Mocha configuration disables Node's
 built-in type stripping so parameter properties and the project tsconfig are handled by ts-node.
 
+## Use from the VSCode extension
+
+The VSCode extension installs this repository from Git by commit hash. `dist` is not committed:
+the `prepare` script builds it when the extension installs this repository, and also when you run `yarn install` here.
+To release a change, merge it to `main` and update the commit hash in the extension's `package.json`.
+
+The `version` in `package.json` is not updated, and no tags are created. Identify a build by its commit.
+
 # License
 Apache License 2.0
