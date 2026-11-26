@@ -10,7 +10,8 @@
       "es6",
     ],
     "sourceMap": true,
-		// "rootDir": "src",
+    // Keep src/ and test/ under dist/. package.json refers to dist/src.
+    "rootDir": ".",
     "strict": true,   /* enable all strict type-checking options */
     "declaration": true,
     /* Additional Checks */
