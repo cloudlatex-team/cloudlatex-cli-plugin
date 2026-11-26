@@ -8,6 +8,7 @@
   },
   "scripts": {
     "build": "tsc",
+    "prepare": "yarn run build",
     "lint": "eslint src test --ext ts",
     "watch": "tsc -watch -p ./",
     "test": "nyc mocha -r ts-node/register \"test/**/*.ts\"",
