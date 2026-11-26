@@ -3,7 +3,11 @@
     "dist": false // set this to true to hide the "out" folder with the compiled JS files
   },
   "search.exclude": {
-    "dist": true // set this to false to include "out" folder in search results
+    "dist": true, // set this to false to include "out" folder in search results
+    ".yarn-cache": true
+  },
+  "files.watcherExclude": {
+    "**/.yarn-cache/**": true
   },
   "[typescript]": {
     "editor.defaultFormatter": "vscode.typescript-language-features"
