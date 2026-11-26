@@ -1,4 +1,4 @@
-import EventEmitter = require('eventemitter3');
+import { EventEmitter } from 'eventemitter3';
 import fs from 'fs';
 import { Logger, getErrorTraceStr } from './util/logger';
 import {
